@@ -127,10 +127,10 @@ export function spawnWindowsRemoval(comspec: string, dir: string) {
       "/v:off",
       "/s",
       "/c",
-      '"ping -n 3 127.0.0.1 >nul & rmdir /s /q "%T3_UNINSTALL_RUNTIME%""',
+      '"ping -n 3 127.0.0.1 >nul & rmdir /s /q "%T2_UNINSTALL_RUNTIME%""',
     ],
     {
-      env: { ...process.env, T3_UNINSTALL_RUNTIME: dir },
+      env: { ...process.env, T2_UNINSTALL_RUNTIME: dir },
       windowsVerbatimArguments: true,
       detached: true,
       stdio: "ignore",

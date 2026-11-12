@@ -246,7 +246,7 @@ describe("ssh auth", () => {
       assert.equal(yield* Fiber.join(next), first);
       assert.equal(callsDuringCancellation, callsBeforeCancellation);
       assert.equal(helperWrites, 3);
-      assert.include(yield* fs.readFileString(first), 'printf "%s\\n" "$T3_SSH_AUTH_SECRET"');
+      assert.include(yield* fs.readFileString(first), 'printf "%s\\n" "$T2_SSH_AUTH_SECRET"');
     }).pipe(
       Effect.provide(Layer.merge(NodeServices.layer, Layer.succeed(HostProcess.Platform, "linux"))),
       Effect.scoped,

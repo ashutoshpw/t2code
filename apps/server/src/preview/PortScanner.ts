@@ -70,7 +70,7 @@ export class PortDiscovery extends Context.Service<
 export const AGENT_THREAD_ENV = "T2CODE_THREAD_ID";
 
 /** `0` turns off listener discovery; configured preview URLs are still probed. */
-const PORT_DISCOVERY_ENV = "T3CODE_PORT_DISCOVERY";
+const PORT_DISCOVERY_ENV = "T2CODE_PORT_DISCOVERY";
 
 const POLL_INTERVAL = Duration.seconds(3);
 const LSOF_TIMEOUT_MS = 5_000;

@@ -22,7 +22,6 @@ import {
   ServerSettings,
   SpacesStorageStatus,
   ServerSettingsPatch,
-  FxSettings,
   withIdleCompaction,
 } from "./settings.ts";
 
@@ -372,16 +371,6 @@ describe("provider enabled defaults", () => {
     expect(
       resolveProviderInstanceEnabled({ driver: codex, enabled: false, config: { enabled: true } }),
     ).toBe(false);
-  });
-});
-
-describe("FxSettings", () => {
-  it("keeps fx opt-in and resolves its default binary", () => {
-    expect(decodeFxSettings({})).toEqual({
-      enabled: false,
-      binaryPath: "fx",
-      customModels: [],
-    });
   });
 });
 

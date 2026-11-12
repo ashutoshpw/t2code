@@ -20,10 +20,10 @@ import {
 } from "../../state/use-composer-drafts";
 import { useSelectWorkspaceDetail } from "../layout/workspace/useSelectWorkspaceDetail";
 
-const CLI_COMMAND = "npx t3 triage";
+const CLI_COMMAND = "npx t2 triage";
 
 /**
- * In-app `t3 triage`, as on web: the server writes the session files and
+ * In-app `t2 triage`, as on web: the server writes the session files and
  * clones the matching source, then a No project draft opens with the prompt.
  */
 export function useStartTriage() {

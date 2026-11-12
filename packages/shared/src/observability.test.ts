@@ -401,7 +401,7 @@ describe("observability", () => {
           const url = "/ws?wsTicket=ticket-secret&dpop=proof-secret&clientSurface=web";
 
           yield* Effect.annotateCurrentSpan({
-            "url.full": `http://127.0.0.1:3773${url}`,
+            "url.full": `http://127.0.0.1:3772${url}`,
             "url.query": url.slice(4),
           }).pipe(
             Effect.withSpan("GET", { kind: "server" }),

@@ -11,7 +11,7 @@ it.live("loads the CLI with its cache settings only when the command needs it", 
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-cli-cache-test-" });
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-cli-cache-test-" });
     const report = `
       import { getCompileCacheDir, registerHooks } from 'node:module';
       registerHooks({ resolve(specifier, context, nextResolve) {
@@ -37,7 +37,7 @@ it.live("loads the CLI with its cache settings only when the command needs it", 
           {
             env: {
               XDG_CACHE_HOME: `${root}/cache`,
-              T3CODE_HOME: `${root}/home`,
+              T2CODE_HOME: `${root}/home`,
               NODE_COMPILE_CACHE: undefined,
               NODE_DISABLE_COMPILE_CACHE: undefined,
               APPIMAGE: "",
@@ -59,7 +59,7 @@ it.live("loads the CLI with its cache settings only when the command needs it", 
     expect(normal.exitCode).toBe(0);
     expect(normal.stderr).toContain("LOADED_CLI_MAIN");
     expect(normal.stderr.replaceAll("\\", "/")).toContain(
-      `CACHE=${root}/cache/t3code/compile-cache`.replaceAll("\\", "/"),
+      `CACHE=${root}/cache/t2code/compile-cache`.replaceAll("\\", "/"),
     );
     const launcher = yield* run({ T3CODE_HOME: "" }, ["__service-launcher"]);
     expect(launcher.exitCode).toBe(1);

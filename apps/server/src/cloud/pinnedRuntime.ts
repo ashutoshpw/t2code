@@ -226,7 +226,7 @@ const installFromArchive = Effect.fn("cloud.pinned_runtime.install_archive")(fun
       ),
     );
   input.onProgress?.({ stage: "extract" });
-  const extractStep = "extracting the t3 release archive";
+  const extractStep = "extracting the t2 release archive";
   // Strip the archive's stem directory so the executable lands at <versionDir>/t3.
   yield* input.runner
     .run({

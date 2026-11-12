@@ -15,7 +15,7 @@ import packageJson from "../../package.json" with { type: "json" };
 import * as BootService from "../cloud/bootService.ts";
 import { upCommand } from "./up.ts";
 
-// T3 Connect's flows run only in builds with its public config, and they call
+// T2 Connect's flows run only in builds with its public config, and they call
 // the relay; this file swaps in the link and unlink steps.
 const events = vi.hoisted((): Array<string> => []);
 // The CLI link marker, kept in memory instead of the secret store.
@@ -58,7 +58,7 @@ vi.mock("./connect.ts", async (importOriginal) => {
 });
 
 it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))(
-  "t3 up with T3 Connect",
+  "t2 up with T2 Connect",
   (it) => {
     it.effect.each([
       { label: "no link", prior: null, events: ["link", "restart", "unlink", "restart"] },
@@ -74,8 +74,8 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
         link.desired = input.prior !== null;
         link.mode = input.prior ?? "managed";
         const fs = yield* FileSystem.FileSystem;
-        const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-up-connect-test-" });
-        yield* fs.writeFileString(`${baseDir}/service.env`, "T3CODE_LAN=false\n");
+        const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-up-connect-test-" });
+        yield* fs.writeFileString(`${baseDir}/service.env`, "T2CODE_LAN=false\n");
         const status = {
           supported: true,
           installed: true,
@@ -123,7 +123,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
             ? { desired: false, mode: "managed" }
             : { desired: true, mode: input.prior },
         );
-        expect(yield* fs.readFileString(`${baseDir}/service.env`)).toBe("T3CODE_LAN=false\n");
+        expect(yield* fs.readFileString(`${baseDir}/service.env`)).toBe("T2CODE_LAN=false\n");
       }),
     );
 

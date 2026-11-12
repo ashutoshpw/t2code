@@ -2,7 +2,6 @@ import {
   makeProviderSettingsSchema,
   SettingsSecretValue,
   SourceControlProviderKind,
-  TrimmedString,
 } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";

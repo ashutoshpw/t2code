@@ -4569,7 +4569,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           threadId,
           ...key,
           watching: true,
-          link: { url: "https://github.com/pingdotgg/t3code/pull/14", source: "agent" },
+          link: { url: "https://github.com/pingdotgg/t2code/pull/14", source: "agent" },
         });
 
         let reads = 0;

@@ -129,16 +129,16 @@ describe("DesktopClerk", () => {
     return Effect.gen(function* () {
       yield* Effect.scoped(Layer.build(layerDesktopClerk(true, events)));
 
-      assert.deepEqual(createClerkBridgeMock.mock.calls, [
-        [
-          {
-            storage: storageAdapter,
-            manageSingleInstanceLock: false,
-            passkeys: true,
-            renderer: { scheme: "t2code-dev", host: "app" },
-          },
-        ],
-      ]);
+      // The bridge wraps the Clerk storage in the token store; only its identity is observable.
+      assert.equal(createClerkBridgeMock.mock.calls.length, 1);
+      const options = createClerkBridgeMock.mock.calls[0]?.[0];
+      assert.notStrictEqual(options?.storage, storageAdapter);
+      assert.deepEqual(options, {
+        storage: options?.storage,
+        manageSingleInstanceLock: false,
+        passkeys: true,
+        renderer: { scheme: "t2code-dev", host: "app" },
+      });
       assert.equal(cleanup.mock.calls.length, 1);
       assert.deepEqual(events, [
         "setPath:userData:/tmp/app-data/t2code-dev",

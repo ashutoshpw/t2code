@@ -66,7 +66,7 @@ import * as OpenCodeRuntime from "../OpenCodeRuntime.ts";
 import { readableProviderErrorMessage } from "../providerErrorMessage.ts";
 import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
 import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
-import { t3OrchestrationSystemPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
+import { t2OrchestrationSystemPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
 import { SKILL_MENTION_PATTERN } from "@t2code/shared/composerInlineTokens";
 import { compareSemverVersions } from "@t2code/shared/semver";
 import * as KeyedLock from "@t2code/shared/KeyedLock";
@@ -1125,7 +1125,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
       });
     });
 
-    // T3's own prompts are sent while their turn is active, so only other clients reach here.
+    // T2's own prompts are sent while their turn is active, so only other clients reach here.
     const emitExternalPrompt = Effect.fnUntraced(function* (
       state: ThreadState,
       turn: ActiveTurn,
@@ -1551,7 +1551,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
     });
 
     const syncRoster = Effect.fnUntraced(function* (state: ThreadState) {
-      const roster: Array<import("@t3tools/contracts").OrchestrationV2PendingBackgroundTask> =
+      const roster: Array<import("@t2code/contracts").OrchestrationV2PendingBackgroundTask> =
         runningCalls(state)
           .filter((call) => call.background)
           .map((call) => ({
@@ -3259,7 +3259,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
       ) {
         const text = event.data.item.payload.text;
         if (state.subagent !== undefined) state.subagent.prompt ??= text;
-        // T3's own prompts can be admitted after a failed submit ended their turn.
+        // T2's own prompts can be admitted after a failed submit ended their turn.
         else if (!isOwnPrompt(event.data.inboxID)) {
           state.externalPrompts.set(event.data.inboxID, {
             text,

@@ -87,7 +87,7 @@ const tailscaleServePortFlag = Flag.Int("tailscale-serve-port").pipe(
 );
 const lanFlag = Flag.Boolean("lan").pipe(
   Flag.withDescription(
-    "Accept connections from your local network and tailnet, not only this machine (equivalent to T3CODE_LAN).",
+    "Accept connections from your local network and tailnet, not only this machine (equivalent to T2CODE_LAN).",
   ),
   Flag.optional,
 );
@@ -172,7 +172,7 @@ const EnvServerConfig = Config.all({
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  lan: Config.Boolean("T3CODE_LAN").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  lan: Config.Boolean("T2CODE_LAN").pipe(Config.option, Config.map(Option.getOrUndefined)),
 });
 
 const DevAuthTokenConfig = Config.Redacted("T2CODE_DEV_AUTH_TOKEN").pipe(
@@ -429,6 +429,7 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
   // A background service exists to be reached from other devices, so it
   // listens on private networks unless `service.env` sets `T2CODE_HOST`.
   // Clients then learn its LAN address and prefer it over T2 Connect.
+  const lan = resolveOptionPrecedence(normalizedFlags.lan, Option.fromUndefinedOr(env.lan));
   const privateNetworkOnly =
     Option.isNone(explicitHost) &&
     mode === "web" &&
