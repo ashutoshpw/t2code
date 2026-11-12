@@ -697,7 +697,7 @@ it.layer(NodeServices.layer)("Antigravity profile preparation", (it) => {
           stdout: Stream.empty,
           stderr: Stream.encodeText(
             Stream.make(
-              `${ANTIGRAVITY_AUTH_BROWSER_MARKER}"https://example.invalid/t3-antigravity-browser-preflight"\n`,
+              `${ANTIGRAVITY_AUTH_BROWSER_MARKER}"https://example.invalid/t2-antigravity-browser-preflight"\n`,
             ),
           ),
           all: Stream.empty,

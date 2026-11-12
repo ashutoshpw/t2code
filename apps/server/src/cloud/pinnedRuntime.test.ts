@@ -384,12 +384,12 @@ it.layer(NodeServices.layer)("ensurePinnedRuntimeInstalled", (it) => {
   );
 });
 
-it("isVersionExecutable accepts only <version>/t3, never another drive or program", () => {
+it("isVersionExecutable accepts only <version>/t2, never another drive or program", () => {
   const win32 = NodePath.win32 as unknown as Path.Path;
-  assert.isTrue(isVersionExecutable(win32, "C:\\t3\\versions", "C:\\t3\\versions\\1.0.0\\t3.exe"));
-  assert.isFalse(isVersionExecutable(win32, "C:\\t3\\versions", "D:\\t3.exe"));
+  assert.isTrue(isVersionExecutable(win32, "C:\\t2\\versions", "C:\\t2\\versions\\1.0.0\\t2.exe"));
+  assert.isFalse(isVersionExecutable(win32, "C:\\t2\\versions", "D:\\t2.exe"));
   assert.isFalse(
-    isVersionExecutable(win32, "C:\\t3\\versions", "C:\\t3\\versions\\1.0.0\\node.exe"),
+    isVersionExecutable(win32, "C:\\t2\\versions", "C:\\t2\\versions\\1.0.0\\node.exe"),
   );
 });
 
@@ -537,12 +537,12 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
       const { baseDir, versionsDir } = yield* setup(["1.0.0", "1.1.0"]);
       const binDir = path.join(baseDir, "bin");
       yield* fs.makeDirectory(binDir);
-      yield* fs.symlink(path.join(versionsDir, "1.1.0", "t3"), path.join(binDir, "t3"));
+      yield* fs.symlink(path.join(versionsDir, "1.1.0", "t2"), path.join(binDir, "t2"));
       const ownDir = path.join(versionsDir, "1.0.0");
       if (recorded) {
         yield* fs.writeFileString(
           path.join(baseDir, "runtime", "launchers"),
-          `${path.join(ownDir, "t3")}\n`,
+          `${path.join(ownDir, "t2")}\n`,
         );
       }
 
@@ -559,7 +559,7 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
         ),
         Effect.provideService(HostProcess.Platform, "darwin"),
         Effect.provideService(HostProcess.Environment, {
-          T3CODE_INSTALL_BIN_DIR: binDir,
+          T2CODE_INSTALL_BIN_DIR: binDir,
           PATH: onPath ? `${ownDir}:/usr/bin:/bin` : "/usr/bin:/bin",
         }),
       );
@@ -584,10 +584,10 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
         // The installer accepts any bin directory, including one under the versions directory.
         const binDir = path.join(versionsDir, "bin");
         yield* fs.makeDirectory(binDir);
-        yield* fs.symlink(path.join(versionsDir, "1.0.0", "t3"), path.join(binDir, "t3"));
+        yield* fs.symlink(path.join(versionsDir, "1.0.0", "t2"), path.join(binDir, "t2"));
         yield* fs.writeFileString(
           path.join(baseDir, "runtime", "launchers"),
-          `${path.join(binDir, "t3")}\n`,
+          `${path.join(binDir, "t2")}\n`,
         );
       } else {
         const linkedDir = path.join(via === "linked dir" ? baseDir : versionsDir, "current");

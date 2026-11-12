@@ -555,7 +555,7 @@ export const make = Effect.gen(function* () {
     if (shownTabs.get(id) === shown) return;
     shownTabs.set(id, shown);
     const tab = tabs.get(id);
-    if (tab !== undefined)
+    if (tab !== undefined && tab.stopWaiting === null)
       emit(tab, { type: "shown", threadId: key.threadId, tabId: key.tabId, shown });
   };
 

@@ -18,7 +18,7 @@ import { runtimeModeConfig, runtimeModeOptions } from "./runtimeModeConfig";
 const options = runtimeModeOptions.map((mode) => ({ mode, ...runtimeModeConfig[mode] }));
 
 // Mirrors the overflow menu: mode radio items first, then the Permissions section.
-function OverflowMenu() {
+function OverflowMenu({ modeItems = true }: { modeItems?: boolean }) {
   const [interaction, setInteraction] = useState("plan");
   const [mode, setMode] = useState<RuntimeMode>("full-access");
   const composerMenuProps = useComposerMenuProps();
@@ -28,10 +28,12 @@ function OverflowMenu() {
       <Menu onOpenChangeComplete={(open) => focusRequestedPermission(open, triggerRef.current)}>
         <MenuTrigger ref={triggerRef}>More</MenuTrigger>
         <MenuPopup {...composerMenuProps}>
-          <MenuRadioGroup value={interaction} onValueChange={setInteraction}>
-            <MenuRadioItem value="default">Chat</MenuRadioItem>
-            <MenuRadioItem value="plan">Plan</MenuRadioItem>
-          </MenuRadioGroup>
+          {modeItems ? (
+            <MenuRadioGroup value={interaction} onValueChange={setInteraction}>
+              <MenuRadioItem value="default">Chat</MenuRadioItem>
+              <MenuRadioItem value="plan">Plan</MenuRadioItem>
+            </MenuRadioGroup>
+          ) : null}
           <ComposerPermissionsSection
             runtimeMode={mode}
             runtimeModeOptions={options}
@@ -43,6 +45,33 @@ function OverflowMenu() {
     </>
   );
 }
+
+it("reaches Permissions with arrow keys, previews, and picks with Enter", async () => {
+  await using screen = await render(<OverflowMenu modeItems={false} />, { router: false }); // no routes involved
+  const trigger = screen.getByRole("button", { name: "More" });
+  await userEvent.tab();
+  await expect.element(trigger).toHaveFocus();
+  await userEvent.keyboard("{ArrowDown}");
+  const supervised = page.getByRole("menuitemradio", { name: "Supervised" });
+  await expect.element(supervised).toHaveFocus();
+  await expect
+    .element(supervised)
+    .toHaveAccessibleDescription("Ask before commands and file changes.");
+
+  await userEvent.keyboard("{ArrowRight}");
+  await expect
+    .element(page.getByRole("menuitemradio", { name: "Auto-accept edits" }))
+    .toHaveFocus();
+  await userEvent.keyboard("{ArrowLeft}{ArrowLeft}");
+  await expect.element(page.getByRole("menuitemradio", { name: "Supervised" })).toHaveFocus();
+
+  await userEvent.keyboard("{ArrowDown}{Enter}");
+  await expect.element(screen.getByRole("status")).toHaveTextContent("auto-accept-edits");
+  await expect
+    .element(page.getByRole("menuitemradio", { name: "Supervised" }))
+    .not.toBeInTheDocument();
+  await expect.element(trigger).toHaveFocus();
+});
 
 it("reaches Permissions from the mode items with arrow keys, previews, and picks with Enter", async () => {
   await using screen = await render(<OverflowMenu />, { router: false }); // no routes involved
