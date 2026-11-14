@@ -150,6 +150,7 @@ import * as EventLoopMonitor from "./observability/EventLoopMonitor.ts";
 import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
 import * as SpacePageShareHttp from "./spaces/pageShareHttp.ts";
 import * as SpacePageShareService from "./spaces/PageShareService.ts";
+import * as CommentDispatchService from "./spaces/CommentDispatchService.ts";
 import * as SpacesService from "./spaces/SpacesService.ts";
 import * as DirectEndpoints from "./environment/DirectEndpoints.ts";
 import * as RemoteOpenTargets from "./environment/RemoteOpenTargets.ts";
@@ -698,6 +699,12 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   layerThreadPullRequestWorker,
   KeepAwake.layer,
   SpacePageShareService.layer.pipe(Layer.provide(layerSpaces)),
+  Layer.effectDiscard(
+    Effect.gen(function* () {
+      const service = yield* CommentDispatchService.CommentDispatchService;
+      yield* service.start();
+    }),
+  ).pipe(Layer.provideMerge(CommentDispatchService.layer), Layer.provide(layerSpaces)),
   DelegatedTaskAnalytics.layer,
   Layer.effectDiscard(
     Effect.gen(function* () {

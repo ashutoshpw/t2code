@@ -1,6 +1,6 @@
 import type { Editor } from "@tiptap/core";
 import type { Command } from "@tiptap/pm/state";
-import { CopyIcon, Trash2Icon } from "lucide-react";
+import { CopyIcon, MessageSquarePlusIcon, Trash2Icon } from "lucide-react";
 import type { SpaceBlockId } from "@t2code/contracts/spaces";
 
 import {
@@ -29,6 +29,7 @@ export function SpaceBlockHandleItems({
   mediaEditable,
   canMove,
   onMoveTo,
+  onComment,
 }: {
   readonly editor: Editor;
   readonly adapter: SpaceEditorAdapter;
@@ -42,9 +43,19 @@ export function SpaceBlockHandleItems({
   readonly mediaEditable: boolean;
   readonly canMove: boolean;
   readonly onMoveTo: () => void;
+  readonly onComment: (() => void) | null;
 }) {
   return (
     <>
+      {onComment ? (
+        <>
+          <MenuItem onClick={onComment}>
+            <MessageSquarePlusIcon />
+            Comment
+          </MenuItem>
+          <MenuSeparator />
+        </>
+      ) : null}
       {convertible ? (
         <MenuSub>
           <MenuSubTrigger>Turn into</MenuSubTrigger>

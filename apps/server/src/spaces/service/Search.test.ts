@@ -577,6 +577,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             pageChanges: true,
             tabs: true,
             syncedBlocks: true,
+            comments: true,
           });
           const value = {
             ...block("search-moving"),

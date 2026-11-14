@@ -64,6 +64,39 @@ it.layer(NodeServices.layer)("Spaces page change stream", (it) => {
     ),
   );
 
+  it.effect("publishes a comment write with its own revision and the page's unchanged ones", () =>
+    fixture(() =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { service, common, page, request } = yield* boot();
+          yield* service.applyBlockBatch(
+            request("body", 0, [{ kind: "insert", block: block("a") }]),
+          );
+          const next = yield* listen(service);
+          yield* service.createCommentThread({
+            ...common,
+            mutationId: "comment",
+            pageId: page.id,
+            blockId: C.SpaceBlockId.make("a"),
+            anchor: { kind: "block" },
+            body: [{ text: "note", marks: [] }],
+          });
+          const events = yield* next;
+          assert.equal(events.length, 1);
+          assert.deepEqual(events[0]!.pages, [
+            {
+              id: page.id,
+              spaceId: page.spaceId,
+              revision: 1,
+              bodyRevision: 1,
+              commentRevision: 1,
+            },
+          ]);
+        }),
+      ),
+    ),
+  );
+
   it.effect("publishes a title change as a tree change that leaves the body revision alone", () =>
     fixture(() =>
       Effect.scoped(

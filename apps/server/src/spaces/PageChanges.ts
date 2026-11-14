@@ -12,10 +12,14 @@ const EVENT_LIMIT = C.SPACE_PAGE_CHANGES_MAX_ENTRIES;
 interface PageFlags {
   readonly tree?: true;
   readonly removed?: true;
+  readonly comments?: true;
 }
 
 export interface PageCollector {
-  readonly pages: Map<string, { spaceId: string; tree: boolean; removed: boolean }>;
+  readonly pages: Map<
+    string,
+    { spaceId: string; tree: boolean; removed: boolean; comments: boolean }
+  >;
   readonly spaces: Set<string>;
 }
 
@@ -40,6 +44,7 @@ export const recordPage = (pageId: string, spaceId: string, flags?: PageFlags) =
       spaceId,
       tree: (held?.tree ?? false) || flags?.tree === true,
       removed: (held?.removed ?? false) || flags?.removed === true,
+      comments: (held?.comments ?? false) || flags?.comments === true,
     });
   });
 
@@ -58,8 +63,11 @@ export const resolve = Effect.fn("SpacesPageChanges.resolve")(function* (collect
           readonly spaceId: string;
           readonly revision: number;
           readonly bodyRevision: number;
-        }>`SELECT page_id AS id, space_id AS spaceId, revision, body_revision AS bodyRevision
-          FROM spaces_pages WHERE page_id IN ${sql.in(ids)}`;
+          readonly commentRevision: number;
+        }>`SELECT p.page_id AS id, p.space_id AS spaceId, p.revision, p.body_revision AS bodyRevision,
+            COALESCE(c.comment_revision, 0) AS commentRevision
+          FROM spaces_pages p LEFT JOIN spaces_comment_pages c ON c.page_id = p.page_id
+          WHERE p.page_id IN ${sql.in(ids)}`;
   const found = new Map(rows.map((row) => [row.id, row]));
   const pages = ids.map((id): C.SpacePageChange => {
     const recorded = collector.pages.get(id)!;
@@ -80,6 +88,7 @@ export const resolve = Effect.fn("SpacesPageChanges.resolve")(function* (collect
           revision: row.revision,
           bodyRevision: row.bodyRevision,
           ...tree,
+          ...(recorded.comments ? { commentRevision: row.commentRevision } : {}),
         };
   });
   return { pages, spaces: [...collector.spaces] } satisfies PageChangeBatch;
@@ -103,6 +112,11 @@ const merge = (mailbox: Mailbox, batch: PageChangeBatch) => {
             ...next,
             revision: Math.max(held.revision, next.revision),
             bodyRevision: Math.max(held.bodyRevision, next.bodyRevision),
+            ...(held.commentRevision === undefined && next.commentRevision === undefined
+              ? {}
+              : {
+                  commentRevision: Math.max(held.commentRevision ?? 0, next.commentRevision ?? 0),
+                }),
             ...(held.tree === true || next.tree === true ? { tree: true as const } : {}),
             ...(held.removed === true || next.removed === true ? { removed: true as const } : {}),
           },

@@ -17,6 +17,15 @@ import {
 } from "./spacesCore.ts";
 import { SpaceListInput } from "./spacesCapability.ts";
 import {
+  SpaceCommentDeleteInput,
+  SpaceCommentEditInput,
+  SpaceCommentAgentReplyInput,
+  SpaceCommentMutationResult,
+  SpaceCommentReplyInput,
+  SpaceCommentThreadCreateInput,
+  SpaceCommentThreadStatusInput,
+} from "./spacesComments.ts";
+import {
   SPACE_SYNCED_REFS_LISTED,
   SpaceSyncedRefSummary,
   SpaceUnsyncInput,
@@ -592,6 +601,25 @@ export const SpaceMutationRequest = Schema.Union([
   Schema.Struct({ operation: Schema.Literal("createRows"), input: SpaceRowsCreateInput }),
   Schema.Struct({ operation: Schema.Literal("updateRows"), input: SpaceRowsUpdateInput }),
   Schema.Struct({ operation: Schema.Literal("moveRows"), input: SpaceRowsMoveInput }),
+  Schema.Struct({
+    operation: Schema.Literal("createCommentThread"),
+    input: SpaceCommentThreadCreateInput,
+  }),
+  Schema.Struct({ operation: Schema.Literal("replyComment"), input: SpaceCommentReplyInput }),
+  Schema.Struct({
+    operation: Schema.Literal("agentReplyComment"),
+    input: SpaceCommentAgentReplyInput,
+  }),
+  Schema.Struct({ operation: Schema.Literal("editComment"), input: SpaceCommentEditInput }),
+  Schema.Struct({ operation: Schema.Literal("deleteComment"), input: SpaceCommentDeleteInput }),
+  Schema.Struct({
+    operation: Schema.Literal("resolveCommentThread"),
+    input: SpaceCommentThreadStatusInput,
+  }),
+  Schema.Struct({
+    operation: Schema.Literal("reopenCommentThread"),
+    input: SpaceCommentThreadStatusInput,
+  }),
 ]);
 export type SpaceMutationRequest = typeof SpaceMutationRequest.Type;
 export const SpaceMutationReceipt = Schema.Union([
@@ -638,6 +666,25 @@ export const SpaceMutationReceipt = Schema.Union([
   Schema.Struct({ operation: Schema.Literal("createRows"), result: SpaceRowsCreateResult }),
   Schema.Struct({ operation: Schema.Literal("updateRows"), result: SpaceRowsUpdateResult }),
   Schema.Struct({ operation: Schema.Literal("moveRows"), result: SpaceRowsMoveResult }),
+  Schema.Struct({
+    operation: Schema.Literal("createCommentThread"),
+    result: SpaceCommentMutationResult,
+  }),
+  Schema.Struct({ operation: Schema.Literal("replyComment"), result: SpaceCommentMutationResult }),
+  Schema.Struct({
+    operation: Schema.Literal("agentReplyComment"),
+    result: SpaceCommentMutationResult,
+  }),
+  Schema.Struct({ operation: Schema.Literal("editComment"), result: SpaceCommentMutationResult }),
+  Schema.Struct({ operation: Schema.Literal("deleteComment"), result: SpaceCommentMutationResult }),
+  Schema.Struct({
+    operation: Schema.Literal("resolveCommentThread"),
+    result: SpaceCommentMutationResult,
+  }),
+  Schema.Struct({
+    operation: Schema.Literal("reopenCommentThread"),
+    result: SpaceCommentMutationResult,
+  }),
 ]);
 export type SpaceMutationReceipt = typeof SpaceMutationReceipt.Type;
 export const SpaceReceiptLookupInput = Schema.Struct({ request: SpaceMutationRequest });
@@ -650,5 +697,6 @@ export const SpaceReceiptLookupResult = Schema.Union([
 export type SpaceReceiptLookupResult = typeof SpaceReceiptLookupResult.Type;
 
 export * from "./spacesCapability.ts";
+export * from "./spacesComments.ts";
 export * from "./spacesErrors.ts";
 export * from "./spacesPageChanges.ts";

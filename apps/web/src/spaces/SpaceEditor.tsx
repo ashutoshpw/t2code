@@ -34,6 +34,9 @@ import {
   type SlashDatabaseCreate,
   type SpaceBlockFeatures,
 } from "./SpaceEditorLayers";
+import { spaceCommentsPlugin } from "./comments/commentsPlugin";
+import type { SpaceCommentsController } from "./comments/commentsController";
+import { SpaceCommentsLayer } from "./comments/SpaceCommentsLayer";
 import "./editor.css";
 
 const placeholder = "Write, or press '/' for commands…";
@@ -137,6 +140,7 @@ export function SpaceEditor({
   onCreatePage,
   onCreateDatabase,
   blockFeatures,
+  comments,
   embedded = false,
 }: {
   /** A synced copy's editor inside another editor: no toolbar, handle or page-level controls. */
@@ -144,6 +148,8 @@ export function SpaceEditor({
   readonly onCreatePage?: ((blockId: SpaceBlockId | null) => void) | undefined;
   readonly onCreateDatabase?: SlashDatabaseCreate | undefined;
   readonly blockFeatures?: SpaceBlockFeatures | undefined;
+  /** Per-viewer comment highlights and popovers; absent where comments are unavailable (shared pages). */
+  readonly comments?: SpaceCommentsController | undefined;
   readonly savedHistory?: ReactNode;
   readonly mentions?: SpaceMentionController | null;
   readonly onOpenSource?: (
@@ -168,6 +174,14 @@ export function SpaceEditor({
         ...withSpaceNodeViews(adapter.extensions()),
         spacePlaceholder,
         spaceCodeHighlight(),
+        ...(comments
+          ? [
+              Extension.create({
+                name: "spaceComments",
+                addProseMirrorPlugins: () => [spaceCommentsPlugin(comments)],
+              }),
+            ]
+          : []),
         createSpaceSessionDispatch(adapter, bridge, onBatch),
       ],
       content: adapter.document.toJSON(),
@@ -205,6 +219,11 @@ export function SpaceEditor({
     synchronize();
     return bridge?.controller.subscribe(synchronize);
   }, [editor, bridge, editable]);
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Attaches the external comment controller to the mounted editor view.
+  useEffect(() => {
+    if (!editor || !comments) return;
+    return comments.attach(editor.view);
+  }, [editor, comments]);
   const shell = useEditorState({
     editor,
     selector: ({ editor }) => {
@@ -283,7 +302,8 @@ export function SpaceEditor({
       {shell.empty && shell.writable ? (
         <p className="pointer-events-none absolute text-muted-foreground/60">{placeholder}</p>
       ) : null}
-      <BubbleLayer {...parts}>
+      {comments ? <SpaceCommentsLayer controller={comments} /> : null}
+      <BubbleLayer {...parts} comments={comments}>
         <SlashLayer
           {...parts}
           onCreatePage={onCreatePage}
@@ -420,6 +440,7 @@ export function SpaceEditor({
                   structure={shell.structure}
                   mediaEditable={mediaEditable}
                   onMoveBlocks={onMoveBlocks}
+                  comments={comments}
                 >
                   {content}
                 </EditorSurface>
