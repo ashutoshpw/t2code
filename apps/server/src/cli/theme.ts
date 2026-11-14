@@ -18,6 +18,8 @@
  */
 import * as NodeFS from "node:fs";
 
+import { envStringConfig } from "@t2code/shared/legacyEnvConfig";
+
 import {
   EnvironmentThemeFile,
   EnvironmentThemeId,
@@ -174,7 +176,7 @@ export class ThemeTargetMissingError extends Schema.TaggedError<ThemeTargetMissi
   }
 }
 
-const envT3Home = Config.String("T3CODE_HOME").pipe(Config.option);
+const envT3Home = envStringConfig("T2CODE_HOME").pipe(Config.option);
 const DEV_STATE_PLACEHOLDER_URL = new URL("http://localhost");
 
 const hasLiveServer = (statePath: string) =>

@@ -16,9 +16,9 @@ cp .env.example .env
 For another deployment, set these values in the repository-root `.env` or `.env.local`:
 
 ```dotenv
-T3CODE_CLERK_PUBLISHABLE_KEY=<publishable key>
-T3CODE_CLERK_JWT_TEMPLATE=<JWT template name>
-T3CODE_CLERK_CLI_OAUTH_CLIENT_ID=<public OAuth application client ID>
+T2CODE_CLERK_PUBLISHABLE_KEY=<publishable key>
+T2CODE_CLERK_JWT_TEMPLATE=<JWT template name>
+T2CODE_CLERK_CLI_OAUTH_CLIENT_ID=<public OAuth application client ID>
 T2CODE_RELAY_URL=https://relay.t2.codes
 ```
 
@@ -44,7 +44,7 @@ In Clerk's OAuth applications settings:
 4. Enable **Device authorization grant** on the application. Headless and SSH authorization use
    it, and Clerk only advertises the device endpoint once it is on. The feature is in beta and
    Clerk enables it per account on request.
-5. Set `T3CODE_CLERK_CLI_OAUTH_CLIENT_ID` to the generated public client ID in local and release
+5. Set `T2CODE_CLERK_CLI_OAUTH_CLIENT_ID` to the generated public client ID in local and release
    build environments.
 
 ## JWT template
@@ -55,7 +55,7 @@ Create a Clerk JWT template named `t2-relay` with claims:
 { "aud": "t2-code-relay" }
 ```
 
-Set `T3CODE_CLERK_JWT_TEMPLATE=t2-relay` for clients and
+Set `T2CODE_CLERK_JWT_TEMPLATE=t2-relay` for clients and
 `CLERK_JWT_AUDIENCE=t2-code-relay` for the relay. The production relay deployment environment
 also defines `CLERK_JWT_TEMPLATE`. The audience stays the same across relay stages; the relay
 URL selects the deployment.
@@ -68,10 +68,10 @@ deploying the production stage, provision or update the following external resou
 - Point the hosted relay and managed-endpoint DNS zones at the T2 relay deployment (the repository
   example uses `relay.t2.codes` and `t2coderelay.com`).
 - Create the `t2-relay` Clerk JWT template with the `t2-code-relay` audience, then update
-  `T3CODE_CLERK_JWT_TEMPLATE`, `CLERK_JWT_TEMPLATE`, and `CLERK_JWT_AUDIENCE` in relay, CI, and
+  `T2CODE_CLERK_JWT_TEMPLATE`, `CLERK_JWT_TEMPLATE`, and `CLERK_JWT_AUDIENCE` in relay, CI, and
   client environments.
-- Provision the `t2-code-relay-*` Axiom datasets, ingest tokens, and recent-spans view, and replace
-  the corresponding `T3CODE_RELAY_CLIENT_*` variables with `T2CODE_RELAY_CLIENT_*`.
+- Provision the `t2-code-relay-*` Axiom datasets, ingest tokens, and recent-spans view, and use the
+  `T2CODE_RELAY_CLIENT_*` variable spellings in relay, CI, and client environments.
 - Update GitHub Actions, Vercel, and EAS environments to use `T2CODE_RELAY_URL` and the new relay
   tracing variables before publishing clients.
 
@@ -125,7 +125,7 @@ Local signed builds additionally use:
 T2CODE_APPLE_TEAM_ID=ABC1234567
 T2CODE_MACOS_PROVISIONING_PROFILE=/absolute/path/to/t3code.provisionprofile
 # Override only when the RP domain differs from the Clerk Frontend API hostname.
-T3CODE_CLERK_PASSKEY_RP_DOMAINS=example.clerk.accounts.dev,clerk.example.com
+T2CODE_CLERK_PASSKEY_RP_DOMAINS=example.clerk.accounts.dev,clerk.example.com
 ```
 
 Without the override, the build derives the RP domain from the Clerk publishable key.
