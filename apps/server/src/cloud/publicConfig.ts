@@ -12,14 +12,10 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as SchemaIssue from "effect/SchemaIssue";
 
-<<<<<<< HEAD
-declare const __T3CODE_BUILD_RELAY_URL__: string | undefined;
-declare const __T3CODE_BUILD_CHANNEL__: "nightly" | "latest" | undefined;
-=======
 declare const __T2CODE_BUILD_RELAY_URL__: string | undefined;
->>>>>>> 10d5e3d32b (refactor(relay): migrate T3 relay identity to T2)
-declare const __T3CODE_BUILD_CLERK_PUBLISHABLE_KEY__: string | undefined;
-declare const __T3CODE_BUILD_CLERK_CLI_OAUTH_CLIENT_ID__: string | undefined;
+declare const __T2CODE_BUILD_CHANNEL__: "nightly" | "latest" | undefined;
+declare const __T2CODE_BUILD_CLERK_PUBLISHABLE_KEY__: string | undefined;
+declare const __T2CODE_BUILD_CLERK_CLI_OAUTH_CLIENT_ID__: string | undefined;
 declare const __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_URL__: string | undefined;
 declare const __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_DATASET__: string | undefined;
 declare const __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_TOKEN__: string | undefined;
@@ -60,14 +56,14 @@ const buildTimeRelayUrl =
     ? ""
     : (normalizeSecureRelayUrl(__T2CODE_BUILD_RELAY_URL__) ?? "");
 const buildTimeClerkPublishableKey = readBuildTimeValue(
-  typeof __T3CODE_BUILD_CLERK_PUBLISHABLE_KEY__ === "undefined"
+  typeof __T2CODE_BUILD_CLERK_PUBLISHABLE_KEY__ === "undefined"
     ? undefined
-    : __T3CODE_BUILD_CLERK_PUBLISHABLE_KEY__,
+    : __T2CODE_BUILD_CLERK_PUBLISHABLE_KEY__,
 );
 const buildTimeClerkCliOAuthClientId = readBuildTimeValue(
-  typeof __T3CODE_BUILD_CLERK_CLI_OAUTH_CLIENT_ID__ === "undefined"
+  typeof __T2CODE_BUILD_CLERK_CLI_OAUTH_CLIENT_ID__ === "undefined"
     ? undefined
-    : __T3CODE_BUILD_CLERK_CLI_OAUTH_CLIENT_ID__,
+    : __T2CODE_BUILD_CLERK_CLI_OAUTH_CLIENT_ID__,
 );
 const buildTimeRelayClientTracing = {
   tracesUrl: readBuildTimeValue(
@@ -127,7 +123,7 @@ const NIGHTLY_HOSTED_APP_URL = "https://nightly.app.t3.codes";
  */
 export const agentApprovalAppUrlConfig = makePublicValueConfig(
   "T3CODE_HOSTED_APP_URL",
-  typeof __T3CODE_BUILD_CHANNEL__ !== "undefined" && __T3CODE_BUILD_CHANNEL__ === "nightly"
+  typeof __T2CODE_BUILD_CHANNEL__ !== "undefined" && __T2CODE_BUILD_CHANNEL__ === "nightly"
     ? NIGHTLY_HOSTED_APP_URL
     : DEFAULT_HOSTED_APP_URL,
 ).pipe(Config.mapEffect(validateHostedAppUrl));
