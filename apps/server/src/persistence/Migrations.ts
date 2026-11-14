@@ -5,7 +5,8 @@ import {
   DATABASE_MIGRATION_PROGRESS_MESSAGE,
   DATABASE_MIGRATIONS_FINISHED_MESSAGE,
   DATABASE_MIGRATIONS_STARTED_MESSAGE,
-} from "@t3tools/shared/databaseMigrationLog";
+} from "@t2code/shared/databaseMigrationLog";
+import { reconcileLegacyMcpIdentityMigration } from "./reconcileLegacyMcpIdentityMigration.ts";
 import { reconcileV2PreviewMigration } from "./reconcileV2PreviewMigration.ts";
 
 import Migration0001 from "./Migrations/001_OrchestrationEvents.ts";
@@ -285,6 +286,7 @@ export const runMigrations = Effect.fn("runMigrations")(function* ({
     toMigrationInclusive === undefined || toMigrationInclusive >= FIRST_V2_MIGRATION_ID;
   const previewMigrations = includesV2 ? yield* reconcileV2PreviewMigration() : [];
   if (includesV2) {
+    yield* reconcileLegacyMcpIdentityMigration();
     yield* assertV2MigrationsCanRun(toMigrationInclusive);
   }
   const sql = yield* SqlClient.SqlClient;
