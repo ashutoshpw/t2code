@@ -101,7 +101,7 @@ We wanted something performant, remote-ready, and truly open. If we ever go the 
 We have limited review capacity. Small, focused fixes are the most likely to be merged. Features need an approved discussion first.
 
 - Read [CONTRIBUTING.md](./CONTRIBUTING.md) before you report a bug or open a pull request.
-- Put feature requests in [Ideas](https://github.com/pingdotgg/t3code/discussions/categories/ideas).
+- Put feature requests in [Ideas](https://github.com/ashutoshpw/t2code/discussions/categories/ideas).
 - Build from source with the [development runbook](./docs/operations/development.md#first-checkout). The [architecture overview](./docs/internals/overview.md) explains how it works.
 - Get help in [Discord](https://discord.gg/jn4EGJjrvv).
 
