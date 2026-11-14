@@ -14,7 +14,7 @@ import { HttpClient, HttpClientError, HttpClientRequest, HttpClientResponse } fr
 
 import {
   CLI_RELEASE_CHECKSUMS_FILE,
-  cliArchiveFileName,
+  cliArchiveFileNames,
   cliArchivePlatformKey,
   cliArchiveTarCommand,
   cliReleaseAssetUrl,
