@@ -213,6 +213,7 @@ function layerFor(input: {
                 Object.assign(attempt, completion);
               }
             }),
+          pruneExpired: Effect.succeed(0),
         }),
         Layer.succeed(LiveActivities.LiveActivities, {
           register: () => Effect.void,
