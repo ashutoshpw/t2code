@@ -10,11 +10,11 @@ const load = (env: Record<string, string>) =>
   OtelEnvironment.load.pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env }))));
 
 const SPEC_OFF =
-  "OTEL_SDK_DISABLED is set, so no telemetry is exported, whatever configured it; set T3CODE_OTEL_SDK_DISABLED=false to export anyway";
-const T3_OFF =
-  "T3CODE_OTEL_SDK_DISABLED is set, so no telemetry is exported, whatever configured it";
+  "OTEL_SDK_DISABLED is set, so no telemetry is exported, whatever configured it; set T2CODE_OTEL_SDK_DISABLED=false to export anyway";
+const T2_OFF =
+  "T2CODE_OTEL_SDK_DISABLED is set, so no telemetry is exported, whatever configured it";
 const specIgnored = (value: string) =>
-  `OTEL_SDK_DISABLED=${value} was read as false; the OpenTelemetry specification recognizes only the string true, so use OTEL_SDK_DISABLED=true or T3CODE_OTEL_SDK_DISABLED to say it any other way`;
+  `OTEL_SDK_DISABLED=${value} was read as false; the OpenTelemetry specification recognizes only the string true, so use OTEL_SDK_DISABLED=true or T2CODE_OTEL_SDK_DISABLED to say it any other way`;
 
 describe("OtelEnvironment", () => {
   it.effect.each([
@@ -26,18 +26,18 @@ describe("OtelEnvironment", () => {
       disabled: false,
       warnings: [specIgnored("1")],
     },
-    { name: "t3 1", env: { T3CODE_OTEL_SDK_DISABLED: "1" }, disabled: true, warnings: [T3_OFF] },
+    { name: "t2 1", env: { T2CODE_OTEL_SDK_DISABLED: "1" }, disabled: true, warnings: [T2_OFF] },
     {
-      name: "t3 false overrides spec true",
-      env: { T3CODE_OTEL_SDK_DISABLED: "false", OTEL_SDK_DISABLED: "true" },
+      name: "t2 false overrides spec true",
+      env: { T2CODE_OTEL_SDK_DISABLED: "false", OTEL_SDK_DISABLED: "true" },
       disabled: false,
       warnings: [],
     },
     {
-      name: "unreadable t3 warns and falls through",
-      env: { T3CODE_OTEL_SDK_DISABLED: "maybe", OTEL_SDK_DISABLED: "true" },
+      name: "unreadable t2 warns and falls through",
+      env: { T2CODE_OTEL_SDK_DISABLED: "maybe", OTEL_SDK_DISABLED: "true" },
       disabled: true,
-      warnings: ["T3CODE_OTEL_SDK_DISABLED=maybe is not a yes or a no and was ignored", SPEC_OFF],
+      warnings: ["T2CODE_OTEL_SDK_DISABLED=maybe is not a yes or a no and was ignored", SPEC_OFF],
     },
   ])("$name", ({ env, disabled, warnings }) =>
     Effect.gen(function* () {
@@ -257,20 +257,26 @@ describe("OtelEnvironment", () => {
     });
     it.each([
       {
+        name: "T3CODE_OTLP_*_URL wins over an OTEL endpoint",
+        otel: withLogs(otelExport),
+        t2Url: "http://t3:4318/v1/logs",
+        expected: { url: "http://t3:4318/v1/logs", export: t3Export },
+      },
+      {
         name: "T3CODE_OTLP_*_URL wins over a signal the OTEL variables turned off",
         otel: withLogs(OtelEnvironment.OtelSignal.Off()),
-        t3Url: "http://t3:4318/v1/logs",
+        t2Url: "http://t2:4318/v1/logs",
         expected: {
-          url: "http://t3:4318/v1/logs",
-          export: t3Export,
+          url: "http://t2:4318/v1/logs",
+          export: t2Export,
           source: "environment" as const,
-          variable: "T3CODE_OTLP_LOGS_URL",
+          variable: "T2CODE_OTLP_LOGS_URL",
         },
       },
       {
         name: "an OTEL endpoint brings its headers and protocol over the fallback",
         otel: withLogs(otelExport),
-        t3Url: " ",
+        t2Url: " ",
         expected: {
           url: "http://otel:4318/v1/logs",
           export: {
@@ -285,47 +291,47 @@ describe("OtelEnvironment", () => {
       {
         name: "a signal the OTEL variables turned off does not fall through",
         otel: withLogs(OtelEnvironment.OtelSignal.Off()),
-        t3Url: undefined,
+        t2Url: undefined,
         expected: undefined,
       },
       {
         name: "an unset signal takes the first non-blank fallback",
         otel: withLogs(OtelEnvironment.OtelSignal.Unset()),
-        t3Url: undefined,
+        t2Url: undefined,
         expected: {
           url: "http://settings:4318/v1/logs",
-          export: t3Export,
+          export: t2Export,
           source: "settings" as const,
         },
       },
       {
         name: "a desktop bootstrap URL that differs from the setting wins as the desktop's own",
         otel: withLogs(OtelEnvironment.OtelSignal.Unset()),
-        t3Url: undefined,
+        t2Url: undefined,
         bootstrapUrl: "http://desktop:4318/v1/logs",
         expected: {
           url: "http://desktop:4318/v1/logs",
-          export: t3Export,
+          export: t2Export,
           source: "bootstrap" as const,
         },
       },
       {
         name: "a desktop bootstrap URL that forwards the setting counts as the setting",
         otel: withLogs(OtelEnvironment.OtelSignal.Unset()),
-        t3Url: undefined,
+        t2Url: undefined,
         bootstrapUrl: " http://settings:4318/v1/logs ",
         expected: {
           url: "http://settings:4318/v1/logs",
-          export: t3Export,
+          export: t2Export,
           source: "settings" as const,
         },
       },
-    ])("$name", ({ otel, t3Url, bootstrapUrl = "", expected }) => {
+    ])("$name", ({ otel, t2Url, bootstrapUrl = "", expected }) => {
       assert.deepStrictEqual(
         OtelEnvironment.resolveSignalEndpoint(
           otel,
           "logs",
-          { url: t3Url, export: t3Export },
+          { url: t2Url, export: t2Export },
           { bootstrapUrl, settingsUrl: "http://settings:4318/v1/logs" },
         ),
         expected,
