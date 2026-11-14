@@ -83,7 +83,7 @@ are more than five minutes apart. A completed turn or a planned shutdown resets
 that limit.
 
 Updates from the previous orchestration system preserve conversation transcripts but cannot carry
-every kind of runtime history forward. Read [Threads from older T3 Code versions](./thread-migration.md)
+every kind of runtime history forward. Read [Threads from older T2 Code versions](./thread-migration.md)
 before continuing an important older thread.
 
 ## When versions don't match
@@ -92,7 +92,7 @@ A client and server must speak the same orchestration protocol. If they do not, 
 refused rather than running half-upgraded:
 
 - An app newer than the server is blocked before connecting, with a notice telling you to update
-  T3 Code on the machine named in the notice.
+  T2 Code on the machine named in the notice.
 - A server newer than your app refuses the connection with an update message.
 
 Update the side the notice names, then reconnect.

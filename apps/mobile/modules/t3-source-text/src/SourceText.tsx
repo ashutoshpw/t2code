@@ -1,7 +1,7 @@
 import React, { type ComponentRef, type Ref } from "react";
 import { Platform, StyleSheet, Text, type TextProps, type TextStyle } from "react-native";
-import T3SourceTextRunNativeComponent from "./T3SourceTextRunNativeComponent";
-import T3SourceTextNativeComponent from "./T3SourceTextNativeComponent";
+import T2SourceTextRunNativeComponent from "./T2SourceTextRunNativeComponent";
+import T2SourceTextNativeComponent from "./T2SourceTextNativeComponent";
 import { flattenStyles } from "./util";
 
 const TextAncestorContext = React.createContext<[boolean, TextStyle]>([false, {}]);
@@ -36,7 +36,7 @@ export function SourceText({ style, children, nativeTextRef, ...props }: SourceT
         if (React.isValidElement(child)) return child;
         if (typeof child !== "string" && typeof child !== "number") return null;
         return (
-          <T3SourceTextRunNativeComponent
+          <T2SourceTextRunNativeComponent
             key={index}
             style={flattenedStyle}
             {...flattenedStyle}
@@ -50,9 +50,9 @@ export function SourceText({ style, children, nativeTextRef, ...props }: SourceT
   }
   return (
     <TextAncestorContext.Provider value={contextValue}>
-      <T3SourceTextNativeComponent allowFontScaling selectable {...props} style={flattenedStyle}>
+      <T2SourceTextNativeComponent allowFontScaling selectable {...props} style={flattenedStyle}>
         {runs}
-      </T3SourceTextNativeComponent>
+      </T2SourceTextNativeComponent>
     </TextAncestorContext.Provider>
   );
 }

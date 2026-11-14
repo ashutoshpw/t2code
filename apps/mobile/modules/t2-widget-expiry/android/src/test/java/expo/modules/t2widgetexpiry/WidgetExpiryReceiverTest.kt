@@ -1,4 +1,4 @@
-package expo.modules.t3widgetexpiry
+package expo.modules.t2widgetexpiry
 
 import android.app.AlarmManager
 import android.content.Context
@@ -50,7 +50,7 @@ class WidgetExpiryReceiverTest {
     )
     assertTrue(
       context.getSharedPreferences(
-        "expo.modules.t3widgetexpiry.DEADLINES",
+        "expo.modules.t2widgetexpiry.DEADLINES",
         Context.MODE_PRIVATE
       ).all.isEmpty()
     )

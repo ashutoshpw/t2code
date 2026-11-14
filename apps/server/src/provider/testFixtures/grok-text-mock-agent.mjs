@@ -15,7 +15,7 @@ const completePrompt = (id) => {
       sessionId,
       update: {
         sessionUpdate: "agent_message_chunk",
-        content: { type: "text", text: process.env.T3_ACP_PROMPT_RESPONSE_TEXT ?? "" },
+        content: { type: "text", text: process.env.T2_ACP_PROMPT_RESPONSE_TEXT ?? "" },
       },
     },
   });
@@ -24,8 +24,8 @@ const completePrompt = (id) => {
 
 for await (const line of NodeReadline.createInterface({ input: process.stdin })) {
   const request = JSON.parse(line);
-  if (process.env.T3_ACP_REQUEST_LOG_PATH) {
-    NodeFS.appendFileSync(process.env.T3_ACP_REQUEST_LOG_PATH, `${line}\n`);
+  if (process.env.T2_ACP_REQUEST_LOG_PATH) {
+    NodeFS.appendFileSync(process.env.T2_ACP_REQUEST_LOG_PATH, `${line}\n`);
   }
   if (request.method === undefined) {
     if (request.id === permissionRequestId && pendingPromptId !== undefined) {
@@ -66,7 +66,7 @@ for await (const line of NodeReadline.createInterface({ input: process.stdin }))
       result = {};
       break;
     case "session/prompt":
-      if (process.env.T3_ACP_REQUEST_PERMISSION) {
+      if (process.env.T2_ACP_REQUEST_PERMISSION) {
         pendingPromptId = request.id;
         write({
           jsonrpc: "2.0",

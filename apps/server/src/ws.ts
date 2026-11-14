@@ -273,10 +273,7 @@ import {
   splitLargeSocketFrames,
 } from "@t2code/shared/socketFrameParts";
 import { isTelemetryIdHash } from "@t2code/shared/telemetryId";
-import {
-  sameUsageLimitCommandCoverage,
-  withUsageLimitsCommands,
-} from "@t2code/shared/usageLimits";
+import { sameUsageLimitCommandCoverage, withUsageLimitsCommands } from "@t2code/shared/usageLimits";
 import * as AgentSessionScanner from "./project/AgentSessionScanner.ts";
 import * as AgentSessionImporter from "./project/AgentSessionImporter.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";
@@ -2981,6 +2978,7 @@ export const layerWsRpc = (
                 }),
             ),
           ),
+        [WS_METHODS.projectsCreateFileUploadUrl]: (input) => issueProjectFileUploadUrl(input),
         [WS_METHODS.projectsMutate]: (mutation) =>
           startup.enqueueCommand(mutateProject(mutation)).pipe(
             Effect.mapError(

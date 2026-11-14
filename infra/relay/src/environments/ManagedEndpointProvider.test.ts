@@ -1150,7 +1150,7 @@ describe("ManagedEndpointProvider", () => {
     return Effect.gen(function* () {
       const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
-      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3773 } as const;
+      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3772 } as const;
       const provisioned = yield* provider.provision({ ...key, origin });
       expect(yield* provider.release(key)).toBe(true);
 
@@ -1535,7 +1535,7 @@ describe("ManagedEndpointProvider", () => {
         const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
         yield* provider.provision({
           ...key,
-          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         });
         const result = yield* Effect.result(provider.release({ ...key, markReleased: true }));
         expect((yield* allocations.get(key))?.tunnelReleasedAt).toBe(
@@ -1580,7 +1580,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       expect(yield* provider.release({ ...key, markReleased: true })).toBe(false);
       expect((yield* allocations.get(key))?.tunnelReleasedAt).toBeNull();

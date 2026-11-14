@@ -44,7 +44,7 @@ export function Notice(props: {
         className={cn(
           "min-w-0 flex-1",
           danger ? "text-danger-foreground" : "text-foreground",
-          !props.floating && "font-t3-medium",
+          !props.floating && "font-t2-medium",
         )}
       >
         {props.message}

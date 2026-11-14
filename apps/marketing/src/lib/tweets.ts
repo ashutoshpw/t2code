@@ -92,6 +92,11 @@ export const tweets = [
     link: "https://x.com/ryanrhughes/status/2093051703616573769",
   },
   {
+    handle: "developedbyed",
+    content: "might say alpha but T2 code is pretty awesome, really fast too",
+    link: "https://x.com/developedbyed/status/2030627970532921605",
+  },
+  {
     handle: "PavolRusnak",
     content:
       "Super pleasantly surprised with @t2dotcodes\n\nSpent countless hours trying to get OpenClaw or Hermes Agent working for my use cases to no avail\n\nBut with t2 everything just works as expected and on my first try!",

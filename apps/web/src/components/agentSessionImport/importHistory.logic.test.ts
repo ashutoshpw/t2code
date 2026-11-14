@@ -1,6 +1,6 @@
 import { ProjectId } from "@t2code/contracts";
 import type { AtomCommandResult } from "@t2code/client-runtime/state/runtime";
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
+import { AsyncResult } from "effect/reactivity";
 import * as Cause from "effect/Cause";
 import { describe, expect, it } from "vite-plus/test";
 

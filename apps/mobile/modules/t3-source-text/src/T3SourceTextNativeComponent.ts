@@ -20,6 +20,6 @@ interface NativeProps extends ViewProps {
   onSelectionChange?: CodegenTypes.BubblingEventHandler<SelectionChangeEvent>;
 }
 
-export default codegenNativeComponent<NativeProps>("T3SourceText", {
+export default codegenNativeComponent<NativeProps>("T2SourceText", {
   excludedPlatforms: ["android"],
 });

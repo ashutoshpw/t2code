@@ -1966,7 +1966,7 @@ describe("PiAdapterV2", () => {
       }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
-  it.effect("stops provider-initiated work that has no T3 turn owner", () =>
+  it.effect("stops provider-initiated work that has no T2 turn owner", () =>
     Effect.gen(function* () {
       const fake = yield* makeFakePi;
       const { runtime, takeEvent } = yield* openRuntime(fake);
@@ -2089,7 +2089,7 @@ describe("PiAdapterV2", () => {
     }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
-  it.effect("injects the T3 MCP extension and bearer when a session exists", () =>
+  it.effect("injects the T2 MCP extension and bearer when a session exists", () =>
     Effect.gen(function* () {
       yield* (yield* McpProviderSessions.McpProviderSessions).set({
         environmentId: EnvironmentId.make("environment-pi-mcp"),
@@ -2112,10 +2112,10 @@ describe("PiAdapterV2", () => {
       assert.notInclude(spawn.args, "--offline");
       assert.isUndefined(spawn.env.PI_OFFLINE);
       assert.isTrue(extensions.some((path) => path?.endsWith("pi-t3-mcp-extension.ts")));
-      assert.equal(spawn.env.T3_MCP_URL, "http://127.0.0.1:43123/mcp");
-      assert.equal(spawn.env.T3_MCP_BEARER_TOKEN, "secret-pi-token");
-      assert.equal(spawn.env.T3_PI_RUNTIME_MODE, "full-access");
-      assert.equal(spawn.env.T3CODE_THREAD_ID, THREAD_ID);
+      assert.equal(spawn.env.T2_MCP_URL, "http://127.0.0.1:43123/mcp");
+      assert.equal(spawn.env.T2_MCP_BEARER_TOKEN, "secret-pi-token");
+      assert.equal(spawn.env.T2_PI_RUNTIME_MODE, "full-access");
+      assert.equal(spawn.env.T2CODE_THREAD_ID, THREAD_ID);
     }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
@@ -2332,8 +2332,7 @@ describe("PiAdapterV2", () => {
         yield* replacement.emit({ type: "agent_settled" });
         const terminal = yield* takeEvent((event) => event.type === "turn.terminal");
         assert.isTrue(terminal.type === "turn.terminal" && terminal.status === "completed");
-      }
-    }).pipe(Effect.scoped, Effect.provide(layerTest)),
+      }    }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
   it.effect("rejects a resume while a turn is active", () =>

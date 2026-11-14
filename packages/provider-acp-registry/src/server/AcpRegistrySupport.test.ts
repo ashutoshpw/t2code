@@ -569,7 +569,7 @@ describe("AcpRegistrySupport", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const cacheDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-acp-registry-uv-path-collision-",
+        prefix: "t2-acp-registry-uv-path-collision-",
       });
       const toolchain = yield* makeFakeUvToolchain(cacheDir);
       const userBin = path.join(cacheDir, "user-bin");

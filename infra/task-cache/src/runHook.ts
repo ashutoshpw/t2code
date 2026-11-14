@@ -11,7 +11,7 @@ export default function start({ root }: { readonly root: string }) {
   endpoint.username = "";
   endpoint.password = "";
   const stop =
-    process.env.T3_TASK_CACHE_TELEMETRY === "off"
+    process.env.T2_TASK_CACHE_TELEMETRY === "off"
       ? undefined
       : observeSummaries(root, endpoint.href.replace(/\/$/, ""), process.env);
   const finish = async () => {

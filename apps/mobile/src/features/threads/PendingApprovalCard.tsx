@@ -61,7 +61,7 @@ export function PendingApprovalCard(props: PendingApprovalCardProps) {
           accessibilityState={{ expanded: explanationOpen }}
           onPress={() => setExplanationOpen((open) => !open)}
         >
-          <Text className="font-t3-bold text-xs text-foreground-secondary underline">
+          <Text className="font-t2-bold text-xs text-foreground-secondary underline">
             {FULL_ACCESS_OVERRIDE_QUESTION}
           </Text>
           {explanationOpen ? (

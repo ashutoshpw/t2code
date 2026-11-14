@@ -1,7 +1,7 @@
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import type { EnvironmentId } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { AsyncResult } from "effect/reactivity";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, View } from "react-native";
 
@@ -58,15 +58,15 @@ export function SettingsEnvironmentRenameRouteScreen({
       input: nextLabel,
     });
     setSaving(false);
-    if (AsyncResult.isSuccess(result)) {
-      navigation.goBack();
+    if (AsyncResult.isFailure(result)) {
+      const error = Cause.squash(result.cause);
+      Alert.alert(
+        "Could not rename environment",
+        error instanceof Error ? error.message : "The environment name was not saved.",
+      );
       return;
     }
-    const error = Cause.squash(result.cause);
-    Alert.alert(
-      "Could not rename environment",
-      error instanceof Error ? error.message : "The environment name was not saved.",
-    );
+    navigation.goBack();
   };
 
   return (

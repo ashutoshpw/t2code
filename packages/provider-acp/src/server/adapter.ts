@@ -38,7 +38,7 @@ import { AgentScope, AgentScopeThreadId } from "@t2code/shared/AgentScope";
 import { HTML_RENDER_TOOL_NAME } from "@t2code/shared/htmlRender";
 import { modelSelectionsEqual } from "@t2code/shared/model";
 import { type SelfInvocation, selfInvocationArgs } from "@t2code/shared/nodeRuntime";
-import { resolveT3McpToolId } from "@t2code/shared/t3McpToolPresentation";
+import { resolveT2McpToolId } from "@t2code/shared/t2McpToolPresentation";
 import {
   compactDynamicToolOutput,
   htmlRenderFromToolItem,
@@ -4371,7 +4371,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
             const input =
               mcpIdentity.input ?? unknownRecord(rawInputRecord?.arguments) ?? rawInputRecord ?? {};
             let output = rawOutput === undefined ? undefined : acpMcpToolCallOutput(rawOutput);
-            const isHtmlRender = resolveT3McpToolId(toolName) === HTML_RENDER_TOOL_NAME;
+            const isHtmlRender = resolveT2McpToolId(toolName) === HTML_RENDER_TOOL_NAME;
             const isError =
               compactDynamicToolOutput(output)?.isError === true ||
               compactDynamicToolOutput(rawOutputRecord?.result)?.isError === true;

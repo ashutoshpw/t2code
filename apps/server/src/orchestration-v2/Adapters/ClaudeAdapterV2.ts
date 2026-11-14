@@ -415,7 +415,7 @@ export function spawnClaudeProcessGroup(
     [
       "-c",
       CLAUDE_GROUP_WATCH_SCRIPT,
-      "t3-claude",
+      "t2-claude",
       cwd.startsWith("/") ? cwd : `./${cwd}`,
       options.command,
       ...options.args,
@@ -2109,12 +2109,12 @@ function parseClaudeInteger(text: string): number {
 }
 
 // Claude Code defers MCP tools behind ToolSearch, so the agent only finds
-// t3_background_wait when the system prompt says when to reach for it.
+// t2_background_wait when the system prompt says when to reach for it.
 const CLAUDE_BACKGROUND_WAIT_INSTRUCTIONS = `
 
 ### Background work you wait on
 
-To wait for a background command or Monitor you started (tests, a build), call \`t3_background_wait\` with its task ID before you end your turn. Do not mark work you leave running, or PRs. T3 MCP tools are deferred: load one with ToolSearch before you call it.
+To wait for a background command or Monitor you started (tests, a build), call \`t2_background_wait\` with its task ID before you end your turn. Do not mark work you leave running, or PRs. T3 MCP tools are deferred: load one with ToolSearch before you call it.
 `;
 
 // Claude 5.1+ returns text written before a tool call as a progress update, which the API
@@ -2415,31 +2415,31 @@ export const readClaudeLaunchArgSettings = Effect.fn("ClaudeAdapterV2.readLaunch
   },
 );
 
-export const CLAUDE_T3_MCP_TOOL_WILDCARD = "mcp__t3-code__*";
+export const CLAUDE_T2_MCP_TOOL_WILDCARD = "mcp__t2-code__*";
 
 // Keep in sync with OrchestratorToolkit Tool.Readonly annotations; ClaudeAdapterV2.test.ts checks this.
-export const CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
-  "mcp__t3-code__orchestrator_capabilities",
-  "mcp__t3-code__list_scheduled_tasks",
-  "mcp__t3-code__t3_background_wait",
-  "mcp__t3-code__t3_thread_list",
-  "mcp__t3-code__t3_thread_wait",
-  "mcp__t3-code__t3_worktree_status",
-  "mcp__t3-code__t3_worktree_list",
-  "mcp__t3-code__t3_project_list",
-  "mcp__t3-code__t3_project_read",
-  "mcp__t3-code__t3_thread_search",
-  "mcp__t3-code__t3_preview_list",
-  "mcp__t3-code__t3_environment_read",
-  "mcp__t3-code__t3_environment_links",
-  "mcp__t3-code__t3_theme_read",
-  "mcp__t3-code__html_preview",
-  "mcp__t3-code__html_render",
-  "mcp__t3-code__send_to_user",
+export const CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
+  "mcp__t2-code__orchestrator_capabilities",
+  "mcp__t2-code__list_scheduled_tasks",
+  "mcp__t2-code__t2_background_wait",
+  "mcp__t2-code__t2_thread_list",
+  "mcp__t2-code__t2_thread_wait",
+  "mcp__t2-code__t2_worktree_status",
+  "mcp__t2-code__t2_worktree_list",
+  "mcp__t2-code__t2_project_list",
+  "mcp__t2-code__t2_project_read",
+  "mcp__t2-code__t2_thread_search",
+  "mcp__t2-code__t2_preview_list",
+  "mcp__t2-code__t2_environment_read",
+  "mcp__t2-code__t2_environment_links",
+  "mcp__t2-code__t2_theme_read",
+  "mcp__t2-code__html_preview",
+  "mcp__t2-code__html_render",
+  "mcp__t2-code__send_to_user",
 ];
 
 // request_secret can wait an hour; exceed Claude's default 60 s timeout.
-export const CLAUDE_T3_MCP_TOOL_TIMEOUT_MS = 65 * 60 * 1_000;
+export const CLAUDE_T2_MCP_TOOL_TIMEOUT_MS = 65 * 60 * 1_000;
 
 // allowedTools pre-approves calls; tools controls availability. Pre-approve T3 tools for headless modes,
 // limited to annotated read-only tools in read-only sandboxes.
@@ -2457,18 +2457,18 @@ export function claudeMcpQueryOverrides(input: {
     return input.allowedTools === undefined ? {} : { allowedTools: input.allowedTools };
   }
   const mcpAllowedTools = input.readOnlySandbox
-    ? CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS
-    : [CLAUDE_T3_MCP_TOOL_WILDCARD];
+    ? CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS
+    : [CLAUDE_T2_MCP_TOOL_WILDCARD];
   return {
     allowedTools: Array.from(new Set([...(input.allowedTools ?? []), ...mcpAllowedTools])),
     mcpServers: {
-      "t3-code": {
+      "t2-code": {
         type: "http",
         url: session.endpoint,
         headers: {
           Authorization: session.authorizationHeader,
         },
-        timeout: CLAUDE_T3_MCP_TOOL_TIMEOUT_MS,
+        timeout: CLAUDE_T2_MCP_TOOL_TIMEOUT_MS,
       },
     },
   };
@@ -8499,7 +8499,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
             const { liveQuery, toolCall } = input;
             if (
               !toolCall.toolName.startsWith("mcp__") ||
-              toolCall.toolName.startsWith("mcp__t3-code__") ||
+              toolCall.toolName.startsWith("mcp__t2-code__") ||
               !claudeSupportsMcpApps(liveQuery.capabilities)
             ) {
               return undefined;

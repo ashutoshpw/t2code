@@ -59,17 +59,17 @@ Running `vp run dev` through an agent's own shell tool does not attach it to thi
 
 ### State and ports
 
-Linked worktrees default to their own `.t3/userdata`, even when `T2CODE_HOME` is set.
-The main checkout defaults to `~/.t3/dev`. An explicit `--home-dir` wins in both cases.
+Linked worktrees default to their own `.t2/userdata`, even when `T2CODE_HOME` is set.
+The main checkout defaults to `~/.t2/dev`. An explicit `--home-dir` wins in both cases.
 The first start in a worktree seeds its empty database from a read-only copy of
-`~/.t3/userdata/statev2.sqlite` if the source is at most 500 MiB. Larger sources warn
+`~/.t2/userdata/statev2.sqlite` if the source is at most 500 MiB. Larger sources warn
 and dev starts with an empty database. `--no-seed` or `T2CODE_DEV_SEED=0` skips seeding.
 To copy a larger source, run `vp run migrate-dev-db` with dev stopped. It may use
 substantial disk space before pruning.
 The first start in any checkout also builds the native resource monitor with Cargo when
 `native/resource-monitor/target` has no binary. Without Rust, dev starts with a warning
 and no process telemetry; install Rust and run `vp run build:resource-monitor`.
-Never run a development server against the live `~/.t3/userdata`.
+Never run a development server against the live `~/.t2/userdata`.
 See [test data](../../AGENTS.md#test-data) for copying a consistent database snapshot.
 
 Read ports from the `[dev-runner]` output. Worktrees derive stable preferences from their paths,

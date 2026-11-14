@@ -237,7 +237,7 @@ describe("check-rebrand", () => {
         { file: "docs/user/example.md", line: "The connected T3 server manages the device hub." },
         { file: "apps/web/src/example.tsx", line: `"not a child of the T3 Server"` },
         { file: "apps/web/src/example.ts", line: "The T2 server chooses tool versions." },
-        { file: "packages/shared/src/example.ts", line: `const legacy = "~/.t3";` },
+        { file: "packages/shared/src/example.ts", line: `const legacy = "~/.t2";` },
       ],
       EMPTY_BASELINE,
     );

@@ -62,7 +62,7 @@ The host's tunnel is up, but it cannot reach T3 Code on the host. Common causes:
 - T3 Code on the host stopped, crashed, or is still starting.
 - T3 Code restarted on a different port, for example after an update, and the
   tunnel still points at the old port.
-- The server binds only one network address with `T3CODE_HOST`. The tunnel
+- The server binds only one network address with `T2CODE_HOST`. The tunnel
   sends requests to `127.0.0.1`, so the server must also listen there.
 
 Fix: restart T3 Code on the host. For the background service, run

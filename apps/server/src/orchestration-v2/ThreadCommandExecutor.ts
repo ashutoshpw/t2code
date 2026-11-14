@@ -14,7 +14,7 @@ export class ThreadCommandExecutor extends Context.Service<
      */
     readonly withDeletionLock: <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
   }
->()("t3/orchestration-v2/ThreadCommandExecutor") {}
+>()("@t2code/cli/orchestration-v2/ThreadCommandExecutor") {}
 
 export const make = Effect.gen(function* () {
   const deletion = yield* Semaphore.make(1);

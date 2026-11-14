@@ -46,7 +46,7 @@ export class PeerForwarding extends Context.Service<
   {
     /**
      * Runs `tool` in the linked environment `environmentId` with `params`. A
-     * `t3_thread_wait` goes in pieces short enough to survive any route.
+     * `t2_thread_wait` goes in pieces short enough to survive any route.
      */
     readonly call: <T extends Tool.Any>(
       scope: Scope,
@@ -54,19 +54,19 @@ export class PeerForwarding extends Context.Service<
       environmentId: EnvironmentId,
       params: Tool.Parameters<T>,
     ) => Effect.Effect<Tool.Success<T>, OrchestratorMcpFailure>;
-    /** `t3_thread_read` there. */
+    /** `t2_thread_read` there. */
     readonly readThread: (
       scope: Scope,
       environmentId: EnvironmentId,
       input: OrchestratorMcpThreadReadInput,
     ) => Effect.Effect<OrchestratorMcpThreadReadResult, OrchestratorMcpFailure>;
-    /** `t3_thread_interrupt` there. */
+    /** `t2_thread_interrupt` there. */
     readonly interruptThread: (
       scope: Scope,
       environmentId: EnvironmentId,
       input: OrchestratorMcpThreadInterruptInput,
     ) => Effect.Effect<OrchestratorMcpThreadInterruptResult, OrchestratorMcpFailure>;
-    /** `t3_thread_wait` there, bounded like a local wait. */
+    /** `t2_thread_wait` there, in pieces short enough to survive any route. */
     readonly waitForThread: (
       scope: Scope,
       environmentId: EnvironmentId,
@@ -194,7 +194,7 @@ const make = Effect.gen(function* () {
   const readThread: PeerForwarding["Service"]["readThread"] = (scope, environmentId, input) =>
     forward<OrchestratorMcpThreadReadResult>(
       scope,
-      "t3_thread_read",
+      "t2_thread_read",
       OrchestratorMcpThreadReadInput,
       OrchestratorMcpThreadReadResult,
       environmentId,
@@ -208,28 +208,44 @@ const make = Effect.gen(function* () {
   ) =>
     forward<OrchestratorMcpThreadInterruptResult>(
       scope,
-      "t3_thread_interrupt",
+      "t2_thread_interrupt",
       OrchestratorMcpThreadInterruptInput,
       OrchestratorMcpThreadInterruptResult,
       environmentId,
       input,
     );
 
-  const waitForThread: PeerForwarding["Service"]["waitForThread"] = (scope, environmentId, input) =>
-    forward<OrchestratorMcpThreadWaitResult>(
-      scope,
-      "t3_thread_wait",
-      OrchestratorMcpThreadWaitInput,
-      OrchestratorMcpThreadWaitResult,
-      environmentId,
-      {
-        ...input,
-        timeoutMs: Math.min(
-          MAX_WAIT_TIMEOUT_MS,
-          Math.max(1, input.timeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS),
-        ),
-      },
+  const waitForThread: PeerForwarding["Service"]["waitForThread"] = Effect.fn(
+    "PeerForwarding.waitForThread",
+  )(function* (scope, environmentId, input) {
+    let remaining = Math.min(
+      MAX_WAIT_TIMEOUT_MS,
+      Math.max(1, input.timeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS),
     );
+    let runId = input.runId;
+    while (true) {
+      const chunk = Math.min(remaining, FORWARDED_WAIT_CHUNK_MS);
+      const result = yield* forward<OrchestratorMcpThreadWaitResult>(
+        scope,
+        "t2_thread_wait",
+        OrchestratorMcpThreadWaitInput,
+        OrchestratorMcpThreadWaitResult,
+        environmentId,
+        {
+          threadId: input.threadId,
+          ...(runId === undefined ? {} : { runId }),
+          timeoutMs: chunk,
+          ...(input.untilDelegatedWorkSettled === undefined
+            ? {}
+            : { untilDelegatedWorkSettled: input.untilDelegatedWorkSettled }),
+        },
+      );
+      remaining -= chunk;
+      if (!result.timedOut || remaining <= 0) return result;
+      // Later pieces wait for the run the first one picked, not a newer one.
+      runId = result.runId ?? undefined;
+    }
+  });
 
   // While the beta is off, agents start nothing over links. Tasks already running there keep
   // following through readThread, waitForThread and interruptThread, so they still finish.
@@ -241,7 +257,7 @@ const make = Effect.gen(function* () {
     const forwarded: Effect.Effect<
       Tool.Success<typeof tool>,
       OrchestratorMcpFailure
-    > = tool.name === "t3_thread_wait"
+    > = tool.name === "t2_thread_wait"
       ? (waitForThread(
           scope,
           environmentId,

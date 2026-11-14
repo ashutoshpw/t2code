@@ -240,7 +240,7 @@ export const OrchestratorMcpDelegateTaskResult = Schema.Struct({
   resultContextTransferId: Schema.NullOr(ContextTransferId),
   hasPendingQuestion: Schema.Boolean.annotate({
     description:
-      "A question blocks the child and ends a wait. Answer via `t3_pending_request` on `childThreadId`, or the user does.",
+      "A question blocks the child and ends a wait. Answer via `t2_pending_request` on `childThreadId`, or the user does.",
   }),
   pendingApproval: Schema.NullOr(
     Schema.Struct({ requestId: RuntimeRequestId, kind: ProviderRequestKind, runId: RunId }),
@@ -746,7 +746,7 @@ export const OrchestratorMcpScheduledTask = Schema.Struct({
   lastRunStatus: ScheduledTaskRunStatus,
   webhookUrl: Schema.optional(Schema.String).annotate({
     description:
-      "Webhook bearer URL, returned only on task creation to callers allowed to run it. Lists and updates omit it; the user can copy it from Settings. Creation may omit it without T3 Connect remote access or run permission.",
+      "Public URL for the sender. Absent: no T2 Connect tunnel. The user must enable T2 Connect remote access.",
   }),
   webhookSignature: Schema.optional(Schema.Literals(["none", "set"])),
   blockedByPolicy: Schema.optional(Schema.String).annotate({

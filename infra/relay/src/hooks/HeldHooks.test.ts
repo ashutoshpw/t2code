@@ -28,11 +28,11 @@ const allocationFor = (
   environmentId,
   hostname: `${key}.example.test`,
   tunnelId: `tunnel-${key}`,
-  tunnelName: `t3coderelay-managedendpoint-dev-${key}`,
+  tunnelName: `t2coderelay-managedendpoint-dev-${key}`,
   dnsRecordId: "dns-record-id",
   readyAt: ready ? "2026-05-25T00:00:00.000Z" : null,
   tunnelReleasedAt: null,
-  origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+  origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
   updatedAt: "2026-05-25T00:00:00.000Z",
   generation: 1,
 });
