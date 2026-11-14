@@ -77,21 +77,21 @@ function withFakeClaudeEnv<A, E, R>(
     const pathDelimiter = (yield* HostProcess.isWindows) ? ";" : ":";
     const hostEnv = yield* HostProcess.Environment;
     const fakeClaudeEnv: Record<string, string | undefined> = {
-      T3_FAKE_CLAUDE_OUTPUT: input.output,
-      T3_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE: input.rejectsNoSessionPersistence
+      T2_FAKE_CLAUDE_OUTPUT: input.output,
+      T2_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE: input.rejectsNoSessionPersistence
         ? "1"
         : undefined,
-      T3_FAKE_CLAUDE_EXIT_CODE: input.exitCode === undefined ? undefined : String(input.exitCode),
-      T3_FAKE_CLAUDE_STDERR: input.stderr,
-      T3_FAKE_CLAUDE_ARGS_MUST_CONTAIN: input.argsMustContain,
-      T3_FAKE_CLAUDE_ARGS_MUST_NOT_CONTAIN: input.argsMustNotContain,
-      T3_FAKE_CLAUDE_STDIN_MUST_CONTAIN: input.stdinMustContain,
-      T3_FAKE_CLAUDE_CWD_MUST_NOT_BE: input.cwdMustNotBe,
-      T3_FAKE_CLAUDE_CONFIG_DIR_MUST_BE: input.configDirMustBe,
+      T2_FAKE_CLAUDE_EXIT_CODE: input.exitCode === undefined ? undefined : String(input.exitCode),
+      T2_FAKE_CLAUDE_STDERR: input.stderr,
+      T2_FAKE_CLAUDE_ARGS_MUST_CONTAIN: input.argsMustContain,
+      T2_FAKE_CLAUDE_ARGS_MUST_NOT_CONTAIN: input.argsMustNotContain,
+      T2_FAKE_CLAUDE_STDIN_MUST_CONTAIN: input.stdinMustContain,
+      T2_FAKE_CLAUDE_CWD_MUST_NOT_BE: input.cwdMustNotBe,
+      T2_FAKE_CLAUDE_CONFIG_DIR_MUST_BE: input.configDirMustBe,
     };
     const environment: NodeJS.ProcessEnv = {
       ...Object.fromEntries(
-        Object.entries(hostEnv).filter(([name]) => !name.startsWith("T3_FAKE_CLAUDE_")),
+        Object.entries(hostEnv).filter(([name]) => !name.startsWith("T2_FAKE_CLAUDE_")),
       ),
       ...Object.fromEntries(
         Object.entries(fakeClaudeEnv).filter(([, value]) => value !== undefined),
