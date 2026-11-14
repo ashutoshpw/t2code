@@ -1,5 +1,6 @@
 import { assert, it } from "@effect/vitest";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
+import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   DEFAULT_SERVER_SETTINGS,
   ProjectId,
@@ -143,6 +144,8 @@ it.effect.each([
         }),
       }),
       Layer.mock(ServerEnvironment.ServerEnvironment)({
+        getEnvironmentId: Effect.succeed(EnvironmentId.make("bootstrap-environment")),
+        setEnvironmentLabel: () => Effect.void,
         getDescriptor: Effect.succeed({
           environmentId: EnvironmentId.make("bootstrap-environment"),
           label: "Test environment",

@@ -26,13 +26,13 @@ describe("tailscale endpoint provider", () => {
   it.effect("does not advertise Proton's CGNAT address as a Tailscale pairing endpoint", () =>
     Effect.gen(function* () {
       const endpoints = yield* resolveTailscaleAdvertisedEndpoints({
-        port: 3773,
+        port: 3772,
         networkInterfaces: protonAndTailscaleInterfaces,
         statusJson: `{"Self":{"TailscaleIPs":["100.74.126.34"]}}`,
       });
       assert.deepEqual(
         endpoints.map((endpoint) => endpoint.httpBaseUrl),
-        ["http://100.74.126.34:3773/"],
+        ["http://100.74.126.34:3772/"],
       );
     }).pipe(Effect.provide(layerUnusedTailscaleExternalServices)),
   );
@@ -42,7 +42,7 @@ describe("tailscale endpoint provider", () => {
       for (const interfaceName of ["tailscale0", "Tailscale"]) {
         for (const statusJson of [null, "not-json", `{"Self":{"TailscaleIPs":[]}}`]) {
           const endpoints = yield* resolveTailscaleAdvertisedEndpoints({
-            port: 3773,
+            port: 3772,
             networkInterfaces: {
               pvpnksintrf1: protonAndTailscaleInterfaces.pvpnksintrf1,
               [interfaceName]: protonAndTailscaleInterfaces.tailscale0,
@@ -51,7 +51,7 @@ describe("tailscale endpoint provider", () => {
           });
           assert.deepEqual(
             endpoints.map((endpoint) => endpoint.httpBaseUrl),
-            ["http://100.74.126.34:3773/"],
+            ["http://100.74.126.34:3772/"],
           );
         }
       }
@@ -63,7 +63,7 @@ describe("tailscale endpoint provider", () => {
     () =>
       Effect.gen(function* () {
         const endpoints = yield* resolveTailscaleAdvertisedEndpoints({
-          port: 3773,
+          port: 3772,
           networkInterfaces: {
             utun3: [{ address: "100.85.0.1", family: "IPv4", internal: false }],
             utun4: [
@@ -75,7 +75,7 @@ describe("tailscale endpoint provider", () => {
         });
         assert.deepEqual(
           endpoints.map((endpoint) => endpoint.httpBaseUrl),
-          ["http://100.74.126.34:3773/"],
+          ["http://100.74.126.34:3772/"],
         );
       }).pipe(Effect.provide(layerUnusedTailscaleExternalServices)),
   );
