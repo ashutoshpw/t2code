@@ -647,21 +647,30 @@ export class SpaceEditorAdapter {
   }
 
   setDatabaseViews(id: SpaceBlockId, viewIds: ReadonlyArray<SpaceViewId>): Command {
+    return this.#replaceDatabaseContent(id, (content) => ({ ...content, viewIds: [...viewIds] }));
+  }
+
+  setDatabaseTitleHidden(id: SpaceBlockId, hidden: boolean): Command {
+    return this.#replaceDatabaseContent(id, ({ hideTitle: _, ...rest }) =>
+      hidden ? { ...rest, hideTitle: true } : rest,
+    );
+  }
+
+  #replaceDatabaseContent(
+    id: SpaceBlockId,
+    next: (content: SpaceDatabaseBlock["content"]) => SpaceDatabaseBlock["content"],
+  ): Command {
     return (state, dispatch) => {
       if (this.#options.canChangeStructure?.() === false) return false;
       const entry = entries(state.doc).find((item) => item.block.id === id);
       if (!entry || !isSpaceDatabaseBlock(entry.block)) return false;
-      const same =
-        entry.block.content.viewIds.length === viewIds.length &&
-        entry.block.content.viewIds.every((viewId, i) => viewId === viewIds[i]);
-      if (same) return this.#options.canEdit?.() !== false;
-      if (!dispatch) return this.#options.canEdit?.() !== false;
-      const next = { ...entry.block, content: { ...entry.block.content, viewIds: [...viewIds] } };
-      return this.#dispatch(
-        state.tr.setNodeMarkup(entry.pos, undefined, { ...entry.node.attrs, block: next }),
-        dispatch,
-        { database: true },
-      );
+      const content = next(entry.block.content);
+      if (!dispatch || JSON.stringify(content) === JSON.stringify(entry.block.content))
+        return this.#options.canEdit?.() !== false;
+      const attrs = { ...entry.node.attrs, block: { ...entry.block, content } };
+      return this.#dispatch(state.tr.setNodeMarkup(entry.pos, undefined, attrs), dispatch, {
+        database: true,
+      });
     };
   }
 

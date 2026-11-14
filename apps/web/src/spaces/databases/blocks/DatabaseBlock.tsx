@@ -22,6 +22,7 @@ interface DatabaseBlockProps {
   readonly databaseId: SpaceDatabaseId;
   readonly viewIds: ReadonlyArray<SpaceViewId>;
   readonly actions: DatabaseBlockActions;
+  readonly hideTitle?: boolean;
 }
 
 const Note = ({ children }: { readonly children: string }) => (
@@ -39,6 +40,7 @@ function Loaded({
   databaseId,
   viewIds,
   actions,
+  hideTitle,
 }: DatabaseBlockProps & { readonly host: DatabaseBlockHost }) {
   const layout = useDatabaseLayout();
   const { model, error, refresh } = useDatabaseModel(host.environmentId, databaseId);
@@ -66,6 +68,7 @@ function Loaded({
         actions={actions}
         layout={layout}
         host={host}
+        hideTitle={hideTitle === true}
       />
     </>
   );

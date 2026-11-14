@@ -21,7 +21,7 @@ import type {
 import { Button } from "~/components/ui/button";
 
 import type { DatabaseBlockActions } from "../blocks/actions";
-import type { DatabaseBlockHost, DatabaseLayout } from "../blocks/DatabaseBlockHost";
+import type { DatabaseLayout, DatabaseSurfaceHost } from "../blocks/DatabaseBlockHost";
 import { createDatabaseActions, type ActionsState } from "../data/actions";
 import { Latest } from "../data/latest";
 import { databaseStores } from "../data/stores";
@@ -38,9 +38,7 @@ import { DatabaseSkeleton } from "./DatabaseSkeleton";
 import { isLinkedBlock } from "../blocks/useIsLinkedBlock";
 import { AddFirstView } from "./AddFirstView";
 import { DatabaseTitle } from "./DatabaseTitle";
-import { LinkedHeader } from "./LinkedHeader";
-import { DatabaseToolbar } from "./DatabaseToolbar";
-import { ViewTabs } from "./ViewTabs";
+import { DatabaseHeader } from "./DatabaseHeader";
 import { viewEntry } from "./viewRegistry";
 import type { DatabaseViewProps } from "./viewTypes";
 
@@ -83,13 +81,20 @@ export function DatabaseSurface({
   actions: blockActions,
   layout,
   host,
+  hideTitle = false,
+  fullPage = false,
+  initialViewId = null,
 }: {
   readonly model: DatabaseModel;
   readonly blockId: SpaceBlockId;
   readonly viewIds: ReadonlyArray<SpaceViewId>;
   readonly actions: DatabaseBlockActions;
   readonly layout: DatabaseLayout;
-  readonly host: DatabaseBlockHost;
+  readonly host: DatabaseSurfaceHost;
+  readonly hideTitle?: boolean;
+  /** The database's own page: a large title, and tab edits go through the server. */
+  readonly fullPage?: boolean;
+  readonly initialViewId?: SpaceViewId | null;
 }) {
   const registry = useContext(RegistryContext);
   const stores = databaseStores(registry);
@@ -97,10 +102,21 @@ export function DatabaseSurface({
   const [edits, setEdits] = useState<ViewEdits>([]);
   const [editIds] = useState(() => new Latest(0));
   const [activeId, setActiveId] = useState<SpaceViewId | null>(
-    () => stores.activeView.get(blockId) ?? null,
+    () => initialViewId ?? stores.activeView.get(blockId) ?? null,
   );
   const [search, setSearch] = useState("");
   const [control, setControl] = useState<OpenControl>(null);
+  const [collapsed, setCollapsed] = useState(() => stores.collapsed.has(blockId));
+  const fold = (next: boolean) => {
+    if (next) stores.collapsed.add(blockId);
+    else stores.collapsed.delete(blockId);
+    setCollapsed(next);
+  };
+  // A control opening from elsewhere (a property menu, the title menu) needs the toolbar it lives in.
+  const openControl = (next: OpenControl) => {
+    if (next !== null) fold(false);
+    setControl(next);
+  };
 
   const revision = model.database.revision;
   const tabs = resolveBlockViews(viewIds, model.views).map((view) =>
@@ -189,24 +205,36 @@ export function DatabaseSurface({
 
   return (
     <DatabaseActionsContext.Provider value={actions}>
-      <OpenControlContext.Provider value={[control, setControl]}>
+      <OpenControlContext.Provider value={[control, openControl]}>
         <section
           aria-label={model.database.title || "Database"}
           className="min-w-0 space-y-1.5 text-sm"
         >
-          {linked ? (
-            <LinkedHeader model={model} host={host} />
-          ) : layout === "inline" ? (
-            <DatabaseTitle model={model} />
+          {fullPage || (!hideTitle && (linked || layout === "inline")) ? (
+            <DatabaseTitle
+              model={model}
+              blockActions={blockActions}
+              variant={fullPage ? "page" : "inline"}
+              linked={linked}
+              host={host}
+              canEditLayout={Boolean(context?.known)}
+            />
           ) : null}
-          <ViewTabs
-            tabs={tabs}
-            activeId={view?.id ?? null}
-            permissions={model.permissions}
-            onChoose={choose}
-            actions={actions}
-            blockActions={blockActions}
-          />
+          <DatabaseContext.Provider value={context}>
+            <DatabaseHeader
+              model={model}
+              collapsed={collapsed}
+              onCollapsed={fold}
+              tabs={tabs}
+              activeId={view?.id ?? null}
+              hasView={context !== null}
+              blockActions={blockActions}
+              actions={actions}
+              search={search}
+              onSearch={setSearch}
+              onChoose={choose}
+            />
+          </DatabaseContext.Provider>
           {context === null ? (
             linked ? (
               <AddFirstView model={model} actions={actions} />
@@ -226,7 +254,6 @@ export function DatabaseSurface({
             )
           ) : (
             <DatabaseContext.Provider value={context}>
-              <DatabaseToolbar search={search} onSearch={setSearch} />
               <ViewBody key={context.view.id} search={search} type={context.known?.type ?? null} />
             </DatabaseContext.Provider>
           )}

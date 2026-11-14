@@ -7,187 +7,73 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  arrayMove,
-  horizontalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { PlusIcon, TableIcon } from "lucide-react";
-import { useState, type KeyboardEvent, type MouseEvent } from "react";
-import type { SpaceDatabaseView, SpaceViewId } from "@t2code/contracts/spaces";
+import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import { PlusIcon } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
+import type { SpaceViewId } from "@t2code/contracts/spaces";
 
 import { Button } from "~/components/ui/button";
-import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
-import { cn } from "~/lib/utils";
-import type { DatabaseBlockActions } from "../blocks/actions";
+import { observeResize } from "~/lib/observeResize";
+import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import type { DatabaseActions } from "../data/actions";
-import type { DatabasePermissions } from "../data/useDatabaseModel";
-import { RenameInput } from "./RenameInput";
-import { DeleteViewDialog, ViewTabMenu } from "./ViewTabMenu";
-import { VIEW_REGISTRY, VIEW_TYPES, viewEntry } from "./viewRegistry";
+import type { DatabaseModel } from "../data/useDatabaseModel";
+import { NewViewPicker } from "./NewViewPicker";
+import { TAB_CLASS, TabIcon, ViewTab } from "./ViewTab";
+import { ViewsPopover, type ViewListProps } from "./ViewsOverflow";
+import { fitTabs } from "./viewTabs.logic";
 
 // Module constants: dnd-kit rebuilds its sensors when the options object changes.
 const POINTER_OPTIONS = { activationConstraint: { distance: 4 } } as const;
 const MODIFIERS = [restrictToHorizontalAxis];
+const GAP = 2;
+const PLUS_WIDTH = 28;
 
-function TabIcon({ type }: { readonly type: string }) {
-  const Icon = viewEntry(type)?.icon ?? TableIcon;
-  return <Icon aria-hidden className="size-3.5 shrink-0" />;
-}
-
-function Tab({
-  view,
-  active,
-  manage,
-  renaming,
-  siblings,
-  onChoose,
-  onRename,
+function AddViewButton({
+  model,
   actions,
-  index,
-  count,
-  onMove,
 }: {
-  readonly view: SpaceDatabaseView;
-  readonly active: boolean;
-  readonly manage: boolean;
-  readonly renaming: boolean;
-  readonly siblings: number;
-  readonly onChoose: (id: SpaceViewId) => void;
-  readonly onRename: (id: SpaceViewId | null) => void;
+  readonly model: DatabaseModel;
   readonly actions: DatabaseActions;
-  readonly index: number;
-  readonly count: number;
-  readonly onMove: (from: number, to: number) => void;
 }) {
-  const { setNodeRef, listeners, transform, transition, isDragging } = useSortable({
-    id: view.id,
-    disabled: !manage || renaming,
-  });
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  // The dialog opens once the menu has finished closing, or the menu leaves inert guards over it.
-  const [deleteRequested, setDeleteRequested] = useState(false);
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (renaming) return;
-    const step = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
-    if (step === 0) return;
-    event.preventDefault();
-    if (event.altKey && manage) {
-      const target = index + step;
-      if (target >= 0 && target < count) onMove(index, target);
-      return;
-    }
-    const tabs = event.currentTarget
-      .closest('[role="tablist"]')
-      ?.querySelectorAll<HTMLElement>('[role="tab"]');
-    tabs?.[Math.max(0, Math.min(count - 1, index + step))]?.focus();
-  };
-  if (renaming)
-    return (
-      <div ref={setNodeRef} style={style} className="shrink-0 px-1">
-        <RenameInput
-          label="View name"
-          value={view.name}
-          onCommit={(name) => {
-            actions.renameView(view.id, name);
-            onRename(null);
-          }}
-          onCancel={() => onRename(null)}
-        />
-      </div>
-    );
-  const buttonProps = {
-    type: "button",
-    role: "tab",
-    "aria-selected": active,
-    tabIndex: active ? 0 : -1,
-    className: cn(
-      "flex h-7 max-w-44 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-      active
-        ? "bg-accent text-foreground"
-        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-    ),
-    onKeyDown,
-    onContextMenu: (event: MouseEvent<HTMLElement>) => {
-      if (!manage) return;
-      event.preventDefault();
-      onChoose(view.id);
-      setMenuOpen(true);
-    },
-  } as const;
-  const content = (
-    <>
-      <TabIcon type={view.type} />
-      <span className="truncate">{view.name}</span>
-    </>
-  );
+  const [open, setOpen] = useState(false);
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn("shrink-0", isDragging && "z-10 opacity-80")}
-      {...listeners}
-    >
-      {active && manage ? (
-        <Menu
-          open={menuOpen}
-          onOpenChange={setMenuOpen}
-          onOpenChangeComplete={(open) => {
-            if (!open && deleteRequested) {
-              setDeleteRequested(false);
-              setConfirming(true);
-            }
-          }}
-        >
-          <MenuTrigger render={<button {...buttonProps}>{content}</button>} />
-          <MenuPopup align="start">
-            <ViewTabMenu
-              view={view}
-              deletable={siblings > 1}
-              actions={actions}
-              onRename={() => onRename(view.id)}
-              onDelete={() => setDeleteRequested(true)}
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <PopoverTrigger
+              render={<Button variant="ghost-muted" size="icon-xs" aria-label="Add a view" />}
             />
-          </MenuPopup>
-        </Menu>
-      ) : (
-        <button {...buttonProps} onClick={() => onChoose(view.id)}>
-          {content}
-        </button>
-      )}
-      <DeleteViewDialog
-        open={confirming}
-        onOpenChange={setConfirming}
-        onConfirm={() => void actions.deleteView(view.id)}
-      />
-    </div>
+          }
+        >
+          <PlusIcon />
+        </TooltipTrigger>
+        <TooltipPopup side="bottom">Add a view</TooltipPopup>
+      </Tooltip>
+      <PopoverPopup align="start" padding="none" width="sm">
+        <NewViewPicker
+          mode="create"
+          model={model}
+          actions={actions}
+          onDone={() => setOpen(false)}
+        />
+      </PopoverPopup>
+    </Popover>
   );
 }
 
+/** The views as tabs that fit their row; the rest sit behind "N more…". */
 export function ViewTabs({
-  tabs,
-  activeId,
-  permissions,
-  onChoose,
-  actions,
-  blockActions,
+  list,
+  renaming,
+  onRenaming,
 }: {
-  readonly tabs: ReadonlyArray<SpaceDatabaseView>;
-  readonly activeId: SpaceViewId | null;
-  readonly permissions: DatabasePermissions;
-  readonly onChoose: (id: SpaceViewId) => void;
-  readonly actions: DatabaseActions;
-  readonly blockActions: DatabaseBlockActions;
+  readonly list: ViewListProps;
+  readonly renaming: SpaceViewId | null;
+  readonly onRenaming: (id: SpaceViewId | null) => void;
 }) {
-  const [renaming, setRenaming] = useState<SpaceViewId | null>(null);
-  const manage = permissions.views && permissions.block;
+  const { model, views: tabs, activeId, manage, canReorder, actions } = list;
   const sensors = useSensors(useSensor(PointerSensor, POINTER_OPTIONS));
   const ids = tabs.map((view) => view.id);
   const move = (from: number, to: number) => actions.reorderViews(arrayMove(ids, from, to));
@@ -195,60 +81,107 @@ export function ViewTabs({
     if (!over || active.id === over.id) return;
     move(ids.indexOf(active.id as SpaceViewId), ids.indexOf(over.id as SpaceViewId));
   };
-  void blockActions;
+
+  const signature = tabs.map((view) => `${view.id}:${view.type}:${view.name}`).join("|");
+  const measuring = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState<{ signature: string; widths: number[] } | null>(null);
+  const [width, setWidth] = useState<number | null>(null);
+  const [strip, setStrip] = useState<HTMLDivElement | null>(null);
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Measure tab widths from the DOM when names change; the strip fits tabs to its width.
+  useLayoutEffect(() => {
+    const widths = [...(measuring.current?.children ?? [])].map((child) =>
+      child instanceof HTMLElement ? child.offsetWidth : 0,
+    );
+    setMeasured({ signature, widths });
+  }, [signature]);
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Follow the strip's width to refit tabs.
+  useLayoutEffect(() => {
+    if (strip === null) return;
+    return observeResize(strip, ([entry]) => {
+      const next = Math.floor(entry?.contentRect.width ?? 0);
+      setWidth((current) => (current === next ? current : next));
+    });
+  }, [strip]);
+
+  const fresh = measured?.signature === signature ? measured.widths : null;
+  const fit =
+    fresh === null || width === null || fresh.length !== tabs.length + 1
+      ? null
+      : fitTabs({
+          widths: fresh.slice(0, -1),
+          available: width - (manage ? PLUS_WIDTH : 0),
+          gap: GAP,
+          moreWidth: fresh[fresh.length - 1] ?? 0,
+          activeIndex: tabs.findIndex((view) => view.id === activeId),
+        });
+  const visible = fit === null ? tabs : fit.visible.flatMap((index) => tabs[index] ?? []);
+  const hidden = fit?.hidden.length ?? 0;
   return (
-    <div className="flex items-center gap-1">
+    <div ref={setStrip} className="relative flex min-w-48 flex-1 items-center gap-0.5">
+      <div
+        aria-hidden
+        inert
+        className="pointer-events-none invisible absolute inset-0 overflow-hidden"
+      >
+        <div ref={measuring} className="absolute start-0 top-0 flex gap-0.5 whitespace-nowrap">
+          {tabs.map((view) => (
+            <span key={view.id} className="inline-flex shrink-0 items-center">
+              <span className={TAB_CLASS}>
+                <TabIcon type={view.type} />
+                <span className="truncate">{view.name}</span>
+              </span>
+              {manage ? <span className="-ms-1 size-6 shrink-0" /> : null}
+            </span>
+          ))}
+          <span className="inline-flex h-7 items-center px-2 text-xs">99 more…</span>
+        </div>
+      </div>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
         modifiers={MODIFIERS}
         onDragEnd={onDragEnd}
       >
-        <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
+        <SortableContext
+          items={visible.map((view) => view.id)}
+          strategy={horizontalListSortingStrategy}
+        >
           <div
             role="tablist"
             aria-label="Database views"
-            className="flex min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none]"
+            className="flex min-w-0 items-center gap-0.5 overflow-hidden"
           >
-            {tabs.map((view, index) => (
-              <Tab
+            {visible.map((view) => (
+              <ViewTab
                 key={view.id}
                 view={view}
                 active={view.id === activeId}
                 manage={manage}
+                canReorder={canReorder}
                 renaming={renaming === view.id}
-                siblings={tabs.length}
-                onChoose={onChoose}
-                onRename={setRenaming}
-                actions={actions}
-                index={index}
+                deletable={tabs.length > 1}
+                index={ids.indexOf(view.id)}
                 count={tabs.length}
+                actions={actions}
+                onChoose={list.onChoose}
+                onRename={onRenaming}
+                onEdit={list.onEdit}
+                onCopyLink={list.onCopyLink}
                 onMove={move}
               />
             ))}
           </div>
         </SortableContext>
       </DndContext>
-      {manage ? (
-        <Menu>
-          <MenuTrigger
-            render={<Button variant="ghost-muted" size="icon-sm" aria-label="Add a view" />}
-          >
-            <PlusIcon className="size-4" />
-          </MenuTrigger>
-          <MenuPopup align="start">
-            {VIEW_TYPES.map((type) => {
-              const { icon: Icon, label } = VIEW_REGISTRY[type];
-              return (
-                <MenuItem key={type} onClick={() => void actions.createView(type)}>
-                  <Icon />
-                  {label}
-                </MenuItem>
-              );
-            })}
-          </MenuPopup>
-        </Menu>
+      {hidden > 0 ? (
+        <ViewsPopover
+          {...list}
+          trigger={<Button variant="ghost-muted" size="xs" aria-label={`${hidden} more views`} />}
+        >
+          {hidden} more…
+        </ViewsPopover>
       ) : null}
+      {manage ? <AddViewButton model={model} actions={actions} /> : null}
     </div>
   );
 }

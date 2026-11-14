@@ -26,6 +26,8 @@ const writerRejects = (error: unknown): boolean =>
 interface DatabaseStores {
   writer(environmentId: EnvironmentId): DatabaseWriter;
   readonly activeView: Map<string, SpaceViewId>;
+  /** Blocks whose tabs and toolbar this viewer folded away; never written to the document. */
+  readonly collapsed: Set<string>;
   /** The view a row was last opened from, so its page lists properties in that view's order. */
   readonly openedFrom: Map<string, SpaceViewId>;
   readonly optionHints: Map<string, { readonly name: string; readonly color: string }>;
@@ -100,6 +102,7 @@ export function databaseStores(registry: AtomRegistry.AtomRegistry): DatabaseSto
       return writer;
     },
     activeView: new Map(),
+    collapsed: new Set(),
     openedFrom: new Map(),
     optionHints: new Map(),
   };

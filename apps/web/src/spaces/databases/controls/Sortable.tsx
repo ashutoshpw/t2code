@@ -71,6 +71,7 @@ export function SortableRow({
   id,
   label,
   disabled = false,
+  reveal = false,
   className,
   children,
 }: {
@@ -78,6 +79,8 @@ export function SortableRow({
   /** Names the handle: "Reorder <label>". */
   readonly label: string;
   readonly disabled?: boolean;
+  /** Shows the handle only while the row is hovered or the handle has focus. */
+  readonly reveal?: boolean;
   readonly className?: string;
   readonly children: ReactNode;
 }) {
@@ -97,6 +100,7 @@ export function SortableRow({
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
         "flex items-center gap-1.5",
+        reveal && "group/sortable",
         isDragging && "z-10 bg-popover opacity-80",
         className,
       )}
@@ -106,7 +110,11 @@ export function SortableRow({
         type="button"
         disabled={disabled}
         aria-label={`Reorder ${label}`}
-        className="inline-flex size-5 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-default disabled:opacity-40"
+        className={cn(
+          "inline-flex size-5 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-default disabled:opacity-40",
+          reveal &&
+            "opacity-0 group-hover/sortable:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100",
+        )}
         {...attributes}
         {...listeners}
         // Alt+Arrow moves a row without a drag: dnd-kit's key listeners sit on the document,

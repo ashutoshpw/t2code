@@ -1,4 +1,4 @@
-import type { SpaceKnownDatabaseProperty } from "@t2code/contracts/spaces";
+import type { SpaceDatabaseColor, SpaceKnownDatabaseProperty } from "@t2code/contracts/spaces";
 import type {
   SpaceSharedDataSource,
   SpaceSharedDatabaseRow,
@@ -9,6 +9,7 @@ import type { MouseEvent, ReactNode } from "react";
 
 import { SpacePageGlyph } from "~/spaces/SpacePageGlyph";
 import { CellValue, type CellValueVariant } from "~/spaces/databases/primitives/CellValue";
+import { isDatabaseColor } from "~/spaces/databases/primitives/colors";
 import { OptionChip } from "~/spaces/databases/primitives/OptionChip";
 import { Button } from "../../ui/button";
 import { optionHintFor } from "./cells";
@@ -120,6 +121,26 @@ export function ShowMore({
 
 export const BUCKET_CAP = MAX_BUCKET_ROWS;
 
+function bucketLabel(props: ViewProps, bucket: NonNullable<WindowData["groups"]>[number]) {
+  const propertyId = props.view.group?.property;
+  const property = propertyId === undefined ? undefined : props.source.properties[propertyId];
+  return groupLabel(
+    bucket,
+    propertyId === undefined ? null : (props.known.get(propertyId) ?? null),
+    property?.name ?? "value",
+    optionHintFor(props.data.options),
+  );
+}
+
+/** The palette color of a group header, when the bucket has one. */
+export function bucketColor(
+  props: ViewProps,
+  bucket: NonNullable<WindowData["groups"]>[number],
+): SpaceDatabaseColor | undefined {
+  const color = bucketLabel(props, bucket).color;
+  return color !== undefined && isDatabaseColor(color) ? color : undefined;
+}
+
 export function GroupTitle({
   props,
   bucket,
@@ -127,14 +148,7 @@ export function GroupTitle({
   readonly props: ViewProps;
   readonly bucket: NonNullable<WindowData["groups"]>[number];
 }) {
-  const propertyId = props.view.group?.property;
-  const property = propertyId === undefined ? undefined : props.source.properties[propertyId];
-  const label = groupLabel(
-    bucket,
-    propertyId === undefined ? null : (props.known.get(propertyId) ?? null),
-    property?.name ?? "value",
-    optionHintFor(props.data.options),
-  );
+  const label = bucketLabel(props, bucket);
   return (
     <span className="flex min-w-0 items-center gap-2">
       {label.color === undefined ? (

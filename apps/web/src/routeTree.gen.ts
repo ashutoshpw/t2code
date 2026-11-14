@@ -59,6 +59,7 @@ import { Route as ChatEnvironmentIdThreadIdRouteImport } from './routes/_chat.$e
 import { Route as ChatSpacesEnvironmentIdSpaceIdRouteImport } from './routes/_chat.spaces.$environmentId.$spaceId'
 import { Route as ChatSpacesEnvironmentIdSpaceIdIndexRouteImport } from './routes/_chat.spaces.$environmentId.$spaceId.index'
 import { Route as ChatSpacesEnvironmentIdSpaceIdPageIdRouteImport } from './routes/_chat.spaces.$environmentId.$spaceId.$pageId'
+import { Route as ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRouteImport } from './routes/_chat.spaces.$environmentId.$spaceId.database.$databaseId'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -317,6 +318,12 @@ const ChatSpacesEnvironmentIdSpaceIdPageIdRoute =
     path: '/$pageId',
     getParentRoute: () => ChatSpacesEnvironmentIdSpaceIdRoute,
   } as any)
+const ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRoute =
+  ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRouteImport.update({
+    id: '/database/$databaseId',
+    path: '/database/$databaseId',
+    getParentRoute: () => ChatSpacesEnvironmentIdSpaceIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ChatIndexRoute
@@ -368,6 +375,7 @@ export interface FileRoutesByFullPath {
   '/spaces/$environmentId/$spaceId': typeof ChatSpacesEnvironmentIdSpaceIdRouteWithChildren
   '/spaces/$environmentId/$spaceId/$pageId': typeof ChatSpacesEnvironmentIdSpaceIdPageIdRoute
   '/spaces/$environmentId/$spaceId/': typeof ChatSpacesEnvironmentIdSpaceIdIndexRoute
+  '/spaces/$environmentId/$spaceId/database/$databaseId': typeof ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRoute
 }
 export interface FileRoutesByTo {
   '/approve-agent': typeof ApproveAgentRoute
@@ -417,6 +425,7 @@ export interface FileRoutesByTo {
   '/spaces': typeof ChatSpacesIndexRoute
   '/spaces/$environmentId/$spaceId/$pageId': typeof ChatSpacesEnvironmentIdSpaceIdPageIdRoute
   '/spaces/$environmentId/$spaceId': typeof ChatSpacesEnvironmentIdSpaceIdIndexRoute
+  '/spaces/$environmentId/$spaceId/database/$databaseId': typeof ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -470,6 +479,7 @@ export interface FileRoutesById {
   '/_chat/spaces/$environmentId/$spaceId': typeof ChatSpacesEnvironmentIdSpaceIdRouteWithChildren
   '/_chat/spaces/$environmentId/$spaceId/$pageId': typeof ChatSpacesEnvironmentIdSpaceIdPageIdRoute
   '/_chat/spaces/$environmentId/$spaceId/': typeof ChatSpacesEnvironmentIdSpaceIdIndexRoute
+  '/_chat/spaces/$environmentId/$spaceId/database/$databaseId': typeof ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -523,6 +533,7 @@ export interface FileRouteTypes {
     | '/spaces/$environmentId/$spaceId'
     | '/spaces/$environmentId/$spaceId/$pageId'
     | '/spaces/$environmentId/$spaceId/'
+    | '/spaces/$environmentId/$spaceId/database/$databaseId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/approve-agent'
@@ -572,6 +583,7 @@ export interface FileRouteTypes {
     | '/spaces'
     | '/spaces/$environmentId/$spaceId/$pageId'
     | '/spaces/$environmentId/$spaceId'
+    | '/spaces/$environmentId/$spaceId/database/$databaseId'
   id:
     | '__root__'
     | '/_chat'
@@ -624,6 +636,7 @@ export interface FileRouteTypes {
     | '/_chat/spaces/$environmentId/$spaceId'
     | '/_chat/spaces/$environmentId/$spaceId/$pageId'
     | '/_chat/spaces/$environmentId/$spaceId/'
+    | '/_chat/spaces/$environmentId/$spaceId/database/$databaseId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -993,6 +1006,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatSpacesEnvironmentIdSpaceIdPageIdRouteImport
       parentRoute: typeof ChatSpacesEnvironmentIdSpaceIdRoute
     }
+    '/_chat/spaces/$environmentId/$spaceId/database/$databaseId': {
+      id: '/_chat/spaces/$environmentId/$spaceId/database/$databaseId'
+      path: '/database/$databaseId'
+      fullPath: '/spaces/$environmentId/$spaceId/database/$databaseId'
+      preLoaderRoute: typeof ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRouteImport
+      parentRoute: typeof ChatSpacesEnvironmentIdSpaceIdRoute
+    }
   }
 }
 
@@ -1061,6 +1081,7 @@ const ChatSettingsRouteWithChildren = ChatSettingsRoute._addFileChildren(
 interface ChatSpacesEnvironmentIdSpaceIdRouteChildren {
   ChatSpacesEnvironmentIdSpaceIdPageIdRoute: typeof ChatSpacesEnvironmentIdSpaceIdPageIdRoute
   ChatSpacesEnvironmentIdSpaceIdIndexRoute: typeof ChatSpacesEnvironmentIdSpaceIdIndexRoute
+  ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRoute: typeof ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRoute
 }
 
 const ChatSpacesEnvironmentIdSpaceIdRouteChildren: ChatSpacesEnvironmentIdSpaceIdRouteChildren =
@@ -1069,6 +1090,8 @@ const ChatSpacesEnvironmentIdSpaceIdRouteChildren: ChatSpacesEnvironmentIdSpaceI
       ChatSpacesEnvironmentIdSpaceIdPageIdRoute,
     ChatSpacesEnvironmentIdSpaceIdIndexRoute:
       ChatSpacesEnvironmentIdSpaceIdIndexRoute,
+    ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRoute:
+      ChatSpacesEnvironmentIdSpaceIdDatabaseDatabaseIdRoute,
   }
 
 const ChatSpacesEnvironmentIdSpaceIdRouteWithChildren =

@@ -14,7 +14,7 @@ import { readyWhen } from "../test/readyWhen";
 import { fakeController, testHost, TestHostProvider } from "../test/harness";
 import { createDatabaseBlock } from "./createDatabase";
 
-const state = vi.hoisted(() => ({ fake: null as unknown }));
+const state = vi.hoisted(() => ({ fake: null as unknown, hideable: true }));
 
 vi.mock(import("../data/ports"), async () => {
   const { fakePortsModule } = await import("../test/fakeDatabase");
@@ -22,7 +22,10 @@ vi.mock(import("../data/ports"), async () => {
 });
 vi.mock(import("../../../state/environments"), async (original) => {
   const { environmentWith } = await import("../test/environment");
-  return { ...(await original()), useEnvironment: (() => environmentWith(true)) as never };
+  return {
+    ...(await original()),
+    useEnvironment: (() => environmentWith(true, { hideTitle: state.hideable })) as never,
+  };
 });
 vi.mock(import("../../../state/spaces"), async (original) => ({
   ...(await original()),
@@ -153,7 +156,7 @@ describe("database block in the page editor", () => {
 });
 
 describe("database block handle menu", () => {
-  async function openMenu(item: string, block: SpaceBlock = database) {
+  async function openMenu(item: string | null, block: SpaceBlock = database) {
     // The handle sits in the gutter left of the column, so the editor needs room on both sides.
     await page.viewport(1200, 800);
     state.fake = new FakeDatabase();
@@ -175,7 +178,7 @@ describe("database block handle menu", () => {
     return readyWhen({ screen, onBatch }, async () => {
       await userEvent.hover(screen.getByRole("tablist", { name: "Database views" }));
       await userEvent.click(screen.getByRole("button", { name: "Block menu" }));
-      await userEvent.click(page.getByRole("menuitem", { name: item }));
+      if (item !== null) await userEvent.click(page.getByRole("menuitem", { name: item }));
     });
   }
 
@@ -209,6 +212,32 @@ describe("database block handle menu", () => {
     await vi.waitFor(() => expect(onBatch).toHaveBeenCalled());
     expect(page.getByText("Delete this database?").query()).toBeNull();
     expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).not.toContain('"type":"database"');
+  });
+
+  it("hides and shows the title, only on a server that stores the flag", async () => {
+    state.hideable = true;
+    const { screen } = await openMenu("Hide title");
+    await using _screen = screen;
+    const title = screen.getByRole("textbox", { name: "Database title" });
+    await expect.element(title).not.toBeInTheDocument();
+    await userEvent.hover(screen.getByRole("tablist", { name: "Database views" }));
+    await userEvent.click(screen.getByRole("button", { name: "Block menu" }));
+    await userEvent.click(page.getByRole("menuitem", { name: "Show title" }));
+    await expect.element(title).toBeVisible();
+  });
+
+  it("offers neither title item without the capability flag", async () => {
+    state.hideable = false;
+    const { screen } = await openMenu(null);
+    await using _screen = screen;
+    await expect.element(page.getByRole("menuitem", { name: "Delete database" })).toBeVisible();
+    await expect
+      .element(page.getByRole("menuitem", { name: "Hide title" }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(page.getByRole("menuitem", { name: "Show title" }))
+      .not.toBeInTheDocument();
+    state.hideable = true;
   });
 
   it("moves the block up", async () => {

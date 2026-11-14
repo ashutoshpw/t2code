@@ -431,7 +431,14 @@ export const SpaceDatabase = Schema.Struct({
   title: Schema.String,
   icon: Schema.optionalKey(SpacePageIcon),
   revision: NonNegativeInt,
-  home: Schema.NullOr(Schema.Struct({ pageId: SpacePageId, blockId: SpaceBlockId })),
+  // viewIds: the home block's tabs, for the full-page view.
+  home: Schema.NullOr(
+    Schema.Struct({
+      pageId: SpacePageId,
+      blockId: SpaceBlockId,
+      viewIds: Schema.optionalKey(Schema.Array(SpaceViewId)),
+    }),
+  ),
   live: Schema.Boolean,
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -499,7 +506,12 @@ export type SpaceRelatedPage = typeof SpaceRelatedPage.Type;
 export const SpaceDatabaseBlock = Schema.Struct({
   ...spaceBlockBase,
   type: Schema.Literal("database"),
-  content: Schema.Struct({ databaseId: SpaceDatabaseId, viewIds: Schema.Array(SpaceViewId) }),
+  content: Schema.Struct({
+    databaseId: SpaceDatabaseId,
+    viewIds: Schema.Array(SpaceViewId),
+    // Only true is stored; absence shows the title.
+    hideTitle: Schema.optionalKey(Schema.Literal(true)),
+  }),
 });
 export type SpaceDatabaseBlock = typeof SpaceDatabaseBlock.Type;
 

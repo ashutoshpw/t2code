@@ -7,7 +7,7 @@ import type {
 import { describe, expect, it } from "vite-plus/test";
 
 import { queryKey } from "./queryKey.ts";
-import { viewDependencies, viewQueryInput } from "./viewQuery.ts";
+import { applyLoadLimit, viewDependencies, viewQueryInput } from "./viewQuery.ts";
 
 const view = {
   id: "v1",
@@ -107,6 +107,24 @@ describe("viewQueryInput", () => {
     });
     expect(input.scope).toEqual({ parentRowId: null });
     expect(input.properties).toEqual(["a", "b"]);
+  });
+});
+
+describe("applyLoadLimit", () => {
+  const withLimit = (type: string, loadLimit: unknown) =>
+    ({ type, layout: { loadLimit } }) as unknown as SpaceDatabaseView;
+  it("caps the window and the rows per group of a table or board", () => {
+    expect(applyLoadLimit(withLimit("table", 25), { limit: 100 })).toEqual({ limit: 25 });
+    expect(applyLoadLimit(withLimit("board", 10), { limit: 100, rowsPerGroup: 30 })).toEqual({
+      limit: 10,
+      rowsPerGroup: 10,
+    });
+  });
+
+  it("ignores other view types and values that are not a load limit", () => {
+    const sizes = { limit: 100, rowsPerGroup: 30 };
+    expect(applyLoadLimit(withLimit("calendar", 10), sizes)).toBe(sizes);
+    expect(applyLoadLimit(withLimit("table", 7), sizes)).toBe(sizes);
   });
 });
 

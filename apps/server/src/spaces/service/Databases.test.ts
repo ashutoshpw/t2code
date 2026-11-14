@@ -47,6 +47,7 @@ it.layer(NodeServices.layer)("Spaces databases", (it) => {
         const got = yield* kit.get(created.databaseId);
         assert.isTrue(got.database.live);
         assert.equal(got.database.home?.pageId, page.id);
+        assert.deepEqual(got.database.home?.viewIds, [created.viewId]);
         assert.equal(Object.keys(got.dataSources[0]!.properties).length, 2);
         assert.lengthOf(got.views, 1);
         assert.equal(got.views[0]!.ownerBlockId, created.block?.blockId);
@@ -492,6 +493,49 @@ it.layer(NodeServices.layer)("Spaces databases", (it) => {
           ),
           "databases.maxViewsPerDatabase",
         );
+        const homeBlock = (hideTitle: boolean): C.SpaceBlock => ({
+          id: created.block!.blockId,
+          parentId: null,
+          order: "00000000000000000000000000000001",
+          type: "database",
+          version: 1,
+          content: {
+            databaseId: created.databaseId,
+            viewIds: [created.viewId],
+            hideTitle,
+          },
+        });
+        assert.equal(
+          yield* validationReason(
+            service.applyBlockBatch(
+              request("title-false", 1, [{ kind: "replace", block: homeBlock(false) }]),
+            ),
+          ),
+          "unsupported_block",
+        );
+        yield* service.applyBlockBatch(
+          request("title-hidden", 1, [{ kind: "replace", block: homeBlock(true) }]),
+        );
+        const added = yield* service.createView({
+          ...common,
+          mutationId: "tab-on-hidden",
+          dataSourceId: created.dataSourceId,
+          name: "Second",
+          type: "table",
+          block: { pageId: page.id, blockId: created.block!.blockId },
+        });
+        const hidden = yield* kit.get(created.databaseId);
+        assert.deepEqual(hidden.database.home?.viewIds, [created.viewId, added.viewId]);
+        const stored = (yield* service.readBlocks({
+          ...env,
+          pageId: page.id,
+          revision: 3,
+        })).blocks.find((block) => block.id === created.block!.blockId);
+        assert.deepEqual(stored?.content, {
+          databaseId: created.databaseId,
+          viewIds: [created.viewId, added.viewId],
+          hideTitle: true,
+        });
       }),
     ),
   );

@@ -1,6 +1,6 @@
 import { ArrowUpRightIcon } from "lucide-react";
 
-import type { DatabaseBlockHost } from "../blocks/DatabaseBlockHost";
+import type { DatabaseSurfaceHost } from "../blocks/DatabaseBlockHost";
 import type { DatabaseModel } from "../data/useDatabaseModel";
 
 /** A linked view's title: a link to the home page; the database is renamed there, not here. */
@@ -9,12 +9,17 @@ export function LinkedHeader({
   host,
 }: {
   readonly model: DatabaseModel;
-  readonly host: DatabaseBlockHost;
+  readonly host: DatabaseSurfaceHost;
 }) {
-  const { home, title, spaceId } = model.database;
+  const { home, title, spaceId, icon } = model.database;
   const label = title.trim() || "Untitled database";
   if (home === null)
-    return <p className="px-1 text-sm font-medium text-muted-foreground">{label}</p>;
+    return (
+      <p className="px-1 text-sm font-medium text-muted-foreground">
+        {icon === undefined ? "" : `${icon} `}
+        {label}
+      </p>
+    );
   return (
     <button
       type="button"
@@ -24,6 +29,7 @@ export function LinkedHeader({
       }
     >
       <ArrowUpRightIcon className="size-3.5 shrink-0" />
+      {icon === undefined ? null : <span aria-hidden>{icon}</span>}
       <span className="truncate">{label}</span>
     </button>
   );
