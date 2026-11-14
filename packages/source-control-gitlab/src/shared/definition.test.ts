@@ -27,7 +27,7 @@ describe("GitLab change request URLs", () => {
   });
 
   it("leaves issues and single-segment paths alone", () => {
-    expect(parse("https://gitlab.com/t2tools/t2code/-/issues/12")).toBeNull();
+    expect(parse("https://gitlab.com/ashutoshpw/t2code/-/issues/12")).toBeNull();
     expect(parse("https://gitlab.com/t2code/-/merge_requests/12")).toBeNull();
   });
 

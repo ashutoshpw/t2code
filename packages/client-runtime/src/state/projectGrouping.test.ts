@@ -79,11 +79,11 @@ describe("load balancing shared project machines", () => {
   });
 });
 const repositoryIdentity = {
-  canonicalKey: "github.com/t2tools/t2code",
+  canonicalKey: "github.com/ashutoshpw/t2code",
   locator: {
     source: "git-remote" as const,
     remoteName: "upstream",
-    remoteUrl: "https://github.com/t2tools/t2code.git",
+    remoteUrl: "https://github.com/ashutoshpw/t2code.git",
   },
   provider: SourceControlProviderKind.make("github"),
   owner: "t2tools",
@@ -304,7 +304,7 @@ describe("buildProjectGroups", () => {
 
     const groups = buildProjectGroups({ projects, settings: settings("repository") });
     expect(groups.map((group) => group.key)).toEqual([
-      "github.com/t2tools/t2code",
+      "github.com/ashutoshpw/t2code",
       "github.com/julius/t2code-fork",
     ]);
     expect(groups[1]?.members.map((member) => member.project.id)).toEqual(["fork", "fork-2"]);

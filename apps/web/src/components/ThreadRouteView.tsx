@@ -37,7 +37,7 @@ function useOpenThreadFamily(threadRef: ScopedThreadRef | null, missing: boolean
   const [mountedKey, setMountedKey] = useState<string | null>(null);
   const nextKey = missing || mountedKey === key ? key : null;
   if (nextKey !== mountedKey) setMountedKey(nextKey);
-  // oxlint-disable-next-line t2code/react-effect-budget -- holds the open thread's family in the thread family registry until the route leaves it
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- holds the open thread's family in the thread family registry until the route leaves it
   useEffect(() => {
     const ref = mountedKey === null ? null : parseScopedThreadKey(mountedKey);
     if (ref === null) return;
@@ -140,7 +140,7 @@ export function ThreadRouteView({
   });
   const environmentHasAnyThreads = environmentThreadRefs.length > 0 || environmentHasDraftThreads;
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- clears pending file drops and navigates the router home once a server thread is confirmed missing
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- clears pending file drops and navigates the router home once a server thread is confirmed missing
   useEffect(() => {
     if (target.kind !== "server" || !bootstrapComplete) {
       return;

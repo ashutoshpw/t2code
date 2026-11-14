@@ -142,7 +142,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
     if (config?.environment.capabilities.modelCatalogRefresh !== true) return;
     void refreshProviders({ environmentId, input: { modelCatalogOnly: true } });
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- asks the server for newly released models on every open; a parent, a keybinding or the palette can open the picker, so no one handler sees them all
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- asks the server for newly released models on every open; a parent, a keybinding or the palette can open the picker, so no one handler sees them all
   useEffect(() => {
     if (isMenuOpen) refreshModelCatalog();
   }, [isMenuOpen]);

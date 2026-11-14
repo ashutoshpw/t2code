@@ -171,13 +171,19 @@ export function newestCliReleaseVersion(
   return undefined;
 }
 
+export const NPM_PACKAGE_NAME = "@t2code/cli";
+/** Manifest fields that carry the migration head; `t3code` is what releases published before the rename carry. */
+export const NPM_MANIFEST_KEYS = ["t2code", "t3code"] as const;
+
+const MigrationField = Schema.Struct({ databaseMigration: Schema.Int });
 const NpmReleaseMigrationManifest = Schema.Struct({
-  t3code: Schema.Struct({ databaseMigration: Schema.Int }),
+  t2code: Schema.optionalKey(MigrationField),
+  t3code: Schema.optionalKey(MigrationField),
 });
 const decodeNpmReleaseMigrationManifest = Schema.decodeUnknownOption(NpmReleaseMigrationManifest);
 
-/** Highest database migration a release's server knows, from its npm `t3` manifest. */
+/** Highest database migration a release's server knows, from its npm manifest. */
 export function npmReleaseDatabaseMigration(manifest: unknown): number | undefined {
-  return Option.getOrUndefined(decodeNpmReleaseMigrationManifest(manifest))?.t3code
-    .databaseMigration;
+  const decoded = Option.getOrUndefined(decodeNpmReleaseMigrationManifest(manifest));
+  return (decoded?.t2code ?? decoded?.t3code)?.databaseMigration;
 }

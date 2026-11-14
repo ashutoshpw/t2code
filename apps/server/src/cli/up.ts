@@ -1,3 +1,4 @@
+import { NPM_PACKAGE_NAME } from "@t2code/shared/cliRelease";
 import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Config from "effect/Config";
 import * as ConfigProvider from "effect/ConfigProvider";
@@ -141,7 +142,7 @@ const formatSetup = (setup: Setup) => {
       !service.supported
         ? "unavailable"
         : service.installed
-          ? `installed · t3@${service.installedVersion ?? packageJson.version}`
+          ? `installed · ${NPM_PACKAGE_NAME}@${service.installedVersion ?? packageJson.version}`
           : "not installed",
     ],
     ...(setup.connect === null
@@ -367,7 +368,9 @@ const setUp = Effect.fn("cli.up")(function* (flags: {
     yield* printServeCommand("Background service unavailable.");
   } else {
     if (newer) {
-      yield* Console.log(`Keeping installed service version t3@${installedVersion}.`);
+      yield* Console.log(
+        `Keeping installed service version ${NPM_PACKAGE_NAME}@${installedVersion}.`,
+      );
     }
     if (update && !interactive) {
       yield* Console.log("Updating T2 Code. Running agent turns will stop.");

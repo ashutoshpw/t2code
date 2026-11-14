@@ -9,11 +9,11 @@ export function useDictationSubmissionShortcut(input: {
   onKeyDown(event: KeyboardEvent): void;
 }) {
   const latest = useRef(input);
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed inputs to the window keydown listener
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed inputs to the window keydown listener
   useEffect(() => {
     latest.current = input;
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed inputs to the window keydown listener
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed inputs to the window keydown listener
   useEffect(() => {
     if (!input.enabled) return;
     const onKeyDown = (event: KeyboardEvent) => {

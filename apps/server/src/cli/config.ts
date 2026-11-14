@@ -1,3 +1,5 @@
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { copyLegacyHome, describeLegacyHomeCopy } from "@t2code/shared/legacyT3Identity";
 import * as NetService from "@t2code/shared/Net";
 import {
   OtlpHeadersFromString,
@@ -335,6 +337,19 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
     normalizedFlags.baseDir,
     Option.fromUndefinedOr(env.t2Home),
   ).pipe(Option.filter((value) => value.trim().length > 0));
+  // Desktop owns this for itself and hands the server its home via the bootstrap.
+  if (
+    Option.isNone(explicitBaseDir) &&
+    bootstrap?.t2Home === undefined &&
+    devUrl === undefined &&
+    mode !== "desktop"
+  ) {
+    const copyResult = copyLegacyHome({ homeDirectory: yield* HostProcess.HomeDirectory });
+    const message = describeLegacyHomeCopy(copyResult);
+    if (message !== undefined) {
+      yield* copyResult._tag === "copied" ? Effect.logInfo(message) : Effect.logWarning(message);
+    }
+  }
   const baseDir = yield* resolveBaseDir(
     Option.getOrUndefined(
       resolveOptionPrecedence(explicitBaseDir, Option.fromUndefinedOr(bootstrap?.t2Home)),

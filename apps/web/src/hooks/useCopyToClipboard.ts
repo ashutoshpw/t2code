@@ -232,7 +232,7 @@ export function useCopyToClipboard<TContext = void>({
     );
   });
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- clears the copied-state reset timer on unmount
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- clears the copied-state reset timer on unmount
   React.useEffect(() => {
     return (): void => {
       if (timeoutIdRef.current) {

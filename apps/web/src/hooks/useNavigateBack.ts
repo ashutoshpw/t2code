@@ -18,6 +18,7 @@ export function useEscapeToGoBack(onEscape?: () => void) {
   const navigateBack = useNavigateBack();
   const handleEscape = onEscape ?? navigateBack;
 
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- subscribes to the window keydown listener for Escape while mounted
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat || event.isComposing || event.key !== "Escape")

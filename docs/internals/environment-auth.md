@@ -41,7 +41,7 @@ the request's Host header is not checked, because a LAN client can forge it.
 
 ### Page share links are public and read-only
 
-`/api/shared-page/*` ([pageShareHttp](../../apps/server/src/spaces/pageShareHttp.ts)) is reachable by anyone who can reach the tunnel, so it only reads. The credential is an HMAC of the share id under a server key and lives in the link's URL hash, which browsers never send in the page request. Every request re-checks the share, the Labs setting and the Connect hostname. A page is served only inside the shared root's tree, and an asset only when a live block of that page references it.
+`/api/shared-page/*` ([pageShareHttp](../../apps/server/src/spaces/pageShareHttp.ts)) is reachable by anyone who can reach the tunnel, so it only reads. The credential is an HMAC of the share id under a server key and lives in the link's URL hash, which browsers never send in the page request. The page route reads it from a request header so it stays out of proxy and relay URL logs; asset URLs load from `<img>`/`<video>` and keep it in the query. Page responses carry one block window with a cursor, and concurrent viewer requests are bounded. Every request re-checks the share, the Labs setting and the Connect hostname. A page is served only inside the shared root's tree, and an asset only when a live block of that page references it.
 
 ### MCP clients are a separate audience
 

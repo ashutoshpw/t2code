@@ -134,7 +134,7 @@ repeating the call's outcome and duration, so event counts are not call counts.
 
 ## Delivery
 
-The server sends batches to the ingest endpoint at `ingest.t3.codes`, which archives
+The server sends batches to the ingest endpoint at `ingest.t2.codes`, which archives
 every event and forwards some of them to PostHog. A send can fail after the endpoint
 has stored the batch, so every retry is a copy.
 [Delivery](../../apps/server/src/telemetry/AnalyticsService.ts) gives each event a

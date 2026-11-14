@@ -420,6 +420,8 @@ export function getMobileSpaceStructure(environmentId: EnvironmentId) {
       appAtomRegistry.update(spacesEnvironment.changed(environmentId), (value) => value + 1),
   });
   structures.set(environmentId, coordinator);
+  // Hydration belongs to the owner, not to each view; a failure lands in the owner's snapshot.
+  void coordinator.hydrate().catch(() => {});
   return coordinator;
 }
 
@@ -516,7 +518,7 @@ export function useSpacesReferenceController(environmentId: EnvironmentId, attem
     stamp: typeof stamp;
     owner: SpaceReferenceController;
   } | null>(null);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Own source queries by connection, grant and actual Spaces change generations; never remount the durable document.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Own source queries by connection, grant and actual Spaces change generations; never remount the durable document.
   useEffect(() => {
     if (!access.current() || !canBrowseSpaces(access.availability)) return;
     let active = true;

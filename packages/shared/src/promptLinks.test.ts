@@ -57,15 +57,15 @@ describe("parseNewThreadLink", () => {
 
   it("reads a pull request link, whose prompt is optional", () => {
     for (const pr of [
-      "pingdotgg/t2code/42",
-      "pingdotgg/t2code%2342",
-      "https://github.com/pingdotgg/t2code/pull/42/files",
+      "ashutoshpw/t2code/42",
+      "ashutoshpw/t2code%2342",
+      "https://github.com/ashutoshpw/t2code/pull/42/files",
     ]) {
       expect(parseNewThreadLink(`?pr=${pr}`)).toEqual({
         ok: true,
         value: {
           kind: "pull-request",
-          pullRequest: { owner: "pingdotgg", name: "t2code", number: 42 },
+          pullRequest: { owner: "ashutoshpw", name: "t2code", number: 42 },
           prompt: null,
         },
       });
@@ -96,7 +96,7 @@ describe("link round trips", () => {
   it("builds a link that parses back to the same prompt", () => {
     const link = buildNewThreadLink({
       prompt: "Swear count & rating?",
-      repository: { owner: "pingdotgg", name: "t2code" },
+      repository: { owner: "ashutoshpw", name: "t2code" },
       provider: "claudeAgent",
       model: "opus",
     });

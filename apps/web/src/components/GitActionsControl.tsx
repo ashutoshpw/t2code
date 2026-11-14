@@ -21,7 +21,7 @@ import type {
 } from "@t2code/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import * as Option from "effect/Option";
-import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { useDeadlinePassed } from "../hooks/useDeadline";
 import { useNowSecond } from "../hooks/useNowSecond";
 import { flushSync } from "react-dom";
@@ -1127,7 +1127,7 @@ export default function GitActionsControl({
   );
   const isProjectCloning = activeProjectClone !== null && activeProjectClone.phase !== "done";
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- persists the draft thread branch when the live git status subscription reports a different branch
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- persists the draft thread branch when the live git status subscription reports a different branch
   useEffect(() => {
     if (isGitActionRunning || isSelectingWorktreeBase || activeServerThread || isProjectCloning) {
       return;

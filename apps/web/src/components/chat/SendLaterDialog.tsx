@@ -42,7 +42,7 @@ function finish(at: string | null) {
 
 export function SendLaterDialogHost() {
   const request = useRequest((state) => state.request);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Unmounting the host dismisses the pending send-later request; the request queue lives outside React.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Unmounting the host dismisses the pending send-later request; the request queue lives outside React.
   useEffect(() => () => finish(null), []);
   return request ? <SendLaterDialog /> : null;
 }

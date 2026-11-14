@@ -404,6 +404,35 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     }),
   );
 
+  it.effect("copies a legacy home once and never when a home is chosen explicitly", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const { join } = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-legacy-home-" });
+      yield* fs.makeDirectory(join(home, ".t3", "userdata"), { recursive: true });
+      yield* fs.writeFileString(join(home, ".t3", "userdata", "settings.json"), "{}");
+      const flags = {
+        ...minimalDesktopFlags(""),
+        mode: Option.some("web" as const),
+        baseDir: Option.none<string>(),
+      };
+      const resolveWith = (env: Record<string, string>) =>
+        resolveServerConfig(flags, Option.some("Info")).pipe(
+          Effect.provideService(HostProcess.HomeDirectory, home),
+          Effect.provide(
+            Layer.mergeAll(ConfigProvider.layer(ConfigProvider.fromEnv({ env })), NetService.layer),
+          ),
+        );
+
+      yield* resolveWith({ T2CODE_HOME: join(home, "chosen"), T2CODE_PORT: "4901" });
+      assert.isFalse(yield* fs.exists(join(home, ".t2")));
+
+      yield* resolveWith({ T2CODE_PORT: "4901" });
+      assert.isTrue(yield* fs.exists(join(home, ".t2", "userdata", "settings.json")));
+      assert.isTrue(yield* fs.exists(join(home, ".t3", "userdata", "settings.json")));
+    }).pipe(Effect.scoped),
+  );
+
   it.effect("applies flag then env precedence over bootstrap envelope values", () =>
     Effect.gen(function* () {
       const { join } = yield* Path.Path;

@@ -120,7 +120,7 @@ function useStopPhase(input: {
       setStopPhase("landed");
     else if (stopPhase === "landed" && canInterrupt) setStopPhase(null);
   }
-  // oxlint-disable-next-line t2code/react-effect-budget -- timers that re-enable an unsettled Stop and end the landed click guard
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- timers that re-enable an unsettled Stop and end the landed click guard
   useEffect(() => {
     if (stopPhase === "pending") {
       const timeout = setTimeout(() => setStopPhase("timedOut"), STOP_PENDING_MAX_MS);
