@@ -4,20 +4,20 @@
 
 The relay Alchemy stack owns a shared Axiom trace setup:
 
-- `t3-code-relay-traces-prod`, the OpenTelemetry trace dataset shared by the Worker, mobile app, and
+- `t2-code-relay-traces-prod`, the OpenTelemetry trace dataset shared by the Worker, mobile app, and
   first-party relay clients
-- `t3-code-relay-otel-ingest-prod`, the dataset-scoped Worker ingest token
-- `t3-code-mobile-otel-ingest-prod`, the dataset-scoped mobile ingest token
-- `t3-code-relay-client-otel-ingest-prod`, the dataset-scoped first-party relay-client ingest token
-- `t3-code-relay-recent-spans-prod`, a view of recent request and endpoint spans
-- `t3-code-mobile-logs-prod` and `t3-code-mobile-metrics-prod`, the mobile app's crash, error, and
+- `t2-code-relay-otel-ingest-prod`, the dataset-scoped Worker ingest token
+- `t2-code-mobile-otel-ingest-prod`, the dataset-scoped mobile ingest token
+- `t2-code-relay-client-otel-ingest-prod`, the dataset-scoped first-party relay-client ingest token
+- `t2-code-relay-recent-spans-prod`, a view of recent request and endpoint spans
+- `t2-code-mobile-logs-prod` and `t2-code-mobile-metrics-prod`, the mobile app's crash, error, and
   startup data from `expo-observe` (see [Mobile crashes and errors](#mobile-crashes-and-errors))
-- `t3-code-mobile-telemetry-ingest-prod`, the ingest token the Worker forwards that data with
-- `t3-code-mobile-sourcemaps-prod`, the R2 bucket of mobile JavaScript source maps, and
-  `t3-code-mobile-sourcemaps-upload-prod`, a Cloudflare token that can only write objects to it
+- `t2-code-mobile-telemetry-ingest-prod`, the ingest token the Worker forwards that data with
+- `t2-code-mobile-sourcemaps-prod`, the R2 bucket of mobile JavaScript source maps, and
+  `t2-code-mobile-sourcemaps-upload-prod`, a Cloudflare token that can only write objects to it
 
 Alchemy stages append their sanitized stage name to isolate resources, for example
-`t3-code-relay-traces-dev-julius` for a personal stage.
+`t2-code-relay-traces-dev-julius` for a personal stage.
 
 Deploy from `infra/relay` with the normal Alchemy workflow:
 
@@ -34,7 +34,7 @@ Effect's OpenTelemetry exporter stores semantic HTTP attributes below the `attri
 For example:
 
 ```apl
-['t3-code-relay-traces-prod']
+['t2-code-relay-traces-prod']
 | where kind == 'server'
 | extend endpoint = column_ifexists('attributes.http.route', ''),
     customAttributes = column_ifexists('attributes.custom', dynamic({}))
@@ -95,19 +95,19 @@ Questions these answer:
 
 ```apl
 // Webhook outcomes per hour
-['t3-code-relay-traces-prod']
+['t2-code-relay-traces-prod']
 | where name == 'relay.hooks.forward'
 | summarize count() by bin(_time, 1h), outcome = tostring(['attributes.custom']['relay.hook.outcome'])
 
 // Inboxes stuck behind an unreachable environment, by endpoint
-['t3-code-relay-traces-prod']
+['t2-code-relay-traces-prod']
 | where name == 'HookInboxStore.deliverDue'
 | extend c = ['attributes.custom']
 | where tostring(c['relay.inbox.run_result']) == 'unreachable'
 | project trace_id, failures = toint(c['relay.inbox.consecutive_failures']),
     backlog = toint(c['relay.inbox.held_count'])
 | join kind=inner (
-    ['t3-code-relay-traces-prod']
+    ['t2-code-relay-traces-prod']
     | where name == 'relay.inbox.deliver'
     | project trace_id, endpoint = tostring(['attributes.custom']['relay.hook.endpoint_key'])
   ) on trace_id
@@ -116,7 +116,7 @@ Questions these answer:
 
 ## Alerts
 
-The stack provisions threshold monitors and a `t3-code-relay-health` dashboard from
+The stack provisions threshold monitors and a `t2-code-relay-health` dashboard from
 [`infra/relay/src/monitoring.ts`](../../infra/relay/src/monitoring.ts) when the deployment sets
 `RELAY_ALERT_NOTIFIER_ID`. Paging monitors go to that notifier and need two failing runs in a row.
 Warnings go to `RELAY_WARNING_NOTIFIER_ID` when it is set and are otherwise only visible in Axiom.
@@ -170,9 +170,9 @@ usual cause.
 
 The mobile app reports through [`expo-observe`](https://docs.expo.dev/eas/observe/). Its
 `endpointUrl` points at the relay (`/v1/mobile/observe`, set in `apps/mobile/app.config.ts` from
-`T3CODE_RELAY_URL`), because Observe cannot send auth headers and prefixes every path with the EAS
+`T2CODE_RELAY_URL`), because Observe cannot send auth headers and prefixes every path with the EAS
 project id. The relay forwards each request to Axiom with its own token: logs (JavaScript errors,
-native crashes, log events) to `t3-code-mobile-logs-*`, metrics to `t3-code-mobile-metrics-*`, and
+native crashes, log events) to `t2-code-mobile-logs-*`, metrics to `t2-code-mobile-metrics-*`, and
 spans to the shared traces dataset. Expo's Observe dashboard receives nothing. The endpoint URL is
 compiled into the native app, so pointing it elsewhere takes a store build.
 
@@ -196,7 +196,7 @@ generic React Native stack. The relay marks that one `relay.crash.js_fatal` when
 request, as they do on the next launch. Leave it out to count real native crashes:
 
 ```apl
-['t3-code-mobile-logs-prod']
+['t2-code-mobile-logs-prod']
 | where ['attributes.expo.error.source'] == 'nativeCrash'
 | where isnull(['attributes.relay.crash.js_fatal'])
 | summarize count() by ['attributes.exception.type'], ['attributes.exception.message']
@@ -230,11 +230,11 @@ Set it as a GitHub Actions secret, for OTA updates, and as an EAS environment va
 PR preview builds run the PR's code in that environment. In CI only the upload step gets it, not
 `eas update` and the dependencies it runs. If the deploy replaces the token, update both.
 
-The `t3-code-mobile-health` dashboard is the place to look every few days: crash and handled
+The `t2-code-mobile-health` dashboard is the place to look every few days: crash and handled
 error counts, top crashes with the installs and app versions they hit, crashes by version, whether
 stacks are symbolicated, and whether reports reach the relay at all. A crash counts once: the
 native abort after a JS crash (`relay.crash.js_fatal`) is left out. Startup times are metrics, so
-they are not on it; query `t3-code-mobile-metrics-*` with MPL. Prod and PR previews get the
+they are not on it; query `t2-code-mobile-metrics-*` with MPL. Prod and PR previews get the
 dashboard, and deployments with `RELAY_ALERT_NOTIFIER_ID` get these monitors
 ([`infra/relay/src/mobileTelemetry/monitoring.ts`](../../infra/relay/src/mobileTelemetry/monitoring.ts)):
 
