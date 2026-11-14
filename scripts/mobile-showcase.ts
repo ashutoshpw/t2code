@@ -32,9 +32,10 @@ import {
 
 const REPO_ROOT = NodePath.resolve(NodePath.dirname(NodeURL.fileURLToPath(import.meta.url)), "..");
 const MOBILE_ROOT = NodePath.join(REPO_ROOT, "apps/mobile");
-const ANDROID_PACKAGE = "com.t3tools.t3code";
-const APP_SCHEME = "t3code";
-// Manifest flags update expo-dev-launcher preferences before loading, hiding dev chrome in captures.
+const ANDROID_PACKAGE = "com.t3tools.t2code";
+const APP_SCHEME = "t2code";
+// expo-dev-launcher reads these off the manifest URL and updates the dev menu
+// preferences before the app loads, keeping captures free of dev chrome.
 const DEV_CLIENT_LAUNCH_FLAGS = "disableOnboarding=1&disableFab=1&disableAutoLaunch=1";
 const IOS_READY_FILENAME = "T3ShowcaseReadyScene";
 const SERVER_HOST = "0.0.0.0";
