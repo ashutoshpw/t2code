@@ -58,7 +58,7 @@ function ConfiguredT2ConnectSidebarSignIn() {
         <SidebarMenuItem>
           <SidebarMenuButton onClick={retryClerkLoad}>
             <RotateCwIcon />
-            <span>Retry T3 Connect</span>
+            <span>Retry T2 Connect</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
