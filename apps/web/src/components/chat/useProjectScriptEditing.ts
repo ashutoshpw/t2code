@@ -1,9 +1,4 @@
-import type {
-  KeybindingCommand,
-  ProjectId,
-  ProjectScript,
-  EnvironmentId,
-} from "@t2code/contracts";
+import type { KeybindingCommand, ProjectId, ProjectScript, EnvironmentId } from "@t2code/contracts";
 import { AuthSettingsWriteScope, EnvironmentAuthorizationError } from "@t2code/contracts";
 import type { UnifiedSettings } from "@t2code/contracts/settings";
 import {
