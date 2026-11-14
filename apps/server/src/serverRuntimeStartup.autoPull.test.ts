@@ -124,6 +124,7 @@ it.effect("parks automatic pull until activation without delaying command readin
       }),
       Layer.mock(ServerSettings.ServerSettingsService)({
         start: Effect.void,
+        subscribeChanges: Effect.succeed(Stream.empty),
         getSettings: Effect.succeed({ ...DEFAULT_SERVER_SETTINGS, defaultAutoPull: true }),
       }),
       Layer.mock(ServerEnvironment.ServerEnvironment)({
@@ -134,6 +135,7 @@ it.effect("parks automatic pull until activation without delaying command readin
           serverVersion: "0.0.0-test",
           capabilities: { repositoryIdentity: true },
         }),
+        setEnvironmentLabel: () => Effect.void,
       }),
       Layer.mock(ProjectStore.ProjectStoreV2)({
         listShells: () => Effect.succeed(snapshot.projects),

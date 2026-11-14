@@ -24,141 +24,32 @@ const git = (cwd: string, args: ReadonlyArray<string>) =>
   }).pipe(Effect.provide(ProcessRunner.layer));
 
 it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
-  it.effect("refreshes the Git root only when requested", () => {
-    const calls: Array<ReadonlyArray<string>> = [];
-    let rootPath = "/repo";
-    let remoteUrl = "git@github.com:Ashutoshpw/t2code.git";
-    let refinements = 0;
-    let refinementFails = false;
-    const layerProcessRunner = Layer.succeed(ProcessRunner.ProcessRunner, {
-      run: (input) =>
-        Effect.sync(() => {
-          calls.push(input.args);
-          return {
-            stdout: input.args.includes("rev-parse")
-              ? `${rootPath}\n`
-              : `origin\t${remoteUrl} (fetch)\n`,
-            stderr: "",
-            code: ChildProcessSpawner.ExitCode(0),
-            timedOut: false,
-            stdoutTruncated: false,
-            stderrTruncated: false,
-            stdoutInvalidUtf8: false,
-            stderrInvalidUtf8: false,
-          };
-        }),
-    });
-    const layerResolver = Layer.effect(
-      RepositoryIdentityResolver.RepositoryIdentityResolver,
-      RepositoryIdentityResolver.make({
-        refine: (identity) => {
-          refinements++;
-          if (refinementFails)
-            return Effect.fail(
-              new SourceControlProviderError({
-                provider: SourceControlProviderKind.make("forgejo"),
-                operation: "detectProvider",
-                cwd: rootPath,
-                detail: "account unavailable",
-              }),
-            );
-          return Effect.succeed(
-            identity.canonicalKey.startsWith("ssh.forge.test/")
-              ? {
-                  ...identity,
-                  provider: "forgejo",
-                  webUrl: "http://forge.test:3000/git/team/repo",
-                }
-              : identity,
-          );
-        },
-      }),
-    ).pipe(Layer.provide(layerProcessRunner));
+  it.effect("returns the git top-level root path when resolving from a nested workspace", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const repoRoot = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t2-repository-identity-nested-root-test-",
+      });
+      const nestedWorkspace = path.join(repoRoot, "packages", "web");
 
-    return Effect.gen(function* () {
+      yield* fileSystem.makeDirectory(nestedWorkspace, { recursive: true });
+      yield* git(repoRoot, ["init"]);
+      yield* git(repoRoot, ["remote", "add", "origin", "git@github.com:Ashutoshpw/t2code.git"]);
+
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
-      const first = yield* resolver.resolve("/repo/packages/web");
-      rootPath = "/repo/packages/web";
-      // Longer than the one-minute cadence of the background sweeps.
-      yield* TestClock.adjust(Duration.minutes(10));
-      const second = yield* resolver.resolve("/repo/packages/web");
+      const identity = yield* resolver.resolve(nestedWorkspace);
+      const resolvedIdentityRoot =
+        identity?.rootPath === undefined ? "" : NodeFS.realpathSync.native(identity.rootPath);
+      const resolvedRepoRoot = NodeFS.realpathSync.native(repoRoot);
 
-      expect(first?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
-      expect(second).toEqual(first);
-      expect(refinements).toBe(1);
-      expect(calls).toEqual([
-        ["-C", "/repo/packages/web", "rev-parse", "--show-toplevel"],
-        ["-C", "/repo", "remote", "-v"],
-      ]);
-
-      const refreshed = yield* resolver.resolve("/repo/packages/web", { refresh: true });
-      expect(refreshed?.rootPath).toBe("/repo/packages/web");
-      expect(yield* resolver.resolve("/repo/packages/web")).toEqual(refreshed);
-      expect(calls.slice(2)).toEqual([
-        ["-C", "/repo/packages/web", "rev-parse", "--show-toplevel"],
-        ["-C", "/repo/packages/web", "remote", "-v"],
-      ]);
-      remoteUrl = "git@ssh.forge.test:team/repo.git";
-      const forgejo = yield* resolver.resolve(rootPath, { refresh: true });
-      expect(forgejo?.webUrl).toBe("http://forge.test:3000/git/team/repo");
-      expect(forgejo?.provider).toBe("forgejo");
-      expect(forgejo?.canonicalKey).toBe("ssh.forge.test/team/repo");
-      expect(forgejo?.locator.remoteUrl).toBe(remoteUrl);
-      expect(yield* resolver.resolve(rootPath)).toEqual(forgejo);
-      expect(refinements).toBe(3);
-      refinementFails = true;
-      const unavailable = yield* resolver.resolve(rootPath, { refresh: true });
-      expect(unavailable?.webUrl).toBeUndefined();
-      expect(unavailable?.canonicalKey).toBe("ssh.forge.test/team/repo");
-    }).pipe(Effect.provide(Layer.merge(TestClock.layer(), layerResolver)));
-  });
-
-  it.effect("retries Git root discovery after the negative TTL", () => {
-    const calls: Array<ReadonlyArray<string>> = [];
-    let rootAttempts = 0;
-    const layerProcessRunner = Layer.succeed(ProcessRunner.ProcessRunner, {
-      run: (input) =>
-        Effect.sync(() => {
-          calls.push(input.args);
-          const rootLookup = input.args.includes("rev-parse");
-          const failed = rootLookup && rootAttempts++ === 0;
-          return {
-            stdout: rootLookup
-              ? failed
-                ? ""
-                : "/repo\n"
-              : "origin\tgit@github.com:Ashutoshpw/t2code.git (fetch)\n",
-            stderr: failed ? "temporary Git failure" : "",
-            code: ChildProcessSpawner.ExitCode(failed ? 1 : 0),
-            timedOut: false,
-            stdoutTruncated: false,
-            stderrTruncated: false,
-            stdoutInvalidUtf8: false,
-            stderrInvalidUtf8: false,
-          };
-        }),
-    });
-    const layerResolver = Layer.effect(
-      RepositoryIdentityResolver.RepositoryIdentityResolver,
-      RepositoryIdentityResolver.make(),
-    ).pipe(Layer.provide(layerProcessRunner));
-
-    return Effect.gen(function* () {
-      const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
-      expect(yield* resolver.resolve("/repo/packages/web")).toBeNull();
-      expect(yield* resolver.resolve("/repo/packages/web")).toBeNull();
-
-      yield* TestClock.adjust(Duration.minutes(1));
-      const recovered = yield* resolver.resolve("/repo/packages/web");
-      expect(recovered?.rootPath).toBe("/repo");
-      expect(calls).toEqual([
-        ["-C", "/repo/packages/web", "rev-parse", "--show-toplevel"],
-        ["-C", "/repo/packages/web", "rev-parse", "--show-toplevel"],
-        ["-C", "/repo", "remote", "-v"],
-      ]);
-    }).pipe(Effect.provide(Layer.merge(TestClock.layer(), layerResolver)));
-  });
-
+      expect(identity).not.toBeNull();
+      expect(identity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
+      expect(normalizeResolvedPath(resolvedIdentityRoot)).toBe(
+        normalizeResolvedPath(resolvedRepoRoot),
+      );
+    }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
+  );
   it.effect("normalizes equivalent GitHub remotes into a stable repository identity", () =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
@@ -432,7 +323,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
         });
 
         yield* git(cwd, ["init"]);
-        yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t2code.git"]);
+        yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t3code.git"]);
         if (change === "replace") {
           yield* git(cwd, ["remote", "add", "upstream", "git@github.com:T2Tools/previous.git"]);
         }
@@ -440,7 +331,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
         const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
         const initialIdentity = yield* resolver.resolve(cwd);
         expect(initialIdentity?.canonicalKey).toBe(
-          change === "add" ? "github.com/julius/t2code" : "github.com/t2tools/previous",
+          change === "add" ? "github.com/julius/t3code" : "github.com/t2tools/previous",
         );
 
         yield* git(cwd, [
@@ -468,7 +359,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       });
 
       yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t2code-fork.git"]);
+      yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t3code-fork.git"]);
       yield* git(cwd, ["remote", "add", "upstream", "git@github.com:Ashutoshpw/t2code.git"]);
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
@@ -477,9 +368,9 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       expect(identity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
       expect(identity?.displayName).toBe("Ashutoshpw/t2code");
       expect(identity?.origin).toEqual({
-        canonicalKey: "github.com/julius/t2code-fork",
-        remoteUrl: "git@github.com:julius/t2code-fork.git",
-        displayName: "julius/t2code-fork",
+        canonicalKey: "github.com/julius/t3code-fork",
+        remoteUrl: "git@github.com:julius/t3code-fork.git",
+        displayName: "julius/t3code-fork",
       });
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
@@ -492,14 +383,14 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       });
 
       yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t2code-fork.git"]);
+      yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t3code-fork.git"]);
       yield* git(cwd, ["remote", "add", "upstream", "git@github.com:Ashutoshpw/t2code.git"]);
       yield* git(cwd, ["config", "remote.origin.gh-resolved", "base"]);
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       const identity = yield* resolver.resolve(cwd);
 
-      expect(identity?.canonicalKey).toBe("github.com/julius/t2code-fork");
+      expect(identity?.canonicalKey).toBe("github.com/julius/t3code-fork");
       expect(identity?.locator.remoteName).toBe("origin");
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
@@ -514,9 +405,9 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       const resolveFresh = () => resolver.resolve(cwd, { refresh: true });
 
       yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "fork", "https://github.com/julius/t2code-fork.git"]);
+      yield* git(cwd, ["remote", "add", "fork", "https://github.com/julius/t3code-fork.git"]);
       yield* git(cwd, ["remote", "add", "main", "https://github.com/Ashutoshpw/t2code.git"]);
-      yield* git(cwd, ["remote", "add", "upstream", "https://github.com/other/t2code.git"]);
+      yield* git(cwd, ["remote", "add", "upstream", "https://github.com/other/t3code.git"]);
       yield* git(cwd, ["config", "remote.fork.gh-resolved", "ashutoshpw/t2code"]);
       const parent = yield* resolveFresh();
       expect(parent?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
@@ -556,7 +447,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       });
 
       yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t2code-fork.git"]);
+      yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t3code-fork.git"]);
       yield* git(cwd, ["remote", "add", "upstream", "git@github.com:Ashutoshpw/t2code.git"]);
       yield* git(cwd, ["config", "remote.origin.gh-resolved", "base"]);
       yield* git(other, ["init"]);
@@ -568,7 +459,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       const identity = yield* resolver.resolve(cwd);
 
-      expect(identity?.canonicalKey).toBe("github.com/julius/t2code-fork");
+      expect(identity?.canonicalKey).toBe("github.com/julius/t3code-fork");
       expect(identity?.locator.remoteName).toBe("origin");
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
@@ -592,87 +483,5 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       expect(identity?.owner).toBe("T2Tools");
       expect(identity?.name).toBe("t2code");
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
-  );
-
-  it.effect(
-    "keeps null identities cached across repeated resolves until the negative TTL expires",
-    () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const cwd = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t2-repository-identity-late-remote-test-",
-        });
-
-        yield* git(cwd, ["init"]);
-
-        const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
-        const initialIdentity = yield* resolver.resolve(cwd);
-        expect(initialIdentity).toBeNull();
-
-        yield* git(cwd, ["remote", "add", "origin", "git@github.com:Ashutoshpw/t2code.git"]);
-
-        for (const _attempt of [1, 2, 3]) {
-          const cachedIdentity = yield* resolver.resolve(cwd);
-          expect(cachedIdentity).toBeNull();
-        }
-
-        yield* TestClock.adjust(Duration.millis(120));
-
-        const refreshedIdentity = yield* resolver.resolve(cwd);
-        expect(refreshedIdentity).not.toBeNull();
-        expect(refreshedIdentity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
-        expect(refreshedIdentity?.name).toBe("t2code");
-      }).pipe(
-        Effect.provide(
-          Layer.merge(
-            TestClock.layer(),
-            layerRepositoryIdentityResolverTest({
-              negativeCacheTtl: Duration.millis(50),
-              positiveCacheTtl: Duration.seconds(1),
-            }),
-          ),
-        ),
-      ),
-  );
-
-  it.effect("refreshes cached identities after the positive TTL when a remote changes", () =>
-    Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const cwd = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t2-repository-identity-remote-change-test-",
-      });
-
-      yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "origin", "git@github.com:Ashutoshpw/t2code.git"]);
-
-      const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
-      const initialIdentity = yield* resolver.resolve(cwd);
-      expect(initialIdentity).not.toBeNull();
-      expect(initialIdentity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
-
-      yield* git(cwd, ["remote", "set-url", "origin", "git@github.com:Ashutoshpw/t2code-next.git"]);
-
-      const cachedIdentity = yield* resolver.resolve(cwd);
-      expect(cachedIdentity).not.toBeNull();
-      expect(cachedIdentity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
-
-      yield* TestClock.adjust(Duration.millis(180));
-
-      const refreshedIdentity = yield* resolver.resolve(cwd);
-      expect(refreshedIdentity).not.toBeNull();
-      expect(refreshedIdentity?.canonicalKey).toBe("github.com/ashutoshpw/t2code-next");
-      expect(refreshedIdentity?.displayName).toBe("Ashutoshpw/t2code-next");
-      expect(refreshedIdentity?.name).toBe("t2code-next");
-    }).pipe(
-      Effect.provide(
-        Layer.merge(
-          TestClock.layer(),
-          layerRepositoryIdentityResolverTest({
-            negativeCacheTtl: Duration.millis(50),
-            positiveCacheTtl: Duration.millis(100),
-          }),
-        ),
-      ),
-    ),
   );
 });

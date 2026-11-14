@@ -112,8 +112,8 @@ import {
 } from "./sessionConfig.ts";
 import * as AcpSessionRuntime from "./AcpSessionRuntime.ts";
 import {
-  t3AcpPromptWithInstructions,
-  type T3AcpInstructionState,
+  t2AcpPromptWithInstructions,
+  type T2AcpInstructionState,
 } from "@t2code/provider-core/server/orchestrationInstructions";
 import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
 import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
@@ -918,7 +918,7 @@ function acpMcpContext(
   return {
     servers: [
       {
-        name: "t3-code",
+        name: "t2-code",
         command: self.command,
         args: [...selfInvocationArgs(self, ["acp-mcp-bridge"])],
         env: [
@@ -928,13 +928,13 @@ function acpMcpContext(
         ],
       },
     ],
-    acpServers: [{ type: "acp", name: "t3-code", serverId: "t3-code" }],
+    acpServers: [{ type: "acp", name: "t2-code", serverId: "t2-code" }],
     httpServers:
       mcpOverHttp === true
         ? [
             {
               type: "http",
-              name: "t3-code",
+              name: "t2-code",
               url: session.endpoint,
               headers: [
                 { name: "Authorization", value: session.authorizationHeader },
@@ -2088,7 +2088,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
         });
         const activeSelection = yield* Ref.make<ModelSelection | null>(null);
         const activeInteractionMode = yield* Ref.make<ProviderInteractionMode | null>(null);
-        const promptInstructionStates = yield* Ref.make(new Map<string, T3AcpInstructionState>());
+        const promptInstructionStates = yield* Ref.make(new Map<string, T2AcpInstructionState>());
         const promptRuntimeInstructions = yield* Ref.make(new Map<string, string>());
         // Unique markers keep delayed prompt completions from clearing later compactions.
         const compactionMarkers = yield* Ref.make(new Map<string, symbol>());
@@ -2581,7 +2581,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
               elicitation: { form: {}, ...(flavor.onUrlElicitation ? { url: {} } : {}) },
               ...(flavor.clientCapabilitiesMeta ? { _meta: flavor.clientCapabilitiesMeta } : {}),
             },
-            clientInfo: { name: "t3-code", version: "0.0.0" },
+            clientInfo: { name: "t2-code", version: "0.0.0" },
             onTermination: (error) =>
               Effect.sync(() => agentRequests.clear()).pipe(Effect.andThen(onTermination(error))),
             ...(promptInactivityTimeoutMillis === undefined
@@ -8320,9 +8320,9 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
           const mcpSession = yield* mcpSessions.read(turnInput.threadId);
           const instructionState = {
             interactionMode: turnInput.runtimePolicy.interactionMode,
-            hasT3Mcp: mcpSession !== undefined,
+            hasT2Mcp: mcpSession !== undefined,
             hasDeviceTools: mcpSession?.capabilities?.has("device") === true,
-          } satisfies T3AcpInstructionState;
+          } satisfies T2AcpInstructionState;
           const userText =
             flavor.rewriteUserText === undefined
               ? turnInput.message.text
@@ -8341,16 +8341,6 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
             resolveExtractedTextPath: host.resolveExtractedTextPath,
           });
           const isNativeSlashCommand = userText.trimStart().startsWith("/");
-          const text = t2AcpPromptWithInstructions({
-            prompt: messageText,
-            state: instructionState,
-            ...(previousInstructionState === undefined || compactionMarker !== undefined
-              ? {}
-              : { previousState: previousInstructionState }),
-          });
-          if (text.length > 0) {
-            prompt.push({ type: "text", text });
-          }
           const imageAttachments = turnInput.message.attachments.filter(
             isProviderNativeImageAttachment,
           );
@@ -8423,7 +8413,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
           // while the prompt is prepared still resends the notes in this prompt.
           const previousInstructionState = (yield* Ref.get(promptInstructionStates)).get(sessionId);
           const compactionMarker = (yield* Ref.get(compactionMarkers)).get(sessionId);
-          const text = t3AcpPromptWithInstructions({
+          const text = t2AcpPromptWithInstructions({
             prompt: messageText,
             state: instructionState,
             ...(previousInstructionState === undefined || compactionMarker !== undefined

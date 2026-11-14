@@ -26,6 +26,7 @@ import {
   v2PullRequestThread,
 } from "../../../orchestration-v2/testkit/pullRequestFixtures.ts";
 import * as ProjectService from "../../../project/ProjectService.ts";
+import * as PullRequestService from "../../../pullRequest/PullRequestService.ts";
 import * as PullRequestWatchService from "../../../pullRequest/PullRequestWatchService.ts";
 import * as PullRequestReviewGuideService from "../../../pullRequest/PullRequestReviewGuideService.ts";
 import * as McpInvocationContext from "../../McpInvocationContext.ts";
@@ -167,12 +168,35 @@ const makeHarness = Effect.fn("makePullRequestsToolkitHarness")(function* (
       yield* Ref.update(commands, (recorded) => [...recorded, command]);
       return { sequence: 1, storedEvents: [] };
     });
+  const projectLayer = Layer.mock(ProjectService.ProjectService)({
+    getShell: () => Effect.succeed(Option.fromNullishOr(project)),
+    listShells: () => Effect.succeed(options.projects ?? (project ? [project] : [])),
+  });
+  const orchestratorLayer = Layer.mock(Orchestrator.OrchestratorV2)({
+    getThreadShell: (id) => Effect.succeed(id === thread?.id ? v2PullRequestThread(thread) : null),
+    dispatch,
+  });
+  // Watches delegate to the real service; its preflight summary read may fail for a host
+  // with no transport in tests, which the service treats as recoverable.
+  const watchLayer = PullRequestWatchService.layer.pipe(
+    Layer.provideMerge(
+      Layer.mergeAll(
+        projectLayer,
+        orchestratorLayer,
+        Layer.mock(PullRequestService.PullRequestService)({
+          summary: () =>
+            Effect.fail(
+              new PullRequestOperationError({ operation: "summary", detail: "unavailable" }),
+            ),
+        }),
+        Layer.succeed(SecureRandom.SecureRandom, testCrypto),
+      ),
+    ),
+  );
   const layerDependencies = Layer.mergeAll(
-    Layer.mock(PullRequestWatchService.PullRequestWatchService)({}),
-    Layer.mock(ProjectService.ProjectService)({
-      getShell: () => Effect.succeed(Option.fromNullishOr(project)),
-      listShells: () => Effect.succeed(options.projects ?? (project ? [project] : [])),
-    }),
+    watchLayer,
+    projectLayer,
+    orchestratorLayer,
     Layer.mock(PullRequestReviewGuideService.PullRequestReviewGuideService)({
       get: () => Effect.succeed(NO_GUIDE),
       generate: (input) =>
@@ -190,11 +214,6 @@ const makeHarness = Effect.fn("makePullRequestsToolkitHarness")(function* (
               }),
           ),
         ),
-    }),
-    Layer.mock(Orchestrator.OrchestratorV2)({
-      getThreadShell: (id) =>
-        Effect.succeed(id === thread?.id ? v2PullRequestThread(thread) : null),
-      dispatch,
     }),
     Layer.succeed(SecureRandom.SecureRandom, testCrypto),
     McpToolAccessTestkit.liveThreadsLayer,

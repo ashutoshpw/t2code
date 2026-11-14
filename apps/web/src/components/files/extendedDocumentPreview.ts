@@ -499,7 +499,7 @@ const RTF_CHARACTERS = new Map([
   ["tab", "\t"],
   ["cell", "\t"],
   ["endash", "–"],
-  // oxlint-disable-next-line t3code/no-em-dash-copy -- Preserve the RTF document's punctuation.
+  // oxlint-disable-next-line t2code/no-em-dash-copy -- Preserve the RTF document's punctuation.
   ["emdash", "—"],
   ["bullet", "•"],
   ["lquote", "‘"],

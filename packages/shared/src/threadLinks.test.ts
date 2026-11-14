@@ -264,7 +264,7 @@ describe("hosted thread links", () => {
 
   it("leaves a hosted link that is part of another link as written", () => {
     const hosted = "https://app.t2.codes/threads/there/t1";
-    const relabeled = "[There](t3-thread://v2/there/t1)";
+    const relabeled = "[There](t2-thread://v2/there/t1)";
     const title = titlesIn({ there: { t1: "There" } });
     for (const [markdown, expected] of [
       [`https://example.com/?next=${hosted}`],
@@ -278,7 +278,7 @@ describe("hosted thread links", () => {
       [`\\\\\\\\[old](${hosted})`, `\\\\\\\\${relabeled}`],
       [`\\[old](${hosted})`, `\\[old](${relabeled})`],
       [`\\[ ${hosted} ](https://example.com)`, `\\[ ${relabeled} ](https://example.com)`],
-      ["\\[old](t3-thread://v2/there/t1) \\<t3-thread://v2/there/t1>"],
+      ["\\[old](t2-thread://v2/there/t1) \\<t2-thread://v2/there/t1>"],
     ] as const) {
       expect(relabelThreadLinks(markdown, local, title)).toBe(expected ?? markdown);
       expect(threadLinkRefs(markdown, local)).toEqual(

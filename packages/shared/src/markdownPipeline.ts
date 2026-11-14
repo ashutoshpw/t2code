@@ -30,6 +30,7 @@ import {
   isWindowsDrivePathHref,
   normalizeMarkdownLinkDestination,
 } from "./markdownLinks.ts";
+import { isWindowsAbsolutePath } from "./path.ts";
 import { THREAD_LINK_PROTOCOL } from "./threadLinks.ts";
 
 export { remarkEnableOrderedListNumbers } from "./markdownOrderedListNumbers.ts";

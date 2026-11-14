@@ -610,7 +610,7 @@ export function HomeScreen(props: HomeScreenProps) {
     threadListV2Layout.settledCount > 0;
   // A hidden list gets no layout, so it never reports its rows as laid out.
   const hasRowsToLayOut = props.visible && hasAnyThreads && threadListV2Items.length > 0;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- holds the native launch splash, which is outside React, until the rows are gone or this list unmounts; a layout effect runs before the splash hides in this commit
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- holds the native launch splash, which is outside React, until the rows are gone or this list unmounts; a layout effect runs before the splash hides in this commit
   useLayoutEffect(() => {
     return hasRowsToLayOut ? holdLaunchSplashForHomeRows() : undefined;
   }, [hasRowsToLayOut]);
