@@ -309,7 +309,7 @@ describe("FxAdapterV2", () => {
           _meta: { fx: { profileMcpServers: true } },
         }),
         answer("session/load", fxSession({ model: NAMED_MODEL, modes: FX_0_0_13_MODES })),
-        // Config id `model`, never fx's `provider`, and never T3's "default".
+        // Config id `model`, never fx's `provider`, and never T2's "default".
         ...setConfig(
           "model",
           FX_DEFAULT_MODEL,

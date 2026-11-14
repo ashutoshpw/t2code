@@ -1,7 +1,4 @@
-import {
-  AcpRegistryDriver,
-  type AcpRegistryDriverEnv,
-} from "@t2code/provider-acp-registry/server";
+import { AcpRegistryDriver, type AcpRegistryDriverEnv } from "@t2code/provider-acp-registry/server";
 import { AntigravityDriver, type AntigravityDriverEnv } from "./Drivers/AntigravityDriver.ts";
 import { ClaudeDriver, type ClaudeDriverEnv } from "./Drivers/ClaudeDriver.ts";
 import { CodexDriver, type CodexDriverEnv } from "./Drivers/CodexDriver.ts";

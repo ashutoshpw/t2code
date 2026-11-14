@@ -306,7 +306,7 @@ describe("useBrowserHistoryStore", () => {
   it("matches a requested localhost URL to the resolved environment host", () => {
     useBrowserHistoryStore.getState().registerThreadProject(threadRef, "proj-a");
     recordVisitForThread(threadRef, "http://localhost:5173/app", 1);
-    readPreparedConnection.mockReturnValue({ httpBaseUrl: "http://192.168.64.2:3773" });
+    readPreparedConnection.mockReturnValue({ httpBaseUrl: "http://192.168.64.2:3772" });
     settle("http://192.168.64.2:5173/app", "Local App");
     expect(useBrowserHistoryStore.getState().byProjectKey["proj-a"]?.[0]?.title).toBe("Local App");
   });
