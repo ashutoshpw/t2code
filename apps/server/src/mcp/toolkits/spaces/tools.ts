@@ -11,6 +11,7 @@ import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Secrets from "../../../auth/ServerSecretStore.ts";
+import * as AssetSigner from "../../../assets/AssetSigner.ts";
 import * as Config from "../../../config.ts";
 import * as WorkspacePaths from "../../../workspace/WorkspacePaths.ts";
 import * as Favicon from "../../../project/ProjectFaviconResolver.ts";
@@ -33,6 +34,7 @@ const dependencies = [
   SpacesService.SpacesService,
   ThreadManagement.ThreadManagementService,
   Secrets.ServerSecretStore,
+  AssetSigner.AssetSigner,
   SecureRandom.SecureRandom,
   Digest.Digest,
   FileSystem.FileSystem,

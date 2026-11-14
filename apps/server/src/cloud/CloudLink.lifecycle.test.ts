@@ -204,7 +204,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
           ServerEnvironment.ServerEnvironment,
           ServerEnvironment.ServerEnvironment.of({
             getEnvironmentId: Effect.succeed(EnvironmentId.make("env_123")),
-           // The fork's relay-configuration path synchronizes the environment
+            // The fork's relay-configuration path synchronizes the environment
             // label, which reads the descriptor; keep the mock usable there.
             getDescriptor: Effect.succeed({
               environmentId: EnvironmentId.make("env_123"),
@@ -213,7 +213,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
               serverVersion: "0.0.0",
               capabilities: { repositoryIdentity: false },
             }),
-           setEnvironmentLabel: () => Effect.void,
+            setEnvironmentLabel: () => Effect.void,
           }),
         ),
         Effect.provideService(

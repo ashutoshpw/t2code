@@ -748,12 +748,7 @@ const RootStackConfig = createWorkspaceStackNavigator({
     EnvironmentRename: createNativeStackScreen({
       screen: SettingsEnvironmentRenameRouteScreen,
       linking: "environment-rename",
-      options: {
-        title: "Rename Environment",
-        ...HORIZONTAL_FORM_SHEET_OPTIONS,
-        sheetAllowedDetents: [0.4],
-        sheetGrabberVisible: true,
-      },
+      options: sheetRoute({ title: "Rename Environment", detent: 0.4 }),
     }),
     NotFound: createNativeStackScreen({
       screen: NotFoundScreen,

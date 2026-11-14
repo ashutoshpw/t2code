@@ -2,9 +2,9 @@ import { describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const rule = createOxlintRuleHarness("t3code/no-raw-resize-observer");
+const rule = createOxlintRuleHarness("t2code/no-raw-resize-observer");
 
-describe("t3code/no-raw-resize-observer", () => {
+describe("t2code/no-raw-resize-observer", () => {
   rule.valid(
     "allows ResizeObserver types and feature detection",
     `

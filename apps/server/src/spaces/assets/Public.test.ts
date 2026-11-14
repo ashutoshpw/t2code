@@ -34,6 +34,8 @@ import * as Config from "../../config.ts";
 import * as Settings from "../../serverSettings.ts";
 import * as Identity from "../../environment/ServerEnvironment.ts";
 import * as Secrets from "../../auth/ServerSecretStore.ts";
+import * as AssetSigner from "../../assets/AssetSigner.ts";
+import * as RepositoryIdentityResolver from "../../project/RepositoryIdentityResolver.ts";
 import * as ServerHttp from "../../http.ts";
 import * as BuiltInDrivers from "../../sourceControl/builtInDrivers.ts";
 import * as Orchestrator from "../../orchestration-v2/Orchestrator.ts";
@@ -121,6 +123,8 @@ const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(
         settings,
         spaces,
         Secrets.layer.pipe(Layer.provide(configLayer)),
+        AssetSigner.layer.pipe(Layer.provide(Secrets.layer.pipe(Layer.provide(configLayer)))),
+        RepositoryIdentityResolver.layer,
         WorkspacePaths.layer,
         Favicon.layer.pipe(Layer.provide(WorkspacePaths.layer), Layer.provide(ProjectLoader.layer)),
         NativeIcons.layer.pipe(Layer.provide(configLayer)),

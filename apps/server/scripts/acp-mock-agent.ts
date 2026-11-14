@@ -29,7 +29,6 @@ const advertisedCommandNames = (process.env.T2_ACP_AVAILABLE_COMMANDS ?? "")
   .map((name) => name.trim())
   .filter((name) => name.length > 0);
 const loadedCommandNames = process.env.T2_ACP_LOADED_COMMANDS?.split(",").filter(Boolean);
-const noAuthProfile = process.env.T2_ACP_NO_AUTH === "1";
 const emitToolCalls = process.env.T2_ACP_EMIT_TOOL_CALLS === "1";
 const emitInterleavedAssistantToolCalls =
   process.env.T2_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS === "1";
@@ -83,22 +82,10 @@ const failPromptOrdinal = Number(process.env.T2_ACP_FAIL_PROMPT_ORDINAL);
 const compactionPromptOrdinals = new Set(
   (process.env.T2_ACP_COMPACTION_PROMPT_ORDINALS ?? "").split(",").map(Number),
 );
-const initialGrokReasoningEffort =
-  process.env.T2_ACP_INITIAL_GROK_REASONING_EFFORT?.trim() || undefined;
-const omitSessionListHandler = process.env.T2_ACP_OMIT_SESSION_LIST_HANDLER === "1";
-  allowOnce: process.env.T2_ACP_ALLOW_ONCE_OPTION_ID ?? "allow-once",
-  allowAlways: process.env.T2_ACP_ALLOW_ALWAYS_OPTION_ID ?? "allow-always",
-  rejectOnce: process.env.T2_ACP_REJECT_ONCE_OPTION_ID ?? "reject-once",
-const omitAllowAlways = process.env.T2_ACP_OMIT_ALLOW_ALWAYS === "1";
-const permissionRequestCount = Math.max(
-  1,
-  Number(process.env.T2_ACP_PERMISSION_REQUEST_COUNT ?? "1") || 1,
-);
 // These prompts end while their compaction is still in progress.
 const openCompactionPromptOrdinals = new Set(
   (process.env.T2_ACP_OPEN_COMPACTION_PROMPT_ORDINALS ?? "").split(",").map(Number),
 );
-const failSetConfigOption = process.env.T2_ACP_FAIL_SET_CONFIG_OPTION === "1";
 const failSetModeConfigOption = process.env.T2_ACP_FAIL_SET_MODE_CONFIG_OPTION === "1";
 const emitEmptyDefaultAgentOption = process.env.T2_ACP_EMIT_EMPTY_DEFAULT_AGENT_OPTION === "1";
 const promptResponseText = process.env.T2_ACP_PROMPT_RESPONSE_TEXT;

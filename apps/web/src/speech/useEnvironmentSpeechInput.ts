@@ -349,7 +349,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     };
   }, [prepared, grantId, cloudProvider, cloudModel]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- probes the chosen environment's speech status once its connection is available
+  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (!prepared || cloudProvider) return;
     let disposed = false;
@@ -367,7 +367,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
   const currentStatus = !cloudProvider && status?.prepared === prepared ? status.value : null;
   const setupModelId = setup.model?.id;
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- polls download progress while the setup dialog owns an active model download
+  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (!setup.open || !setup.downloading || !prepared || !setupModelId) return;
     let disposed = false;
@@ -393,7 +393,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
   }, [prepared, setup.downloading, setup.open, setupModelId]);
 
   const previousOwnerRef = useRef(input.ownerKey);
-  // oxlint-disable-next-line t2code/react-effect-budget -- abandons the recording and any queued submission when the draft's owner changes
+  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (previousOwnerRef.current === input.ownerKey && !input.disabled) return;
     previousOwnerRef.current = input.ownerKey;
@@ -402,7 +402,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     controllerRef.current?.ownerChanged();
   }, [input.ownerKey, input.disabled]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- delivers a queued submission only after the transcript has committed to the draft
+  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     const pending = pendingSubmissionRef.current;
     if (state.phase !== "idle" || !pending) return;

@@ -5,7 +5,7 @@ import * as NodeOS from "node:os";
 import * as Context from "effect/Context";
 import { runSshCommand } from "@t2code/ssh/command";
 import * as Effect from "effect/Effect";
-import { HostnameLookupError } from "@t3tools/shared/HostProcess";
+import { HostnameLookupError } from "@t2code/shared/HostProcess";
 
 export const LocalDeviceHostAddresses = Context.Reference<ReadonlySet<string>>(
   "LocalDeviceHostAddresses",

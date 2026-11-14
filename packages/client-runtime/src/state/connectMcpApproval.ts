@@ -7,7 +7,7 @@ import type {
   AuthMcpApprovalDetails,
   AuthMcpAuthorizationRequest,
   EnvironmentId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import type * as HttpClient from "effect/http/HttpClient";

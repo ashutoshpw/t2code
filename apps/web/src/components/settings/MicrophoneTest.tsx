@@ -1,5 +1,5 @@
-import { MICROPHONE_PERMISSION_ERROR } from "@t3tools/client-runtime/voice-input";
-import { MicIcon, PauseIcon, PlayIcon, RotateCcwIcon, SquareIcon, XIcon } from "lucide-react";
+import { MICROPHONE_PERMISSION_ERROR } from "@t2code/client-runtime/voice-input";
+import { CheckIcon, MicIcon, PauseIcon, PlayIcon, RotateCcwIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useStableCallback } from "~/hooks/useStableCallback";

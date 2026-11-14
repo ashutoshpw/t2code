@@ -79,30 +79,28 @@ it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("service commands
         error: { _tag: "BootServiceOtherBaseDirError", installedBaseDir: "/srv/t3" },
       },
     ]),
-  )(
-    "$command refuses $label before changing the service",
-    ({ command, status: serviceStatus, error: expected }) =>
-      Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-cli-test-" });
-        const { service, installOptions } = makeTestService(newerServiceStatus);
-        vi.spyOn(BootService, "layer").mockReturnValue(
-          Layer.succeed(BootService.BootService, service),
-        );
+  )("$command refuses $label before changing the service", ({ command, status, error: expected }) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-cli-test-" });
+      const { service, installOptions } = makeTestService(status);
+      vi.spyOn(BootService, "layer").mockReturnValue(
+        Layer.succeed(BootService.BootService, service),
+      );
 
-        const error = yield* Command.runWith(serviceCommand, { version: packageJson.version })([
-          command,
-          "--base-dir",
-          baseDir,
-        ]).pipe(
-          Effect.provideService(HostProcess.Environment, {}),
-          Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: {} }))),
-          Effect.flip,
-        );
+      const error = yield* Command.runWith(serviceCommand, { version: packageJson.version })([
+        command,
+        "--base-dir",
+        baseDir,
+      ]).pipe(
+        Effect.provideService(HostProcess.Environment, {}),
+        Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: {} }))),
+        Effect.flip,
+      );
 
-        expect(error).toMatchObject(expected);
-        expect(installOptions).toEqual([]);
-      }),
+      expect(error).toMatchObject(expected);
+      expect(installOptions).toEqual([]);
+    }),
   );
 
   it.effect.each([

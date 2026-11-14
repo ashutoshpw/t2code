@@ -16,8 +16,8 @@ import * as TestClock from "effect/testing/TestClock";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import { beforeEach } from "vite-plus/test";
-import { buildProviderOptionSelectionsFromDescriptors } from "@t3tools/shared/model";
-import { settingsSecretLiteral } from "@t3tools/contracts";
+import { buildProviderOptionSelectionsFromDescriptors } from "@t2code/shared/model";
+import { settingsSecretLiteral } from "@t2code/contracts";
 
 import { OpenCodeSettings } from "../settings.ts";
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";

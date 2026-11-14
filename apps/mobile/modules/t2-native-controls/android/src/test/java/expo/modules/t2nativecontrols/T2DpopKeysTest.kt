@@ -14,18 +14,18 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class T3DpopKeysTest {
+class T2DpopKeysTest {
   @Test
   fun signsRawSignaturesThatVerifyAgainstTheGeneratedPublicKey() {
-    val key = T3DpopKeys.generate()
+    val key = T2DpopKeys.generate()
     val privateKey = key.copyOfRange(0, 32)
     val publicKey = key.copyOfRange(32, 97)
-    assertTrue(T3DpopKeys.matches(privateKey, publicKey))
-    assertFalse(T3DpopKeys.matches(T3DpopKeys.generate().copyOfRange(0, 32), publicKey))
+    assertTrue(T2DpopKeys.matches(privateKey, publicKey))
+    assertFalse(T2DpopKeys.matches(T2DpopKeys.generate().copyOfRange(0, 32), publicKey))
 
     val input = "header.payload".toByteArray()
     repeat(32) {
-      val raw = T3DpopKeys.sign(privateKey, input)
+      val raw = T2DpopKeys.sign(privateKey, input)
       assertEquals(64, raw.size)
       val verifier = Signature.getInstance("SHA256withECDSA").apply {
         initVerify(jcaPublicKey(publicKey))
@@ -42,7 +42,7 @@ class T3DpopKeysTest {
     val der = byteArrayOf(0x30, (2 + r.size + 3).toByte(), 0x02, r.size.toByte()) + r +
       byteArrayOf(0x02, 0x01, 0x05)
     val expected = ByteArray(32) { 0x80.toByte() } + ByteArray(31) + byteArrayOf(5)
-    assertArrayEquals(expected, T3DpopKeys.rawSignature(der))
+    assertArrayEquals(expected, T2DpopKeys.rawSignature(der))
   }
 
   private fun jcaPublicKey(bytes: ByteArray) = KeyFactory.getInstance("EC").generatePublic(

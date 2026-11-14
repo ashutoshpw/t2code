@@ -2,10 +2,7 @@ import {
   EMPTY_SHELL_STATE,
   type EnvironmentShellSummary,
 } from "@t2code/client-runtime/state/shell";
-import {
-  BearerConnectionProfile,
-  BearerConnectionTarget,
-} from "@t2code/client-runtime/connection";
+import { BearerConnectionProfile, BearerConnectionTarget } from "@t2code/client-runtime/connection";
 import { EnvironmentId } from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Option from "effect/Option";

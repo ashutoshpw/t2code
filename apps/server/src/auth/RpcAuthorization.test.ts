@@ -267,6 +267,7 @@ describe("settings mutation authorization", () => {
         yield* client[WS_METHODS.serverUpdateSettings]({
           patch: { secretProviders: { [SecretProviderId.make("personal")]: null } },
         }).pipe(Effect.flip),
+      ).toMatchObject({ requiredPermission: AuthSettingsWriteScope });
       expect(
         yield* client[WS_METHODS.serverUpdateSettings]({ patch: { spacesEnabled: true } }).pipe(
           Effect.flip,

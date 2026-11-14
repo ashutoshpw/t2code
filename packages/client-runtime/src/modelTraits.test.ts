@@ -1,4 +1,5 @@
-import type { ProviderOptionDescriptor } from "@t3tools/contracts";
+import type { ProviderOptionDescriptor } from "@t2code/contracts";
+
 import { describe, expect, it } from "vite-plus/test";
 
 import { buildTraitsTriggerDisplay, getDescriptorStringValue } from "./modelTraits.ts";

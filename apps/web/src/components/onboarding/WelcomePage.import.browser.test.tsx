@@ -14,7 +14,7 @@ import {
   type AuthSessionState,
   type EnvironmentCloudLinkStateResult,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { expect, it, vi } from "vite-plus/test";
 
@@ -54,7 +54,7 @@ const state = vi.hoisted(() => ({
   closeTerminal: vi.fn(),
 }));
 
-vi.mock(import("@t3tools/client-runtime/state/session"), async (original) => {
+vi.mock(import("@t2code/client-runtime/state/session"), async (original) => {
   const actual = await original();
   return {
     ...actual,

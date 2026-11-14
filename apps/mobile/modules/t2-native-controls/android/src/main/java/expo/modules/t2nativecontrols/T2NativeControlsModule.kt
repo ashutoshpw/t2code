@@ -39,13 +39,13 @@ class T2NativeControlsModule : Module() {
       DateFormat.is24HourFormat(context)
     }
 
-    AsyncFunction("generateDpopKey") { T3DpopKeys.generate() }
+    AsyncFunction("generateDpopKey") { T2DpopKeys.generate() }
 
     AsyncFunction("dpopKeyMatches") { privateKey: ByteArray, publicKey: ByteArray ->
-      T3DpopKeys.matches(privateKey, publicKey)
+      T2DpopKeys.matches(privateKey, publicKey)
     }
 
-    AsyncFunction("signDpop") { key: ByteArray, input: ByteArray -> T3DpopKeys.sign(key, input) }
+    AsyncFunction("signDpop") { key: ByteArray, input: ByteArray -> T2DpopKeys.sign(key, input) }
 
     AsyncFunction("openFile") { uri: String, mimeType: String, promise: Promise ->
       check(filePreviewPromise == null) { "A document viewer is already open." }

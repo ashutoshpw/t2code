@@ -153,7 +153,7 @@ const answering = (text: string) =>
     display: () => Effect.void,
   });
 
-it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))("t3 up", (it) => {
+it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))("t2 up", (it) => {
   afterEach(() => vi.restoreAllMocks());
 
   it.effect.each<{
@@ -259,7 +259,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     {
       label: "a service for another home is refused without a restart",
       installed: true,
-      status: { current: false, otherBaseDir: "/srv/t3 home" },
+      status: { current: false, otherBaseDir: "/srv/t2 home" },
       fails: true,
       answer: "y",
       env: "T2CODE_LAN=false\n",
@@ -271,7 +271,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     {
       label: "another home's service supplies no local network default",
       installed: true,
-      status: { current: false, otherBaseDir: "/srv/t3 home" },
+      status: { current: false, otherBaseDir: "/srv/t2 home" },
       reportStatus: true,
       json: {
         service: { otherBaseDir: "/srv/t3 home" },
@@ -288,7 +288,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       installed: true,
       reportStatus: true,
       prints: "overridden · T2CODE_HOST=0.0.0.0",
-      omits: "t3 up --no-lan",
+      omits: "t2 up --no-lan",
       env: "T2CODE_HOST=0.0.0.0\n",
       args: [],
       installs: 0,
@@ -394,6 +394,12 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       }
       if (input.json !== undefined) {
         expect(JSON.parse(lines.join("\n"))).toMatchObject(input.json);
+      }
+      if (input.reportStatus) {
+        expect(JSON.parse(lines.join("\n"))).toMatchObject({
+          service: { otherBaseDir: "/srv/t2 home" },
+          lan: { enabled: false, inheritedDefault: false },
+        });
       }
       expect(exit._tag).toBe(
         input.restartFails === true || input.fails === true ? "Failure" : "Success",

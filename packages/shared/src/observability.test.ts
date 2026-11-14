@@ -396,21 +396,21 @@ describe("observability", () => {
         });
         const url = "/ws?wsTicket=ticket-secret&dpop=proof-secret&clientSurface=web";
 
-          yield* Effect.annotateCurrentSpan({
-            "url.full": `http://127.0.0.1:3772${url}`,
-            "url.query": url.slice(4),
-          }).pipe(
-            Effect.withSpan("GET", { kind: "server" }),
-            Effect.provideService(Tracer.Tracer, tracer),
-          );
-          yield* Effect.die(new Error(`RequestParseError (GET ${url})`)).pipe(
-            Effect.tapCause((cause) => Effect.logError(cause)),
-            Effect.withSpan("DeviceHubProxy.proxyWebSocket"),
-            Effect.provideService(Tracer.Tracer, tracer),
-            Effect.provide(Logger.layer([Logger.tracerLogger], { mergeWithExisting: false })),
-            Effect.exit,
-          );
-          yield* sink.close();
+        yield* Effect.annotateCurrentSpan({
+          "url.full": `http://127.0.0.1:3772${url}`,
+          "url.query": url.slice(4),
+        }).pipe(
+          Effect.withSpan("GET", { kind: "server" }),
+          Effect.provideService(Tracer.Tracer, tracer),
+        );
+        yield* Effect.die(new Error(`RequestParseError (GET ${url})`)).pipe(
+          Effect.tapCause((cause) => Effect.logError(cause)),
+          Effect.withSpan("DeviceHubProxy.proxyWebSocket"),
+          Effect.provideService(Tracer.Tracer, tracer),
+          Effect.provide(Logger.layer([Logger.tracerLogger], { mergeWithExisting: false })),
+          Effect.exit,
+        );
+        yield* sink.close();
 
         const written = yield* fileSystem.readFileString(tracePath);
         const exported = delegates.map((span) =>

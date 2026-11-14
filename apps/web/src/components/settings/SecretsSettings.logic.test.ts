@@ -1,4 +1,4 @@
-import { ServerSettings } from "@t3tools/contracts";
+import { ServerSettings } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import { expect, it } from "vite-plus/test";
 

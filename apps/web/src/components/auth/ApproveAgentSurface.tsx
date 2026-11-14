@@ -1,11 +1,11 @@
 import { useAuth, useClerk } from "@clerk/react";
 import { useAtomValue } from "@effect/atom-react";
-import { managedRelaySessionAtom } from "@t3tools/client-runtime/relay";
+import { managedRelaySessionAtom } from "@t2code/client-runtime/relay";
 import {
   type ConnectMcpApprovalCall,
   ConnectMcpApprovalUnavailableError,
-} from "@t3tools/client-runtime/state/connectMcpApproval";
-import { type AuthMcpApprovalDetails, EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/connectMcpApproval";
+import { type AuthMcpApprovalDetails, EnvironmentId } from "@t2code/contracts";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";

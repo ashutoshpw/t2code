@@ -1,11 +1,6 @@
 import { scopeProjectRef } from "@t2code/client-runtime/environment";
 import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
-import type {
-  EnvironmentId,
-  ModelSelection,
-  ProjectId,
-  ScopedProjectRef,
-} from "@t2code/contracts";
+import type { EnvironmentId, ModelSelection, ProjectId, ScopedProjectRef } from "@t2code/contracts";
 import type { ComposerThreadDraftState, DraftThreadEnvMode } from "../composerDraftStore";
 
 type ComposerModelSelectionState = Pick<
