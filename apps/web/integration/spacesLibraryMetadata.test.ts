@@ -428,16 +428,16 @@ it.effect(
                 ),
               );
               select("format-heading");
-              run(view.bridge.adapter.setHeadingLevel(3));
+              run(view.bridge.adapter.setHeadingLevel(blocks[0]!.id, 3));
               const heading = { ...blocks[0]!, content: { level: 3, runs } };
               select("format-callout");
-              run(view.bridge.adapter.setCalloutIcon("📌"));
+              run(view.bridge.adapter.setCalloutIcon(blocks[1]!.id, "📌"));
               const callout = {
                 ...blocks[1]!,
                 content: { icon: "📌", runs: [{ text: "body", marks: [] }] },
               };
               select("format-code");
-              run(view.bridge.adapter.setCodeLanguage("typescript"));
+              run(view.bridge.adapter.setCodeLanguage(blocks[2]!.id, "typescript"));
               const code = { ...blocks[2]!, content: { text: "source", language: "typescript" } };
               select("format-heading", 4);
               run(view.bridge.adapter.setLink("https://example.test/kept"));
@@ -483,7 +483,7 @@ it.effect(
                 expected,
               );
               select("format-heading");
-              run(view.bridge.adapter.setHeadingLevel(2));
+              run(view.bridge.adapter.setHeadingLevel(blocks[0]!.id, 2));
               await controller.save();
               assert.equal(h.requests.length, 4);
               assert.deepEqual(h.requests[3]!.mutations, [
@@ -517,12 +517,16 @@ it.effect(
             await controller.open();
             const view = savedView(controller);
             try {
-              assert.isTrue(view.bridge.adapter.setHeadingLevel(2)(view.state, view.dispatch));
+              assert.isTrue(
+                view.bridge.adapter.setHeadingLevel(block.id, 2)(view.state, view.dispatch),
+              );
               h.transport.hold = true;
               const saving = controller.save();
               await h.transport.committed.promise;
               const original = controller.session.getSnapshot().pending!;
-              assert.isTrue(view.bridge.adapter.setHeadingLevel(3)(view.state, view.dispatch));
+              assert.isTrue(
+                view.bridge.adapter.setHeadingLevel(block.id, 3)(view.state, view.dispatch),
+              );
               assert.deepEqual(controller.session.getSnapshot().pending, original);
               h.transport.reply.resolve();
               await saving;
