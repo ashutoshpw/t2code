@@ -7,7 +7,6 @@ import {
   type ScopedThreadRef,
   type ServerProviderModel,
 } from "@t2code/contracts";
-import type { EffortDisplay } from "@t2code/contracts/settings";
 import {
   buildExplicitProviderOptionSelectionsFromDescriptors,
   getProviderOptionCurrentValue,

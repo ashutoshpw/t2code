@@ -56,7 +56,7 @@ const BitbucketApiEnvConfig = Config.all({
 });
 
 // Server and Data Center use a different API; a custom Cloud endpoint must be explicit.
-export const BitbucketServesHost = Config.String("T3CODE_BITBUCKET_API_BASE_URL").pipe(
+export const BitbucketServesHost = Config.String("T2CODE_BITBUCKET_API_BASE_URL").pipe(
   Config.option,
   Config.map(
     (baseUrl) => (host: string) =>

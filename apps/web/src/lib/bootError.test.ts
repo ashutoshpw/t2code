@@ -19,18 +19,18 @@ const notOnPath = (launcherPath: string | null): DesktopCliCommandState => ({
 });
 
 describe("resolveTriageCommand", () => {
-  it("prefers t3 on PATH, then the desktop launcher", async () => {
-    const onPath = { ...notOnPath("/home/me/.t2/bin/t3"), onPath: true };
-    await expect(resolveTriageCommand(desktopWith(async () => onPath))).resolves.toBe("t3 triage");
+  it("prefers t2 on PATH, then the desktop launcher", async () => {
+    const onPath = { ...notOnPath("/home/me/.t2/bin/t2"), onPath: true };
+    await expect(resolveTriageCommand(desktopWith(async () => onPath))).resolves.toBe("t2 triage");
     await expect(
-      resolveTriageCommand(desktopWith(async () => notOnPath("/home/me/.t2/bin/t3"))),
-    ).resolves.toBe("/home/me/.t2/bin/t3 triage");
+      resolveTriageCommand(desktopWith(async () => notOnPath("/home/me/.t2/bin/t2"))),
+    ).resolves.toBe("/home/me/.t2/bin/t2 triage");
   });
 
   it("quotes launcher paths for the shell that runs them", async () => {
     await expect(
-      resolveTriageCommand(desktopWith(async () => notOnPath("/Users/O'Neil/.t2/bin/t3"))),
-    ).resolves.toBe(`'/Users/O'"'"'Neil/.t2/bin/t3' triage`);
+      resolveTriageCommand(desktopWith(async () => notOnPath("/Users/O'Neil/.t2/bin/t2"))),
+    ).resolves.toBe(`'/Users/O'"'"'Neil/.t2/bin/t2' triage`);
     await expect(
       resolveTriageCommand(desktopWith(async () => notOnPath("C:\\Users\\Me\\.t2\\bin\\t3.cmd"))),
     ).resolves.toBe("C:\\Users\\Me\\.t2\\bin\\t3.cmd triage");
@@ -43,18 +43,18 @@ describe("resolveTriageCommand", () => {
 
   it("falls back to npx without a usable desktop launcher", async () => {
     using _warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await expect(resolveTriageCommand(undefined)).resolves.toBe("npx t3 triage");
-    await expect(resolveTriageCommand({} as DesktopBridge)).resolves.toBe("npx t3 triage");
+    await expect(resolveTriageCommand(undefined)).resolves.toBe("npx t2 triage");
+    await expect(resolveTriageCommand({} as DesktopBridge)).resolves.toBe("npx t2 triage");
     await expect(resolveTriageCommand(desktopWith(async () => notOnPath(null)))).resolves.toBe(
-      "npx t3 triage",
+      "npx t2 triage",
     );
     const staleWindowsPathEntry = { ...notOnPath(null), supported: true, onPath: true };
     await expect(
       resolveTriageCommand(desktopWith(async () => staleWindowsPathEntry)),
-    ).resolves.toBe("npx t3 triage");
+    ).resolves.toBe("npx t2 triage");
     await expect(
       resolveTriageCommand(desktopWith(() => Promise.reject(new Error("ipc closed")))),
-    ).resolves.toBe("npx t3 triage");
+    ).resolves.toBe("npx t2 triage");
   });
 });
 

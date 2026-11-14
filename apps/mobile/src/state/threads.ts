@@ -12,6 +12,7 @@ import {
 } from "@t2code/client-runtime/state/threads";
 import { createSteadyShellAtoms } from "@t2code/client-runtime/state/shell";
 import type { EnvironmentId, ThreadId } from "@t2code/contracts";
+import { useEffect } from "react";
 import { AsyncResult, Atom } from "effect/reactivity";
 
 import { environmentCatalog } from "../connection/catalog";

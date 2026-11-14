@@ -15,7 +15,7 @@ Line rules run on every added line (pre-commit: staged; pre-push: pushed ranges;
 | `t2-first-party-url`                                                      | First-party product URLs on the upstream `t3.codes` domain, bare or as a subdomain (`app.`, `relay.`, `clerk.`, `nightly.app.`). Upstream repository URLs (`github.com/pingdotgg/t3code`) are not affected.              |
 | `t2-home-copy`, `t2-server-copy`                                          | The `T2 home` data directory and `T2 server` copy, in any casing.                                                                                                                                                        |
 | `t2-noun-copy`, `t2-possessive-copy`                                      | Product nouns and possessives: `T3 environment`, `T3 thread`, `T3 proxy`, `T3 capture`, `T3 mark`, `T3 binary`, `T3 window`, `T3 process`, `T3's`. Identifiers that merely embed the letters are not noun copy and stay. |
-| `t2-cli-scope`                                                            | `@t3code/` — an invented half-rename; the fork CLI is `@t2code/cli` (upstream ships it unscoped as `t3`).                                                                                                                |
+| `t2-cli-scope`                                                            | `@t2code/` — an invented half-rename; the fork CLI is `@t2code/cli` (upstream ships it unscoped as `t3`).                                                                                                                |
 | `t2-scope`                                                                | `@t3/` — an invented upstream-adjacent scope; fork packages are `@t2code/*`.                                                                                                                                             |
 | `t3tools-scope`, `t3tools-brand`                                          | `@t3tools/` and repository-owned `t3tools` metadata; upstream repo URLs stay.                                                                                                                                            |
 | `t2-context-identity`                                                     | A bare `t3/<package>/...` Effect context tag: upstream's package name made that identity correct there, while the fork qualifies every tag with `@t2code/`. Test files are skipped.                                      |
@@ -33,7 +33,7 @@ Line rules run on every added line (pre-commit: staged; pre-push: pushed ranges;
 Grep for brand strings across tests and copy-bearing files:
 
 ```sh
-rg -n "T3 Code|T3_CODE|@t3code/cli|@t3tools/|t3tools|@t2code/" -g '!node_modules' -g '!.t3' -g '!.repos' -g '!patches/**'
+rg -n "T3 Code|T3_CODE|@t2code/cli|@t3tools/|t3tools|@t2code/" -g '!node_modules' -g '!.t3' -g '!.repos' -g '!patches/**'
 rg -no "(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+" -g '!node_modules' -g '!.t3' -g '!.repos' -g '!.agents' -g '!patches/**'
 ```
 

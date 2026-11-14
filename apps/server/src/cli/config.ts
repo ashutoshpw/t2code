@@ -589,9 +589,9 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
     Option.fromUndefinedOr(env.host),
     Option.fromUndefinedOr(bootstrap?.host),
   );
-  // Private networks only, so clients learn a LAN address and prefer it over
-  // T2 Connect. `t2 service install` writes T2CODE_LAN=false for a new
-  // service; one installed before T2CODE_LAN existed keeps listening.
+  // A background service exists to be reached from other devices, so it
+  // listens on private networks unless `service.env` sets `T2CODE_HOST`.
+  // Clients then learn its LAN address and prefer it over T2 Connect.
   const lan = resolveOptionPrecedence(normalizedFlags.lan, Option.fromUndefinedOr(env.lan));
   const privateNetworkOnly =
     Option.isNone(explicitHost) &&
