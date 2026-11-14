@@ -13,7 +13,38 @@ describe("relayOwnsManagedEndpointZone", () => {
   });
 });
 
+describe("relayResourceNameForStage", () => {
+  it("isolates production and personal stages", () => {
+    expect(relayResourceNameForStage("t2-code-relay-traces", "prod")).toBe(
+      "t2-code-relay-traces-prod",
+    );
+    expect(relayResourceNameForStage("t2-code-relay-traces", "dev_julius")).toBe(
+      "t2-code-relay-traces-dev-julius",
+    );
+  });
+});
+
 describe("managed endpoint names", () => {
+  it("uses the stage slug and a stable stage-scoped digest suffix", () => {
+    const hash = "ABCDEF0123456789ABCDEF0123456789";
+
+    expect(managedEndpointDigestInput("dev_julius", "user_123", "env_123")).toBe(
+      "dev_julius:user_123:env_123",
+    );
+    expect(managedEndpointHostname("dev_julius", ".example.com.", hash)).toBe(
+      "dev-julius-abcdef0123456789.example.com",
+    );
+    expect(managedEndpointHostname("prod", "t2coderelay.com", hash)).toBe(
+      "prod-abcdef0123456789.t2coderelay.com",
+    );
+    expect(managedEndpointTunnelName("dev_julius", hash)).toBe(
+      "t2coderelay-managedendpoint-dev-julius-abcdef0123456789",
+    );
+    expect(managedEndpointTunnelNamePrefix("dev_julius")).toBe(
+      "t3coderelay-managedendpoint-dev-julius-",
+    );
+  });
+
   it("keeps the DNS label within the provider limit for long stage names", () => {
     const hostname = managedEndpointHostname(
       "dev_" + "x".repeat(100),
