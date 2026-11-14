@@ -581,7 +581,7 @@ const template = {
     {
       role: "system",
       content:
-        "Main prompt.\n - Primary working directory: /home/alice/app\n\n<runtime_info>old</runtime_info>\n\n## T3 Code orchestration\nold text",
+        "Main prompt.\n - Primary working directory: /home/alice/app\n\n<runtime_info>old</runtime_info>\n\n## T2 Code orchestration\nold text",
     },
     {
       role: "system",
@@ -627,7 +627,7 @@ const browserCase = (id: string) =>
     .map((line) => decodeDeviceCase(line))
     .find((c) => c.id === id)!;
 
-it("rebuilds the template from this checkout and sends a child T3's task prompt", () => {
+it("rebuilds the template from this checkout and sends a child T2's task prompt", () => {
   const base = buildBase(template, { model: "claude-sonnet-5-5", keepUserInstructions: false });
   const system = base.system.map((block) => String(block.text));
   assert.deepEqual(system.slice(0, 2), [
@@ -1165,14 +1165,14 @@ it.effect("seeds T3's error for a prior background wait whose IDs match nothing"
       const testCase = cases.find((c) => c.id === id)!;
       const [wait] = (testCase.setup.priorTurns ?? [])
         .flatMap((turn) => turn.toolCalls ?? [])
-        .filter((call) => call.tool === "t3_background_wait");
+        .filter((call) => call.tool === "t2_background_wait");
       assert.isDefined(wait, id);
       const sample = makeSample(testCase, base);
       yield* withBackgroundWait(sample);
       assert.equal(sample.priorErrors.has(wait), isError, id);
       const blocks = buildMessages(sample).flatMap((message) => message.content);
       const waitUse = blocks.find(
-        (block) => block.type === "tool_use" && String(block.name).endsWith("t3_background_wait"),
+        (block) => block.type === "tool_use" && String(block.name).endsWith("t2_background_wait"),
       );
       const replayed = blocks.find(
         (block) => block.type === "tool_result" && block.tool_use_id === waitUse?.id,

@@ -2354,7 +2354,7 @@ export const CLAUDE_T2_MCP_TOOL_WILDCARD = "mcp__t2-code__*";
 export const CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
   "mcp__t2-code__orchestrator_capabilities",
   "mcp__t2-code__list_scheduled_tasks",
-  "mcp__t2-code__t3_background_wait",
+  "mcp__t2-code__t2_background_wait",
   "mcp__t2-code__t2_thread_list",
   "mcp__t2-code__t2_thread_wait",
   "mcp__t2-code__t2_worktree_status",

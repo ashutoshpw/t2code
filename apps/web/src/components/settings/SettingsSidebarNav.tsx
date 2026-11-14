@@ -13,7 +13,6 @@ import {
   BotIcon,
   CalendarClockIcon,
   createLucideIcon,
-  CalendarClockIcon,
   FileDiffIcon,
   FolderTreeIcon,
   GitBranchIcon,
