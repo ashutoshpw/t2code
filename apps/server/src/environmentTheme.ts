@@ -121,7 +121,7 @@ export class EnvironmentThemeService extends Context.Service<
     /** Subscribes before reading to retain changes during connection. */
     readonly streamChanges: Stream.Stream<ReadonlyArray<EnvironmentTheme>>;
   }
->()("t3/environmentTheme/EnvironmentThemeService") {}
+>()("@t2code/cli/environmentTheme/EnvironmentThemeService") {}
 
 /** True when anything, a dangling symlink included, is at the path. */
 const pathIsTaken = (filePath: string): boolean => {
