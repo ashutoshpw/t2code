@@ -1,18 +1,18 @@
-import {
-  SpaceDataSourceId,
-  type SpacePropertyId,
-  type SpacePropertyType,
-} from "@t2code/contracts/spaces";
-import { useState, type ReactElement, type ReactNode } from "react";
+import type { SpacePropertyId, SpacePropertyType } from "@t2code/contracts/spaces";
+import { lazy, Suspense, useState, type ReactElement, type ReactNode } from "react";
 
-import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
 import { PropertyTypeIcon } from "../primitives/PropertyTypeIcon";
 import { PROPERTY_TYPE_META, propertyTypeMeta } from "../primitives/propertyTypes";
-import { OptionSelect } from "./OptionSelect";
-import { configForType, orderWithInserted, uniqueName } from "./propertyConfig";
+import {
+  configForType,
+  defaultRollupConfig,
+  orderWithInserted,
+  uniqueName,
+} from "./propertyConfig";
 import { PropertyEditorDialog } from "./PropertyEditorDialog";
+import { RelationSetup, type RelationChoice } from "./RelationSetup";
 import { useViewControls } from "./useViewControls";
 
 const WITH_SETTINGS: ReadonlyArray<string> = [
@@ -21,8 +21,9 @@ const WITH_SETTINGS: ReadonlyArray<string> = [
   "status",
   "number",
   "date",
-  "relation",
+  "rollup",
 ];
+const FormulaEditor = lazy(() => import("../formula/FormulaEditor"));
 const TYPES = (Object.keys(PROPERTY_TYPE_META) as SpacePropertyType[]).filter(
   (type) => PROPERTY_TYPE_META[type].creatable,
 );
@@ -35,36 +36,25 @@ export function AddPropertyButton({
   readonly render: ReactElement;
   readonly beforePropertyId?: SpacePropertyId | null;
 }): ReactNode {
-  const { model, dataSource, columns, canEditSchema, actions } = useViewControls();
+  const { dataSource, columns, canEditSchema, actions } = useViewControls();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState<string | null>(null);
   const [relation, setRelation] = useState(false);
-  const [target, setTarget] = useState<string | null>(null);
   const [editing, setEditing] = useState<SpacePropertyId | null>(null);
+  const [formula, setFormula] = useState<SpacePropertyId | null>(null);
   if (!canEditSchema) return null;
 
   const names = Object.values(dataSource.properties).map((property) => property.name);
+  const noRelation = defaultRollupConfig(dataSource) === null;
   const shownName = name ?? uniqueName("Property", names);
   const close = () => {
     setOpen(false);
     setName(null);
     setRelation(false);
-    setTarget(null);
   };
-  const add = async (type: SpacePropertyType, dataSourceId?: string) => {
-    const config =
-      type === "relation" && dataSourceId !== undefined
-        ? { dataSourceId, limit: "many" }
-        : configForType(type);
-    const id = await actions.addProperty(
-      {
-        name: shownName.trim() === "" ? uniqueName("Property", names) : shownName.trim(),
-        type,
-        ...(config === undefined ? {} : { config }),
-      },
-      beforePropertyId,
-    );
-    if (id === null) return;
+  const propertyName = () =>
+    shownName.trim() === "" ? uniqueName("Property", names) : shownName.trim();
+  const placed = (id: SpacePropertyId) => {
     if (beforePropertyId !== undefined)
       actions.editView({
         properties: {
@@ -75,8 +65,35 @@ export function AddPropertyButton({
           ),
         },
       });
+  };
+  const addRelation = async (choice: RelationChoice) => {
+    const id = await actions.addRelation({
+      name: propertyName(),
+      target: choice.target.dataSourceId,
+      limit: choice.limit,
+      twin: choice.twinName === null ? null : { name: choice.twinName },
+      ...(beforePropertyId === undefined ? {} : { beforePropertyId }),
+    });
+    if (id === null) return;
+    placed(id);
     close();
-    if (WITH_SETTINGS.includes(type)) setEditing(id);
+    setEditing(id);
+  };
+  const add = async (type: SpacePropertyType) => {
+    const config = configForType(type, dataSource);
+    const id = await actions.addProperty(
+      {
+        name: propertyName(),
+        type,
+        ...(config === undefined ? {} : { config }),
+      },
+      beforePropertyId,
+    );
+    if (id === null) return;
+    placed(id);
+    close();
+    if (type === "formula") setFormula(id);
+    else if (WITH_SETTINGS.includes(type)) setEditing(id);
   };
 
   return (
@@ -92,27 +109,7 @@ export function AddPropertyButton({
               onChange={(event) => setName(event.target.value)}
             />
             {relation ? (
-              <div className="space-y-2">
-                <OptionSelect
-                  label="Related data source"
-                  value={target}
-                  placeholder="Choose a data source"
-                  choices={model.dataSources.map((source) => ({
-                    value: source.id,
-                    label: source.name,
-                  }))}
-                  onChange={setTarget}
-                />
-                <Button
-                  size="xs"
-                  disabled={target === null}
-                  onClick={() =>
-                    target !== null && void add("relation", SpaceDataSourceId.make(target))
-                  }
-                >
-                  Add relation
-                </Button>
-              </div>
+              <RelationSetup onAdd={(choice) => void addRelation(choice)} />
             ) : (
               <div role="menu" aria-label="Property type" className="space-y-0.5">
                 {TYPES.map((type) => (
@@ -120,11 +117,17 @@ export function AddPropertyButton({
                     key={type}
                     type="button"
                     role="menuitem"
-                    className="flex h-7 w-full items-center gap-2 rounded-sm px-2 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    className="flex h-7 w-full items-center gap-2 rounded-sm px-2 text-sm outline-none hover:bg-accent disabled:opacity-64 disabled:hover:bg-transparent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    disabled={type === "rollup" && noRelation}
                     onClick={() => (type === "relation" ? setRelation(true) : void add(type))}
                   >
                     <PropertyTypeIcon type={type} />
                     {propertyTypeMeta(type).label}
+                    {type === "rollup" && noRelation ? (
+                      <span className="ms-auto text-xs text-muted-foreground">
+                        Needs a relation
+                      </span>
+                    ) : null}
                   </button>
                 ))}
               </div>
@@ -132,6 +135,11 @@ export function AddPropertyButton({
           </div>
         </PopoverPopup>
       </Popover>
+      {formula === null ? null : (
+        <Suspense fallback={null}>
+          <FormulaEditor propertyId={formula} onClose={() => setFormula(null)} />
+        </Suspense>
+      )}
       {editing === null ? null : (
         <PropertyEditorDialog
           propertyId={editing}

@@ -65,7 +65,7 @@ describe("DatabaseBlock", () => {
       <DatabaseHarness host={testHost(controller)} initialViewIds={["view-table"]} />,
       { router: false },
     );
-    await expect.element(screen.getByText("This database is no longer available.")).toBeVisible();
+    await expect.element(screen.getByText(/The original database was deleted/)).toBeVisible();
     await expect.element(screen.getByRole("button", { name: "Remove block" })).toBeVisible();
   });
 });

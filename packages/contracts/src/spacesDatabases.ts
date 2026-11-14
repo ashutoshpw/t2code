@@ -6,6 +6,7 @@ import {
   SpaceBlockId,
   SpaceId,
   SpaceKnownMark,
+  SpaceRichRun,
   SpacePageIcon,
   SpacePageId,
   StableId,
@@ -68,7 +69,14 @@ export const SPACE_PROPERTY_TYPES = [
 export const SpacePropertyType = Schema.Literals(SPACE_PROPERTY_TYPES);
 export type SpacePropertyType = typeof SpacePropertyType.Type;
 
-const SPACE_VIEW_TYPES = ["table", "board", "list", "gallery", "calendar", "timeline"] as const;
+export const SPACE_VIEW_TYPES = [
+  "table",
+  "board",
+  "list",
+  "gallery",
+  "calendar",
+  "timeline",
+] as const;
 export const SpaceViewType = Schema.Literals(SPACE_VIEW_TYPES);
 export type SpaceViewType = typeof SpaceViewType.Type;
 
@@ -144,6 +152,22 @@ const SPACE_ROLLUP_FUNCTIONS = [
 export const SpaceRollupFunction = Schema.Literals(SPACE_ROLLUP_FUNCTIONS);
 export type SpaceRollupFunction = typeof SpaceRollupFunction.Type;
 
+/** What the server knows about a formula or rollup: its result type and whether it can be queried. */
+export const SpaceComputedInfo = Schema.StructWithRest(
+  Schema.Struct({
+    /** The formula type of the result, as JSON (`"number"`, `{"list":"text"}`, `{"page":"<data source>"}`). */
+    resultType: Schema.Json,
+    /** The stored property type the value filters, sorts and groups as; absent means display-only. */
+    queryType: Schema.optionalKey(Schema.String),
+    volatile: Schema.optionalKey(Schema.Boolean),
+    /** Own-row property ids the value reads directly. */
+    inputs: Schema.optionalKey(Schema.Array(SpacePropertyId)),
+    error: Schema.optionalKey(Schema.Struct({ message: Schema.String })),
+  }),
+  [Schema.Record(Schema.String, Schema.Json)],
+);
+export type SpaceComputedInfo = typeof SpaceComputedInfo.Type;
+
 // Property: the envelope is what reads return and decodes unknown future types without loss.
 export const SpaceDatabaseProperty = Schema.StructWithRest(
   Schema.Struct({
@@ -153,6 +177,7 @@ export const SpaceDatabaseProperty = Schema.StructWithRest(
     config: Schema.Json,
     position: Schema.Int,
     description: Schema.optionalKey(Schema.String),
+    computed: Schema.optionalKey(SpaceComputedInfo),
   }),
   [Schema.Record(Schema.String, Schema.Json)],
 );
@@ -217,9 +242,15 @@ export const SpaceKnownPropertyConfig = {
     relationPropertyId: SpacePropertyId,
     targetPropertyId: SpacePropertyId,
     function: SpaceRollupFunction,
+    format: Schema.optionalKey(SpaceNumberFormat),
+    decimals: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 10 }))),
   }),
   // The byte cap (maxFormulaBytes) is server policy.
-  formula: Schema.Struct({ expression: Schema.String }),
+  formula: Schema.Struct({
+    expression: Schema.String,
+    format: Schema.optionalKey(SpaceNumberFormat),
+    decimals: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 10 }))),
+  }),
   unique_id: Schema.Struct({
     prefix: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[A-Za-z0-9]{0,16}$/))),
   }),
@@ -272,12 +303,66 @@ export const SpaceFileItem = Schema.Union([
   Schema.Struct({ name: Schema.String, assetId: SpaceAssetId }),
 ]);
 export type SpaceFileItem = typeof SpaceFileItem.Type;
-// Known types reserved for workflow 3: string, number, boolean, date, array.
+// Known types: string, number, boolean, date, page, array. Unknown types decode through the envelope.
 export const SpaceComputedValue = Schema.StructWithRest(
   Schema.Struct({ type: StableId, value: Schema.Json }),
   [Schema.Record(Schema.String, Schema.Json)],
 );
 export type SpaceComputedValue = typeof SpaceComputedValue.Type;
+
+/** Strict shapes of the known computed value types, for clients that render them. */
+export const SpaceKnownComputedValue = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("string"),
+    value: Schema.String,
+    runs: Schema.optionalKey(Schema.Array(SpaceRichRun)),
+    color: Schema.optionalKey(SpaceDatabaseColor),
+  }),
+  Schema.Struct({ type: Schema.Literal("number"), value: Schema.Finite }),
+  Schema.Struct({ type: Schema.Literal("boolean"), value: Schema.Boolean }),
+  Schema.Struct({ type: Schema.Literal("date"), value: SpaceDateValue }),
+  Schema.Struct({
+    type: Schema.Literal("page"),
+    value: SpacePageId,
+    dataSourceId: Schema.optionalKey(SpaceDataSourceId),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("array"),
+    value: Schema.Array(SpaceComputedValue),
+    truncated: Schema.optionalKey(Schema.Boolean),
+  }),
+]);
+
+type ScalarFormulaType = "number" | "text" | "boolean" | "date" | { readonly list: "text" };
+/** The formula type of every property type that does not need the schema to know it. */
+export const SPACE_FORMULA_TYPE_BY_PROPERTY = {
+  title: "text",
+  text: "text",
+  url: "text",
+  email: "text",
+  phone: "text",
+  select: "text",
+  status: "text",
+  unique_id: "text",
+  multi_select: { list: "text" },
+  files: { list: "text" },
+  number: "number",
+  checkbox: "boolean",
+  date: "date",
+  created_time: "date",
+  last_edited_time: "date",
+} as const satisfies Partial<Record<SpacePropertyType, ScalarFormulaType>>;
+
+const isPropertyType = Schema.is(SpacePropertyType);
+/** The type a property filters, sorts and groups as: its own, or `computed.queryType` for formula and rollup. */
+export function spacePropertyQueryType(
+  property: SpaceDatabaseProperty,
+): SpacePropertyType | undefined {
+  if (property.type !== "formula" && property.type !== "rollup")
+    return isPropertyType(property.type) ? property.type : undefined;
+  const queryType = property.computed?.queryType;
+  return queryType !== undefined && isPropertyType(queryType) ? queryType : undefined;
+}
 
 /** Strict value shape per property type (read and write; read-only types are rejected on write). */
 export const SpaceKnownCellValue = {
@@ -392,6 +477,15 @@ export const SpaceDatabaseRow = Schema.Struct({
   }),
   number: PositiveInt,
   cells: SpaceCellMap,
+  /** Present when the query scoped to a parent row (sub-items): its live children. */
+  childCount: Schema.optionalKey(NonNegativeInt),
+  /** Present when the query asked for `include.cover` and the page body starts with an image. */
+  cover: Schema.optionalKey(
+    Schema.Struct({
+      url: Schema.optionalKey(Schema.String),
+      assetId: Schema.optionalKey(SpaceAssetId),
+    }),
+  ),
 });
 export type SpaceDatabaseRow = typeof SpaceDatabaseRow.Type;
 export const SpaceRelatedPage = Schema.Struct({

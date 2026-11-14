@@ -9,7 +9,8 @@ import {
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, TriangleAlertIcon } from "lucide-react";
+import { computedInfoOf } from "@t2code/client-runtime/spaces";
 import { useRef, type PointerEvent } from "react";
 import type { SpacePropertyId } from "@t2code/contracts/spaces";
 
@@ -93,6 +94,13 @@ function HeaderCell({
           >
             <PropertyTypeIcon type={column.type} />
             <span className="truncate">{column.name}</span>
+            {column.known !== null && computedInfoOf(column.known)?.error !== undefined ? (
+              <TriangleAlertIcon
+                role="img"
+                aria-label="Formula error"
+                className="size-3 shrink-0 text-warning-foreground"
+              />
+            ) : null}
           </button>
         }
       />

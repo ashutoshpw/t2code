@@ -61,6 +61,14 @@ export function handleGridKeyDown(
     if (moved) handled();
     // Shift+Tab out of the first cell lands on the grid root, which must not pull focus back in.
     else if (event.shiftKey) store.park();
+  } else if (
+    propertyId === "title" &&
+    !mod &&
+    !event.shiftKey &&
+    (event.key === "ArrowRight" || event.key === "ArrowLeft") &&
+    grid.toggleRow(pageId, event.key === "ArrowRight")
+  ) {
+    handled();
   } else if (NAVIGATION.has(event.key)) {
     handled();
     grid.navigate(cell, { key: event.key, shift: event.shiftKey, mod });

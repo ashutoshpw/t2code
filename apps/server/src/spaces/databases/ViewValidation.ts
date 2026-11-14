@@ -78,7 +78,7 @@ const validateCondition = Effect.fn("SpacesDatabases.validateCondition")(functio
   condition: Extract<C.SpaceKnownFilter, { readonly property: C.SpacePropertyId }>,
 ) {
   const property = yield* liveProperty(snapshot, condition.property);
-  if (computed.has(property.type)) return;
+  if (computed.has(property.type)) return yield* dbError("property_not_queryable", property.id);
   const legal: readonly string[] = C.SPACE_FILTER_OPERATORS[property.type];
   if (!legal.includes(condition.operator))
     return yield* dbError("operator_not_supported", property.id);

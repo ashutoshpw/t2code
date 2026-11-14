@@ -3,7 +3,6 @@ import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceCellValue, SpaceDatabaseRow, SpaceRelatedPage } from "@t2code/contracts/spaces";
 
 import type { GridEditStore } from "./gridEditStore";
-import { ROW_HEIGHT } from "./gridItems";
 import { TableCell } from "./TableCell";
 import { sameRowProps, type GridHandlers, type OptionHint, type TableColumn } from "./tableTypes";
 
@@ -17,6 +16,10 @@ export interface TableRowProps {
   /** Width of the columns before `firstColumn`. */
   readonly leftSpace: number;
   readonly top: number;
+  readonly rowHeight: number;
+  readonly depth: number;
+  readonly expandable: boolean;
+  readonly expanded: boolean;
   readonly ariaRow: number;
   readonly relatedPages: Readonly<Record<string, SpaceRelatedPage>>;
   readonly optionHint: OptionHint;
@@ -55,6 +58,10 @@ export const TableRow = memo(function TableRow({
   lastColumn,
   leftSpace,
   top,
+  rowHeight,
+  depth,
+  expandable,
+  expanded,
   ariaRow,
   relatedPages,
   optionHint,
@@ -82,12 +89,15 @@ export const TableRow = memo(function TableRow({
       role="row"
       aria-rowindex={ariaRow}
       className="group/row absolute start-0 flex w-full border-b border-border/60 hover:bg-accent/30"
-      style={{ top, height: ROW_HEIGHT }}
+      style={{ top, height: rowHeight }}
     >
       <TableCell
         {...shared}
         column={titleColumn}
         colIndex={1}
+        depth={depth}
+        expandable={expandable}
+        expanded={expanded}
         value={cellValue(row, titleColumn)}
         editable={canEdit && titleColumn.writable}
       />

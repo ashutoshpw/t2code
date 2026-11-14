@@ -65,6 +65,7 @@ import {
 /** Asks the host to create a database, then to place its block with `place`. */
 export type SlashDatabaseCreate = (
   place: (content: SpaceDatabaseBlock["content"]) => boolean,
+  kind?: "new" | "linked",
 ) => void;
 
 export function BubbleLayer({
@@ -363,6 +364,19 @@ export function SlashLayer({
                   editable &&
                   !editor.isDestroyed &&
                   adapter.placeDatabase(id, content)(editor.state, editor.view.dispatch),
+              ),
+          },
+          {
+            label: "Linked view of database",
+            icon: LinkIcon,
+            keywords: "database link view existing table board",
+            apply: (id: SpaceBlockId | null) =>
+              onCreateDatabase(
+                (content) =>
+                  editable &&
+                  !editor.isDestroyed &&
+                  adapter.placeDatabase(id, content)(editor.state, editor.view.dispatch),
+                "linked",
               ),
           },
         ]

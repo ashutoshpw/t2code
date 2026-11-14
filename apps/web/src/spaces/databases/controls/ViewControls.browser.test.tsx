@@ -4,6 +4,7 @@ import { page, userEvent } from "vite-plus/test/browser";
 
 import { render } from "../../../../test/render";
 import { DatabaseHarness, fakeController, testHost } from "../test/harness";
+import { fixtureView } from "../test/fixtures";
 import { EditableFakeDatabase } from "./controlsFake";
 import { dragWithKeyboard } from "./keyboardDrag";
 
@@ -185,6 +186,28 @@ describe("properties popover", () => {
       expect(fake.callsOf("updateSchema").at(-1)?.input.operations).toEqual([
         { op: "restoreProperty", propertyId: "old" },
       ]),
+    );
+  });
+});
+
+describe("layout popover", () => {
+  it("edits the layout of the active view and keeps the keys it does not touch", async () => {
+    const { fake, host } = setup({
+      views: [fixtureView("view-list", "list", "List", 0, { showPropertyNames: true })],
+    });
+    await using _screen = await render(
+      <DatabaseHarness host={host} initialViewIds={["view-list"]} />,
+      { router: false },
+    );
+    await userEvent.click(page.getByRole("button", { name: "Layout" }));
+    await toggle("Show property names");
+    await vi.waitFor(() => expect(lastView(fake)?.layout).toEqual({ showPropertyNames: false }));
+    await choose("Open pages in", "Full page");
+    await vi.waitFor(() =>
+      expect(lastView(fake)?.layout).toEqual({
+        showPropertyNames: false,
+        openPagesIn: "full_page",
+      }),
     );
   });
 });

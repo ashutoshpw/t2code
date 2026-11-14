@@ -5,7 +5,7 @@ import type {
 } from "@t2code/contracts/spaces";
 import { describe, expect, it } from "vite-plus/test";
 
-import { cellForGroupKey, newRowCells } from "./newRow.ts";
+import { cellForGroupKey, newRowCells, templateForNewRow } from "./newRow.ts";
 import { knownProperty } from "./schema.ts";
 
 const property = (id: string, type: string, config: unknown = {}) =>
@@ -85,5 +85,24 @@ describe("newRowCells", () => {
       group: { property: "status" as never, key: key({ kind: "status_group", group: "todo" }) },
     });
     expect(cells.status).toBe("todo1");
+  });
+});
+
+describe("templateForNewRow", () => {
+  const source = {
+    defaultTemplateId: "t1",
+    templates: [
+      { pageId: "t1", title: "Bug" },
+      { pageId: "t2", title: "Idea" },
+    ],
+  } as unknown as Parameters<typeof templateForNewRow>[0];
+  it("uses the default unless the caller chose, and ignores a template that is gone", () => {
+    expect(templateForNewRow(source, undefined)).toBe("t1");
+    expect(templateForNewRow(source, null)).toBeUndefined();
+    expect(templateForNewRow(source, "t2" as never)).toBe("t2");
+    expect(templateForNewRow(source, "gone" as never)).toBeUndefined();
+    expect(
+      templateForNewRow({ ...source, defaultTemplateId: "gone" as never }, undefined),
+    ).toBeUndefined();
   });
 });

@@ -13,7 +13,7 @@ import type { DatabaseActions } from "../data/actions";
 import type { DatabaseModel } from "../data/useDatabaseModel";
 import type { DatabaseLayout } from "../blocks/DatabaseBlockHost";
 
-export type OpenControl = "filter" | "sort" | "group" | "properties" | null;
+export type OpenControl = "layout" | "filter" | "sort" | "group" | "properties" | null;
 
 export interface DatabaseContextValue {
   readonly model: DatabaseModel;

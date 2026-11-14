@@ -3,6 +3,8 @@ import * as Effect from "effect/Effect";
 
 import { byteLength, ensureDatabaseLimit } from "../../CorePolicy.ts";
 import * as SpacesSql from "../../SpacesSql.ts";
+import * as Drain from "../computed/Drain.ts";
+import * as QuerySnapshot from "../computed/QuerySnapshot.ts";
 import * as DatabaseStore from "../DatabaseStore.ts";
 import * as SchemaStore from "../SchemaStore.ts";
 import { dbError } from "../Types.ts";
@@ -44,8 +46,9 @@ export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
     scope: request.scope,
     mode: request.mode,
   };
-  const e = yield* effective(snapshot, definition);
-  const c = { sql, snapshot, dates };
+  const queryable = QuerySnapshot.of(snapshot);
+  const e = yield* effective(queryable, definition);
+  const c = { sql, snapshot: queryable, full: snapshot, dates };
   const plan = yield* makePlan({
     c,
     e,
@@ -57,13 +60,18 @@ export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
     schemaRevision: source.schema_revision,
     dataRevision: source.data_revision,
   };
+  const pending = (yield* Drain.pending(source.data_source_id)) ? { computedPending: true } : {};
   const wantTotal = request.include?.total === true;
   const wantAggregates = request.include?.aggregates === true && e.aggregates.length > 0;
 
   if (request.mode === "groups") {
     const rowsPerGroup = request.rowsPerGroup ?? 0;
     yield* ensureDatabaseLimit("maxGroupPreviewRows", rowsPerGroup);
-    const result = yield* groups(plan, { rowsPerGroup, aggregates: wantAggregates });
+    const result = yield* groups(plan, {
+      rowsPerGroup,
+      aggregates: wantAggregates,
+      cover: request.include?.cover === true,
+    });
     return {
       ...base,
       rows: [],
@@ -72,6 +80,7 @@ export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
       ...(wantTotal ? { total: result.total } : {}),
       ...(result.aggregates ? { aggregates: result.aggregates } : {}),
       relatedPages: result.related,
+      ...pending,
       nextCursor: null,
     } satisfies C.SpaceDatabaseQueryResult;
   }
@@ -107,6 +116,7 @@ export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
       ...(total === undefined ? {} : { total }),
       ...(aggregates ? { aggregates } : {}),
     }),
+    { cover: request.include?.cover === true },
   );
   return {
     ...base,
@@ -114,6 +124,7 @@ export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
     ...(total === undefined ? {} : { total }),
     ...(aggregates === undefined ? {} : { aggregates }),
     relatedPages: page.related,
+    ...pending,
     nextCursor: page.nextCursor,
   } satisfies C.SpaceDatabaseQueryResult;
 });

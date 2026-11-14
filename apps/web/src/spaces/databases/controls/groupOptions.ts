@@ -58,15 +58,16 @@ export const isRangeBy = (by: unknown): by is { range: { start: number; size: nu
 export function listedBuckets(
   known: SpaceKnownDatabaseProperty,
   by: SpaceKnownGroupBy | undefined,
+  type: string = known.type,
 ): ReadonlyArray<{ readonly key: SpaceKnownGroupKey; readonly label: string }> | null {
   const empty = { key: { kind: "empty" } as const, label: "No value" };
-  if (known.type === "checkbox")
+  if (type === "checkbox")
     return [
       { key: { kind: "checkbox", value: false }, label: "Unchecked" },
       { key: { kind: "checkbox", value: true }, label: "Checked" },
       empty,
     ];
-  if (known.type === "status" && by === "status_group")
+  if (type === "status" && by === "status_group")
     return [
       ...(["todo", "in_progress", "complete"] as SpaceStatusGroup[]).map((group) => ({
         key: { kind: "status_group", group } as const,
@@ -74,7 +75,7 @@ export function listedBuckets(
       })),
       empty,
     ];
-  if (known.type === "status" || known.type === "select" || known.type === "multi_select")
+  if (type === "status" || type === "select" || type === "multi_select")
     return [
       ...propertyOptions(known).map((option) => ({
         key: { kind: "option", optionId: option.id } as SpaceKnownGroupKey,

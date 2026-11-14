@@ -1,6 +1,7 @@
 import {
   defaultCondition,
   filterOperatorsFor,
+  propertyQueryType,
   filterShape,
   insertAt,
   prune,
@@ -21,6 +22,7 @@ import {
   GroupIcon,
   PencilIcon,
   Trash2Icon,
+  WrapTextIcon,
 } from "lucide-react";
 import { useState, type ReactElement, type ReactNode } from "react";
 
@@ -65,9 +67,10 @@ export function PropertyMenu({
   if (property === undefined || column === undefined) return render;
 
   const isTitle = property.type === "title";
-  const sortable = (SPACE_SORTABLE_TYPES as ReadonlyArray<string>).includes(property.type);
-  const groupable = (SPACE_GROUPABLE_TYPES as ReadonlyArray<string>).includes(property.type);
-  const filterable = filterOperatorsFor(property.type).length > 0 && column.known !== null;
+  const queryType = propertyQueryType(property) ?? "";
+  const sortable = (SPACE_SORTABLE_TYPES as ReadonlyArray<string>).includes(queryType);
+  const groupable = (SPACE_GROUPABLE_TYPES as ReadonlyArray<string>).includes(queryType);
+  const filterable = filterOperatorsFor(queryType).length > 0 && column.known !== null;
   const atConditionLimit = filterShape(known?.filter).conditions >= limits.maxFilterConditions;
   const columnIds = columns.map((entry) => entry.property.id);
   const schemaOrder = Object.values(dataSource.properties)
@@ -145,7 +148,7 @@ export function PropertyMenu({
               if (column.known === null || known === null) return;
               actions.editView({
                 filter: prune(
-                  insertAt(rootGroup(known.filter), [], defaultCondition(column.known)),
+                  insertAt(rootGroup(known.filter), [], defaultCondition(column.known, queryType)),
                 ),
               });
               setControl("filter");
@@ -166,6 +169,21 @@ export function PropertyMenu({
             >
               <GroupIcon />
               Group
+            </MenuItem>
+          ) : null}
+          {known?.type === "table" ? (
+            <MenuItem
+              disabled={!canEditView}
+              onClick={() =>
+                actions.editView({
+                  properties: {
+                    set: { [propertyId]: { wrap: column.wrap === true ? null : true } },
+                  },
+                })
+              }
+            >
+              <WrapTextIcon />
+              {column.wrap === true ? "Unwrap column" : "Wrap column"}
             </MenuItem>
           ) : null}
           {isTitle ? null : (

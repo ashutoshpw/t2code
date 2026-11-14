@@ -24,7 +24,7 @@ import type { SpacePropertyType } from "@t2code/contracts/spaces";
 interface PropertyTypeMeta {
   readonly label: string;
   readonly icon: LucideIcon;
-  /** Whether a user can add a property of this type (the title, rollup and formula are not creatable yet). */
+  /** Whether a user can add a property of this type (the title is not creatable). */
   readonly creatable: boolean;
 }
 
@@ -42,8 +42,8 @@ export const PROPERTY_TYPE_META: Record<SpacePropertyType, PropertyTypeMeta> = {
   phone: { label: "Phone", icon: PhoneIcon, creatable: true },
   files: { label: "Files and media", icon: PaperclipIcon, creatable: true },
   relation: { label: "Relation", icon: ArrowUpRightIcon, creatable: true },
-  rollup: { label: "Rollup", icon: SigmaIcon, creatable: false },
-  formula: { label: "Formula", icon: SigmaIcon, creatable: false },
+  rollup: { label: "Rollup", icon: SigmaIcon, creatable: true },
+  formula: { label: "Formula", icon: SigmaIcon, creatable: true },
   created_time: { label: "Created time", icon: ClockIcon, creatable: true },
   last_edited_time: { label: "Last edited time", icon: PenLineIcon, creatable: true },
   unique_id: { label: "ID", icon: KeyRoundIcon, creatable: true },

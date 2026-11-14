@@ -61,6 +61,8 @@ export const SpaceDatabaseRowGetInput = Schema.Struct({
   environmentId: EnvironmentId,
   pageId: SpacePageId,
   properties: optional(Schema.Array(SpacePropertyId)),
+  /** IANA zone for volatile formulas (now, today); defaults to the server's. */
+  timeZone: optional(Schema.String),
 });
 export type SpaceDatabaseRowGetInput = typeof SpaceDatabaseRowGetInput.Type;
 export const SpaceDatabaseRowGetResult = Schema.Struct({
@@ -73,6 +75,8 @@ export const SpaceDatabaseRowGetResult = Schema.Struct({
     dataRevision: NonNegativeInt,
   }),
   relatedPages,
+  /** Computed values of this data source are still being brought up to date. */
+  computedPending: optional(Schema.Boolean),
   mutationAdmission: SpaceMutationAdmission,
 });
 export type SpaceDatabaseRowGetResult = typeof SpaceDatabaseRowGetResult.Type;
@@ -105,7 +109,11 @@ export const SpaceDatabaseQueryInput = Schema.Struct({
   /** Present replaces the view's column aggregates. */
   aggregates: optional(Schema.Array(SpaceAggregate)),
   include: optional(
-    Schema.Struct({ total: optional(Schema.Boolean), aggregates: optional(Schema.Boolean) }),
+    Schema.Struct({
+      total: optional(Schema.Boolean),
+      aggregates: optional(Schema.Boolean),
+      cover: optional(Schema.Boolean),
+    }),
   ),
   /** Groups mode; default 0. */
   rowsPerGroup: optional(NonNegativeInt),
@@ -143,6 +151,8 @@ export const SpaceDatabaseQueryResult = Schema.Struct({
   total: optional(NonNegativeInt),
   aggregates: optional(Schema.Array(SpaceAggregateResult)),
   relatedPages,
+  /** Some computed values of this data source are still being brought up to date; ask again. */
+  computedPending: optional(Schema.Boolean),
   /** Rows mode only. */
   nextCursor: Schema.NullOr(SpaceCursor),
 });

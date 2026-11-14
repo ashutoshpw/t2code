@@ -1,4 +1,4 @@
-import { canonicalJson } from "@t2code/client-runtime/spaces";
+import { canonicalJson, subItemCells } from "@t2code/client-runtime/spaces";
 import type {
   SpaceCellValue,
   SpaceDatabaseRow,
@@ -14,7 +14,7 @@ import type { DatabaseActions } from "../data/actions";
 import type { Latest } from "../data/latest";
 import type { CellTextContext } from "../primitives/format";
 import { GridEditStore } from "./gridEditStore";
-import { ROW_HEIGHT, type GridLayout } from "./gridItems";
+import type { GridLayout } from "./gridItems";
 import { nextCell } from "./gridNavigation";
 import { FOOTER_HEIGHT, scrollToCell } from "./gridWindow";
 import { cellCopyText } from "./tableCopy";
@@ -35,6 +35,10 @@ export interface GridModel {
   newRowCells(group: SpaceGroupKey | null): Record<string, SpaceCellValue>;
   readonly text: CellTextContext;
   notePages(pages: Readonly<Record<string, SpaceRelatedPage>>): void;
+  /** The sub-items parent property when nested rows are on. */
+  readonly subItems: { readonly parentPropertyId: string } | null;
+  setExpanded(pageId: string, expand: boolean): void;
+  loadChildren(parentId: string): void;
 }
 
 const sameValue = (a: SpaceCellValue | null | undefined, b: SpaceCellValue | null) =>
@@ -86,7 +90,7 @@ export function createGridHandlers(
         : others.slice(0, columnAt).reduce((sum, column) => sum + column.width, 0);
     const { top, left } = scrollToCell({
       itemTop: m.layout.offsets[itemIndex] ?? 0,
-      itemHeight: ROW_HEIGHT,
+      itemHeight: m.layout.rowHeight,
       columnLeft,
       columnWidth: columnAt < 0 ? 0 : others[columnAt]!.width,
       scrollTop: root.scrollTop,
@@ -110,7 +114,7 @@ export function createGridHandlers(
     const target = nextCell({ rowId: from.pageId, columnId: from.propertyId }, key, {
       rowIds: m.layout.rowIds,
       columnIds: m.columns.map((column) => column.id),
-      pageRows: Math.max(1, Math.floor((store.root?.clientHeight ?? 0) / ROW_HEIGHT) - 2),
+      pageRows: Math.max(1, Math.floor((store.root?.clientHeight ?? 0) / m.layout.rowHeight) - 2),
     });
     if (target === null) return false;
     focus(target.rowId, target.columnId);
@@ -202,8 +206,33 @@ export function createGridHandlers(
         }
       })();
     },
+    toggleRow: (pageId, expand) => {
+      const m = model();
+      const item = m.layout.items[m.layout.itemIndexByRow.get(pageId) ?? -1];
+      if (item?.kind !== "row") return false;
+      const want = expand ?? item.expanded !== true;
+      if (want ? item.expanded === true || item.expandable !== true : item.expanded !== true)
+        return false;
+      m.setExpanded(pageId, want);
+      return true;
+    },
+    addSubItem: (parentId) => {
+      const m = model();
+      if (m.subItems === null || !m.canAdd) return;
+      m.setExpanded(parentId, true);
+      void m.actions
+        .createRow({ cells: subItemCells(m.subItems.parentPropertyId, parentId as SpacePageId) })
+        .then((row) => {
+          if (row !== null) store.start(row.page.id, "title");
+        });
+    },
+    loadChildren: (parentId) => model().loadChildren(parentId),
+    get canSubItems() {
+      return model().subItems !== null;
+    },
     toggleGroup: (id) => model().toggleGroup(id),
     loadBucket: (key) => model().loadBucket(key),
-    pageRows: () => Math.max(1, Math.floor((store.root?.clientHeight ?? 0) / ROW_HEIGHT) - 2),
+    pageRows: () =>
+      Math.max(1, Math.floor((store.root?.clientHeight ?? 0) / model().layout.rowHeight) - 2),
   };
 }

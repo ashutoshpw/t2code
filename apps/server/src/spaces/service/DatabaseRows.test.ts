@@ -380,7 +380,7 @@ it.layer(NodeServices.layer)("Spaces database rows", (it) => {
         assert.deepEqual(cells[ids.ticket!], { number: 1, prefix: "TSK" });
         assert.equal(typeof cells[ids.created!], "string");
         assert.equal(typeof cells[ids.edited!], "string");
-        assert.isUndefined(cells[ids.formula!]);
+        assert.deepEqual(cells[ids.formula!], { type: "number", value: 1 });
         // Every empty form deletes the cell.
         const empties: readonly (readonly [string, C.SpaceCellValue | null])[] = [
           ["text", []],
@@ -497,11 +497,6 @@ it.layer(NodeServices.layer)("Spaces database rows", (it) => {
           C.SpacePageId,
           C.SpacePageId,
         ];
-        assert.equal(
-          (yield* databaseError(kit.addRows(created.dataSourceId, [{ templateId: template }])))
-            .reason,
-          "unsupported",
-        );
         const notTemplate = yield* databaseError(
           service.updateDataSource({
             ...common,

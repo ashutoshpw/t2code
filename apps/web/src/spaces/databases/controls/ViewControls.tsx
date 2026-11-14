@@ -1,5 +1,11 @@
 import { filterShape } from "@t2code/client-runtime/spaces";
-import { ArrowDownUpIcon, FilterIcon, GroupIcon, SlidersHorizontalIcon } from "lucide-react";
+import {
+  ArrowDownUpIcon,
+  FilterIcon,
+  GroupIcon,
+  LayoutIcon,
+  SlidersHorizontalIcon,
+} from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
@@ -8,6 +14,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { useOpenControl, type OpenControl } from "../shell/context";
 import { FilterPopover } from "./FilterPopover";
 import { GroupPopover } from "./GroupPopover";
+import { LayoutPopover } from "./LayoutPopover";
 import { PropertiesPopover } from "./PropertiesPopover";
 import { SortPopover } from "./SortPopover";
 import { useViewControls } from "./useViewControls";
@@ -65,7 +72,7 @@ function ControlButton({
   );
 }
 
-/** Filter, Sort, Group and Properties: each edits the active view through `actions.editView`. */
+/** Layout, Filter, Sort, Group and Properties: each edits the active view through `actions.editView`. */
 export function ViewControls(): ReactNode {
   const { known, columns, model } = useViewControls();
   const disabled = !model.permissions.views || known === null;
@@ -74,6 +81,9 @@ export function ViewControls(): ReactNode {
   const grouped = columns.find((column) => column.property.id === known?.group?.property);
   return (
     <>
+      <ControlButton control="layout" label="Layout" icon={LayoutIcon} disabled={disabled}>
+        <LayoutPopover />
+      </ControlButton>
       <ControlButton
         control="filter"
         label="Filter"

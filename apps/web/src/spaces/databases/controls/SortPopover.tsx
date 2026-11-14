@@ -3,6 +3,7 @@ import {
   type SpaceDatabaseProperty,
   type SpaceKnownSort,
 } from "@t2code/contracts/spaces";
+import { propertyQueryType, unqueryableReason } from "@t2code/client-runtime/spaces";
 import { PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
@@ -16,14 +17,16 @@ const DIRECTIONS = [
   { value: "descending", label: "Descending" },
 ] as const;
 const sortable = (property: SpaceDatabaseProperty) =>
-  (SPACE_SORTABLE_TYPES as ReadonlyArray<string>).includes(property.type);
+  (SPACE_SORTABLE_TYPES as ReadonlyArray<string>).includes(propertyQueryType(property) ?? "");
+const listed = (property: SpaceDatabaseProperty) =>
+  sortable(property) || unqueryableReason(property) !== undefined;
 
 export function SortPopover() {
   const { known, columns, limits, canEditView, actions } = useViewControls();
   const sorts = known?.sorts ?? [];
-  const properties = columns.map((column) => column.property).filter(sortable);
+  const properties = columns.map((column) => column.property).filter(listed);
   const used = new Set(sorts.map((sort) => sort.property));
-  const unused = properties.find((property) => !used.has(property.id));
+  const unused = properties.find((property) => sortable(property) && !used.has(property.id));
   const commit = (next: ReadonlyArray<SpaceKnownSort>) => actions.editView({ sorts: next });
   const change = (index: number, patch: Partial<SpaceKnownSort>) =>
     commit(sorts.map((sort, at) => (at === index ? { ...sort, ...patch } : sort)));
@@ -54,6 +57,7 @@ export function SortPopover() {
                   properties={properties}
                   value={sort.property}
                   disabled={!canEditView}
+                  disabledReason={unqueryableReason}
                   filter={(property) => property.id === sort.property || !used.has(property.id)}
                   onChange={(property) => change(index, { property })}
                 />

@@ -3,6 +3,7 @@ import type { EnvironmentId } from "@t2code/contracts";
 import {
   SpaceMutationAdmissionError,
   SpaceMutationId,
+  type SpaceCursor,
   type SpaceDatabaseId,
   type SpaceDataSourceId,
   type SpaceDatabaseQueryInput,
@@ -101,6 +102,27 @@ export const databasePorts = {
     db.row({ environmentId, input: { environmentId, pageId } }),
   listAtom: (environmentId: EnvironmentId, spaceId: SpaceId) =>
     db.list({ environmentId, input: { environmentId, spaceId } }),
+  /** One page of the space's databases (every space's when `spaceId` is absent), after `cursor`. */
+  listPage: async (
+    registry: AtomRegistry.AtomRegistry,
+    environmentId: EnvironmentId,
+    spaceId: SpaceId | undefined,
+    cursor: SpaceCursor | undefined,
+  ) =>
+    unwrap(
+      await executeAtomQuery(
+        registry,
+        db.list({
+          environmentId,
+          input: {
+            environmentId,
+            ...(spaceId === undefined ? {} : { spaceId }),
+            ...(cursor === undefined ? {} : { cursor }),
+          },
+        }),
+        { refresh: true, reportFailure: false },
+      ),
+    ),
   /** Fetched imperatively: no query atom stays subscribed, so a write never refetches windows. */
   query: async (registry: AtomRegistry.AtomRegistry, input: SpaceDatabaseQueryInput) =>
     unwrap(
@@ -113,6 +135,7 @@ export const databasePorts = {
     create: mutation(db.create),
     update: mutation(db.update),
     updateSchema: mutation(db.updateSchema),
+    updateDataSource: mutation(db.updateDataSource),
     createView: mutation(db.createView),
     updateView: mutation(db.updateView),
     deleteView: mutation(db.deleteView),

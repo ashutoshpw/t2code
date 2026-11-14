@@ -3,12 +3,15 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   SPACE_AGGREGATES_BY_TYPE,
+  SPACE_FORMULA_TYPE_BY_PROPERTY,
   SPACE_FILTER_OPERATORS,
   SPACE_PROPERTY_TYPES,
+  SPACE_VIEW_TYPES,
   SpaceCapability,
   SpaceDatabaseBlock,
   SpaceDatabaseError,
   SpaceDatabaseProperty,
+  SpaceDatabaseRow,
   SpaceDatabaseQueryInput,
   SpaceDatabaseQueryResult,
   SpaceDatabaseView,
@@ -19,7 +22,11 @@ import {
   SpaceKnownFilter,
   SpaceViewCreateInput,
   SpaceViewUpdateInput,
+  SpaceKnownComputedValue,
   SpaceKnownPropertyConfig,
+  SpaceDatabaseRowGetInput,
+  SpaceDatabaseRowGetResult,
+  spacePropertyQueryType,
   SpaceLimitExceededError,
   SpaceMutationReceipt,
   SpaceMutationRequest,
@@ -111,6 +118,39 @@ describe("Spaces databases forward compatibility", () => {
     expect(roundTrip(SpacePageSummary, summary)).toEqual(summary);
     const { row: _row, ...legacy } = summary;
     expect(roundTrip(SpacePageSummary, legacy)).toEqual(legacy);
+  });
+
+  it("decodes rows with and without the optional childCount and cover", () => {
+    const row = {
+      page: {
+        id: "r",
+        title: "Row",
+        revision: 1,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      number: 1,
+      cells: {},
+    };
+    const OldRow = Schema.Struct({
+      page: SpaceDatabaseRow.fields.page,
+      number: SpaceDatabaseRow.fields.number,
+      cells: SpaceDatabaseRow.fields.cells,
+    });
+    expect(roundTrip(SpaceDatabaseRow, row)).toEqual(row);
+    const extras = { ...row, childCount: 2, cover: { assetId: "asset1" } };
+    expect(roundTrip(SpaceDatabaseRow, extras)).toEqual(extras);
+    // An older client's struct drops the new keys and still decodes the payload.
+    expect(roundTrip(OldRow, extras)).toEqual(row);
+    expect(SPACE_VIEW_TYPES).toContain("timeline");
+    const query = {
+      environmentId: "env",
+      dataSourceId: "ds",
+      mode: "rows",
+      timeZone: "UTC",
+      include: { cover: true },
+    };
+    expect(roundTrip(SpaceDatabaseQueryInput, query)).toEqual(query);
   });
 
   it("decodes older capabilities and the new database limit and error names", () => {
@@ -579,5 +619,125 @@ describe("Spaces database mutations", () => {
         }),
       ).toBe(false);
     }
+  });
+});
+
+describe("Spaces databases computed values", () => {
+  const info = { resultType: "number", queryType: "number", inputs: ["p2xx"], volatile: false };
+  const property = { id: "p1xx", name: "N", type: "formula", config: {}, position: 1 };
+  it("keeps old and new property envelopes decodable in both directions", () => {
+    // The pre-computed envelope, copied: an older client decodes a new property, ignoring `computed`.
+    const OldProperty = Schema.StructWithRest(
+      Schema.Struct({
+        id: Schema.String,
+        name: Schema.String,
+        type: Schema.String,
+        config: Schema.Json,
+        position: Schema.Int,
+      }),
+      [Schema.Record(Schema.String, Schema.Json)],
+    );
+    const fresh = { ...property, computed: { ...info, future: { a: 1 } } };
+    expect(decodes(OldProperty, fresh)).toBe(true);
+    expect(decodes(SpaceDatabaseProperty, property)).toBe(true);
+    expect(roundTrip(SpaceDatabaseProperty, fresh)).toEqual(fresh);
+    expect(
+      decodes(SpaceDatabaseProperty, {
+        ...property,
+        computed: { ...info, error: { message: "x" } },
+      }),
+    ).toBe(true);
+    expect(spacePropertyQueryType(fresh as never)).toBe("number");
+    expect(
+      spacePropertyQueryType({ ...fresh, computed: { resultType: "text" } } as never),
+    ).toBeUndefined();
+    expect(spacePropertyQueryType({ ...property, type: "select" } as never)).toBe("select");
+    expect(spacePropertyQueryType({ ...property, type: "future_geo" } as never)).toBeUndefined();
+    expect(SPACE_FORMULA_TYPE_BY_PROPERTY.multi_select).toEqual({ list: "text" });
+  });
+
+  it("decodes the known computed value shapes and the additive result keys", () => {
+    const known = [
+      { type: "string", value: "a", color: "red", runs: [{ text: "a", marks: [] }] },
+      { type: "number", value: 2 },
+      { type: "boolean", value: true },
+      { type: "date", value: { start: "2026-11-11" } },
+      { type: "page", value: "pg", dataSourceId: "ds" },
+      { type: "array", value: [{ type: "number", value: 1 }], truncated: true },
+    ];
+    for (const value of known)
+      expect(decodes(SpaceKnownComputedValue, value), value.type).toBe(true);
+    expect(decodes(SpaceKnownComputedValue, { type: "string", value: 1 })).toBe(false);
+    const result = {
+      dataSourceId: "ds",
+      schemaRevision: 1,
+      dataRevision: 1,
+      rows: [],
+      relatedPages: {},
+      nextCursor: null,
+    };
+    expect(decodes(SpaceDatabaseQueryResult, result)).toBe(true);
+    expect(decodes(SpaceDatabaseQueryResult, { ...result, computedPending: true })).toBe(true);
+    expect(
+      decodes(SpaceDatabaseRowGetInput, { environmentId: "env", pageId: "pg", timeZone: "UTC" }),
+    ).toBe(true);
+    expect(decodes(SpaceDatabaseRowGetInput, { environmentId: "env", pageId: "pg" })).toBe(true);
+    const row = {
+      page: {
+        id: "pg",
+        title: "",
+        revision: 0,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      number: 1,
+      cells: {},
+    };
+    const got = {
+      row,
+      template: false,
+      dataSource: { id: "ds", databaseId: "db", schemaRevision: 1, dataRevision: 1 },
+      relatedPages: {},
+      mutationAdmission: {
+        epoch: "e",
+        acceptsUntil: "2026-01-01T00:00:00.000Z",
+        retainUntil: "2026-01-01T00:00:00.000Z",
+      },
+    };
+    expect(decodes(SpaceDatabaseRowGetResult, { ...got, computedPending: true })).toBe(true);
+  });
+
+  it("carries a detail on database errors and decodes the old shape", () => {
+    const error = {
+      _tag: "SpaceDatabaseError",
+      reason: "invalid_property_config",
+      propertyId: "p1xx",
+    };
+    expect(decodes(SpaceDatabaseError, error)).toBe(true);
+    expect(
+      decodes(SpaceDatabaseError, { ...error, detail: '1:4 There is no property named "x".' }),
+    ).toBe(true);
+    expect(decodes(SpaceDatabaseError, { ...error, detail: "x".repeat(501) })).toBe(false);
+  });
+
+  it("accepts number display keys on formula and rollup configs", () => {
+    expect(
+      decodes(SpaceKnownPropertyConfig.formula, {
+        expression: "1",
+        format: "percent",
+        decimals: 2,
+      }),
+    ).toBe(true);
+    expect(decodes(SpaceKnownPropertyConfig.formula, { expression: "1", decimals: 11 })).toBe(
+      false,
+    );
+    expect(
+      decodes(SpaceKnownPropertyConfig.rollup, {
+        relationPropertyId: "a",
+        targetPropertyId: "b",
+        function: "sum",
+        format: "dollar",
+      }),
+    ).toBe(true);
   });
 });

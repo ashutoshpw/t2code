@@ -1,4 +1,4 @@
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import { memo } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceCellValue, SpacePageId, SpaceRelatedPage } from "@t2code/contracts/spaces";
@@ -8,6 +8,8 @@ import { CellEditor, editorKind } from "../cells/CellEditor";
 import { CellValue } from "../primitives/CellValue";
 import { cellKey, useCellSession, type GridEditStore } from "./gridEditStore";
 import { RowActions } from "./RowActions";
+import { MAX_TREE_DEPTH } from "./gridItems";
+import { INDENT } from "./tree";
 import { widthValue } from "./columnResize";
 import { sameRowProps, type GridHandlers, type OptionHint, type TableColumn } from "./tableTypes";
 
@@ -16,6 +18,10 @@ export interface TableCellProps {
   readonly column: TableColumn;
   /** 1-based, the title is 1. */
   readonly colIndex: number;
+  /** Title cell of a sub-item tree: indent level, a toggle when the row has children. */
+  readonly depth?: number;
+  readonly expandable?: boolean;
+  readonly expanded?: boolean;
   readonly value: SpaceCellValue | undefined;
   readonly relatedPages: Readonly<Record<string, SpaceRelatedPage>>;
   readonly optionHint: OptionHint;
@@ -34,6 +40,9 @@ export const TableCell = memo(function TableCell({
   pageId,
   column,
   colIndex,
+  depth = 0,
+  expandable = false,
+  expanded = false,
   value,
   relatedPages,
   optionHint,
@@ -62,7 +71,8 @@ export const TableCell = memo(function TableCell({
       }}
       style={{ width: widthValue(column.id) }}
       className={cn(
-        "relative flex h-full shrink-0 items-center overflow-hidden border-e border-border/60 px-2 outline-none focus:ring-2 focus:ring-inset focus:ring-ring",
+        "relative flex h-full shrink-0 overflow-hidden border-e border-border/60 px-2 outline-none focus:ring-2 focus:ring-inset focus:ring-ring",
+        column.wrap ? "items-start py-1.5" : "items-center",
         isTitle && "sticky start-0 z-[1] bg-background",
       )}
       onClick={(event) => {
@@ -70,6 +80,30 @@ export const TableCell = memo(function TableCell({
         if (event.currentTarget.contains(event.target as Node)) grid.activate(pageId, column.id);
       }}
     >
+      {isTitle && (depth > 0 || expandable || expanded) ? (
+        <span
+          className="flex shrink-0 items-center"
+          style={{ marginInlineStart: Math.min(depth, MAX_TREE_DEPTH) * INDENT }}
+        >
+          {expandable ? (
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-expanded={expanded}
+              aria-label={expanded ? "Collapse sub-items" : "Expand sub-items"}
+              className="inline-flex size-5 items-center justify-center rounded-sm text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              onClick={(event) => {
+                event.stopPropagation();
+                grid.toggleRow(pageId, !expanded);
+              }}
+            >
+              <ChevronRightIcon className={cn("size-3.5", expanded && "rotate-90")} />
+            </button>
+          ) : (
+            <span aria-hidden className="size-5" />
+          )}
+        </span>
+      ) : null}
       {kind === "toggle" ? (
         <span
           role="checkbox"
@@ -92,6 +126,7 @@ export const TableCell = memo(function TableCell({
           variant="cell"
           optionHint={optionHint}
           timeZone={timeZone}
+          wrap={column.wrap}
         />
       )}
       {isTitle && session === null ? (

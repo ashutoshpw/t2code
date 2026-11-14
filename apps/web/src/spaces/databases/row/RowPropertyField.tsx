@@ -139,7 +139,10 @@ export function RowPropertyField(props: RowPropertyFieldProps): ReactNode {
               </span>
             ) : known === null ? (
               <span className="text-muted-foreground/70">Unsupported property</span>
-            ) : text === "" && !(Array.isArray(value) && value.length > 0) ? (
+            ) : text === "" &&
+              known.type !== "formula" &&
+              known.type !== "rollup" &&
+              !(Array.isArray(value) && value.length > 0) ? (
               <span className="text-muted-foreground/60">Empty</span>
             ) : (
               <CellValue
