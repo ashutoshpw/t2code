@@ -228,6 +228,7 @@ export const make = Effect.gen(function* () {
     orchestrationProtocolVersion: ORCHESTRATION_PROTOCOL_VERSION,
     ...(databaseMigration === undefined ? {} : { databaseMigration }),
     capabilities: {
+      spacesSettings: true,
       repositoryIdentity: true,
       connectionProbe: true,
       attachmentUploads: true,
