@@ -11,7 +11,10 @@ function shortHash(value: string): string {
   ).join("");
 }
 
-/** Hash state directories to stay within Unix socket path limits. */
+/**
+ * The state directory is hashed so custom T2 homes cannot exceed Unix socket
+ * path limits.
+ */
 export function resolveDesktopAppControlAddress(input: {
   readonly stateDir: string;
   readonly platform: NodeJS.Platform;

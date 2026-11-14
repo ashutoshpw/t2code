@@ -3,13 +3,13 @@
 The environment server owns simulators and emulators the way it owns
 terminals: discovery, streaming, and agent access all run there, and every
 client reaches them through the environment connection. This is what makes the
-Device panel work over Tailscale and T3 Connect, including when an SSH host runs the devices.
+Device panel work over Tailscale and T2 Connect, including when an SSH host runs the devices.
 
 ## Two external tools, one seam
 
 [expo-device-hub](../../apps/server/src/device/LocalDeviceHost.ts) streams and
 [agent-device](../../apps/server/src/device/AgentDeviceShim.ts) drives. Each is
-npm-installed at a pinned version into the T3 home after its matching Device
+npm-installed at a pinned version into the T2 home after its matching Device
 panel consent step. Manual setup installs and starts only expo-device-hub;
 agent-device remains absent and stopped until agent access is granted. Both run
 with the server's Node; `npx` would make the first `device_open` after a reboot
