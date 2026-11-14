@@ -23,7 +23,10 @@ import * as Inventory from "../assets/Inventory.ts";
 import * as GC from "../assets/GC.ts";
 import * as ServerEnvironment from "../../environment/ServerEnvironment.ts";
 import * as ServerSettings from "../../serverSettings.ts";
-import { byteLength, limits } from "../CorePolicy.ts";
+import { byteLength, computedDrainRows, limits } from "../CorePolicy.ts";
+import * as DatabaseStore from "../databases/DatabaseStore.ts";
+import * as Drain from "../databases/computed/Drain.ts";
+import { isoNow } from "../databases/Types.ts";
 import * as Receipts from "../Receipts.ts";
 import * as RevisionStore from "../RevisionStore.ts";
 import * as PageShares from "../PageShares.ts";
@@ -33,9 +36,15 @@ import * as SearchStore from "../SearchStore.ts";
 import * as Sqlite from "../Sqlite.ts";
 import { assetErrors, claimFrom, isServiceError, needsWrite } from "./Helpers.ts";
 
+export interface RuntimeOptions {
+  /** Computes queued formula and rollup values in the background (default). Tests turn it off. */
+  readonly backgroundDrain?: boolean;
+}
+
 export const make = Effect.fnUntraced(function* (
   dbPath: string,
   directories?: { readonly assetsDir: string; readonly stagingDir: string },
+  options?: RuntimeOptions,
 ) {
   const settings = yield* ServerSettings.ServerSettingsService;
   const identity = yield* ServerEnvironment.ServerEnvironmentIdentity;
@@ -49,6 +58,8 @@ export const make = Effect.fnUntraced(function* (
     assetsDir: path.join(path.dirname(dbPath), "spaces", "assets"),
     stagingDir: path.join(path.dirname(dbPath), "spaces", "staging"),
   };
+  const backgroundDrain = options?.backgroundDrain !== false;
+  let draining = false;
   const activeUploads = new Set<string>();
   const uploadFibers = new Map<string, Fiber.Fiber<unknown, unknown>>();
   const collectionOwner = NodeCrypto.randomUUID();
@@ -99,6 +110,10 @@ export const make = Effect.fnUntraced(function* (
     assetErrors,
     Effect.uninterruptible,
   );
+  // Declared before `acquire` so its first run can start the drain; filled in below.
+  const background: { start: (sql: SpacesSql.SpacesSql["Service"]) => Effect.Effect<void> } = {
+    start: () => Effect.void,
+  };
   const acquire = yield* Effect.cached(
     Layer.buildWithScope(Sqlite.layerFromPath(dbPath), scope).pipe(
       Effect.provide(platform),
@@ -132,6 +147,7 @@ export const make = Effect.fnUntraced(function* (
               Effect.catch(() => Effect.logWarning("Spaces asset recovery remains pending.")),
             );
           }
+          yield* background.start(sql);
           yield* Effect.uninterruptible(
             Ref.set(acquiredSql, Option.some(sql)).pipe(
               Effect.andThen(Scope.addFinalizer(scope, Ref.set(acquiredSql, Option.none()))),
@@ -208,7 +224,7 @@ export const make = Effect.fnUntraced(function* (
     maintenance: true | C.SpaceMutationRequest = true,
   ) {
     const sql = yield* acquire;
-    return yield* mutex.withPermits(1)(
+    const result = yield* mutex.withPermits(1)(
       Effect.gen(function* () {
         // Commit the observed clock even when the subsequent request is refused or rolled back.
         const meta = yield* sql.withTransaction(Receipts.observe(environmentId));
@@ -231,7 +247,59 @@ export const make = Effect.fnUntraced(function* (
         );
       }).pipe(Effect.provideService(SpacesSql.SpacesSql, sql), mapStorage),
     );
+    yield* background.start(sql);
+    return result;
   });
+  // Computed values that did not fit in a mutation are brought up to date here, in bounded
+  // transactions that yield the write mutex between batches.
+  const drainComputed = Effect.fn("SpacesService.drainComputed")(function* () {
+    const sql = yield* acquire;
+    for (;;) {
+      const more = yield* mutex
+        .withPermits(1)(
+          sql.withTransaction(
+            Effect.gen(function* () {
+              const result = yield* Drain.batch({ limit: computedDrainRows, order: "ASC" });
+              if (result.changed.size > 0) {
+                const now = yield* Clock.currentTimeMillis;
+                for (const id of result.changed) yield* DatabaseStore.bumpData(id, isoNow(now));
+              }
+              return result.processed > 0 && (yield* Drain.queued());
+            }),
+          ),
+        )
+        .pipe(Effect.provideService(SpacesSql.SpacesSql, sql), mapStorage);
+      if (!more) return;
+      yield* Effect.yieldNow;
+    }
+  });
+  background.start = (sql) =>
+    Effect.suspend(() => {
+      if (!backgroundDrain || draining || closing) return Effect.void;
+      return Drain.queued().pipe(
+        Effect.provideService(SpacesSql.SpacesSql, sql),
+        Effect.orElseSucceed(() => false),
+        Effect.flatMap((queued) => {
+          if (!queued) return Effect.void;
+          draining = true;
+          return Effect.forkIn(
+            drainComputed().pipe(
+              Effect.matchEffect({
+                onFailure: () =>
+                  Effect.logWarning("Spaces computed values remain queued.").pipe(
+                    Effect.andThen(Effect.sync(() => void (draining = false))),
+                  ),
+                onSuccess: () =>
+                  Effect.sync(() => void (draining = false)).pipe(
+                    Effect.andThen(Effect.suspend(() => background.start(sql))),
+                  ),
+              }),
+            ),
+            scope,
+          ).pipe(Effect.asVoid);
+        }),
+      );
+    });
   // Reads take no mutex and write nothing: one read-only transaction on a WAL reader, with the
   // clock advanced in memory only. Writes own the observed clock and all maintenance.
   const read = Effect.fn("SpacesService.read")(function* <A>(
@@ -354,6 +422,7 @@ export const make = Effect.fnUntraced(function* (
     maintenanceMutex,
     recover,
     acquire,
+    drainComputed,
     admit,
     checkEnvironment,
     run,

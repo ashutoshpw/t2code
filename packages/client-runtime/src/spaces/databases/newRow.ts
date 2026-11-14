@@ -1,5 +1,7 @@
 import type {
   SpaceCellValue,
+  SpaceDataSource,
+  SpacePageId,
   SpaceDatabaseProperty,
   SpaceFilter,
   SpaceKnownDatabaseProperty,
@@ -151,4 +153,19 @@ export function newRowCells(input: {
     }
   }
   return cells;
+}
+
+/**
+ * The template a new row starts from. `undefined` choice means "the default" (when it still
+ * exists), `null` means a blank page, an id means that template.
+ */
+export function templateForNewRow(
+  dataSource: Pick<SpaceDataSource, "defaultTemplateId" | "templates">,
+  choice: SpacePageId | null | undefined,
+): SpacePageId | undefined {
+  if (choice === null) return undefined;
+  const id = choice ?? dataSource.defaultTemplateId;
+  return id !== undefined && dataSource.templates.some((template) => template.pageId === id)
+    ? id
+    : undefined;
 }

@@ -1,6 +1,8 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { EyeOffIcon, MoreHorizontalIcon, PlusIcon } from "lucide-react";
+import { canonicalJson } from "@t2code/client-runtime/spaces";
 import { memo } from "react";
+import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceGroupBucket, SpaceGroupKey, SpacePageId } from "@t2code/contracts/spaces";
 
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
@@ -13,8 +15,8 @@ import type { SpaceRelatedPage } from "@t2code/contracts/spaces";
 
 export interface BoardHandlers {
   open(pageId: SpacePageId): void;
-  addCard(key: SpaceGroupKey): void;
-  loadBucket(key: SpaceGroupKey): void;
+  addCard(key: SpaceGroupKey, lane?: SpaceGroupKey): void;
+  loadBucket(key: SpaceGroupKey, lane?: SpaceGroupKey): void;
   setHidden(key: SpaceGroupKey, hidden: boolean): void;
 }
 
@@ -36,6 +38,19 @@ export interface BoardColumnProps {
   readonly loadingMore: boolean;
   readonly page: boolean;
   readonly handlers: BoardHandlers;
+  /** Pixels; follows the view's card size. */
+  readonly width: number;
+  /** Compact results of the view's column calculation for this column. */
+  readonly headerAggregates: string;
+  readonly wrap: boolean;
+  readonly coverPropertyId: string | null;
+  readonly coverContent: boolean;
+  readonly coverHeight: number;
+  readonly coverFit: boolean;
+  readonly intrinsicHeight: number;
+  readonly environmentId: EnvironmentId;
+  /** A cell of a sub-group lane: no header of its own, drops and adds also set the lane. */
+  readonly lane?: SpaceGroupKey | undefined;
 }
 
 const BUTTON =
@@ -72,14 +87,21 @@ export function ColumnGhost({
 
 const same = (a: BoardColumnProps, b: BoardColumnProps) =>
   (Object.keys(a) as Array<keyof BoardColumnProps>).every((key) =>
-    key === "lines" ? sameLines(a.lines, b.lines) : Object.is(a[key], b[key]),
+    key === "lines"
+      ? sameLines(a.lines, b.lines)
+      : key === "lane"
+        ? a.lane === b.lane ||
+          (a.lane !== undefined &&
+            b.lane !== undefined &&
+            canonicalJson(a.lane) === canonicalJson(b.lane))
+        : Object.is(a[key], b[key]),
   );
 
 export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
   const { id, bucket, labelText, labelColor, handlers } = props;
   const { setNodeRef, isOver } = useDroppable({
     id: `drop:${id}`,
-    data: { type: "column", key: bucket.key },
+    data: { type: "column", key: bucket.key, lane: props.lane },
   });
   const {
     setNodeRef: setHandleRef,
@@ -99,62 +121,72 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
       ref={setNodeRef}
       data-column-id={id}
       aria-label={labelText}
+      style={{ width: props.width }}
       className={cn(
-        "flex w-68 shrink-0 flex-col rounded-lg",
+        "flex shrink-0 flex-col rounded-lg",
         tinted,
-        props.page ? "h-[calc(100dvh-15rem)] min-h-80" : "max-h-[min(36rem,70vh)]",
+        props.lane !== undefined
+          ? "max-h-96"
+          : props.page
+            ? "h-[calc(100dvh-15rem)] min-h-80"
+            : "max-h-[min(36rem,70vh)]",
         isOver && "ring-2 ring-inset ring-ring/60",
       )}
     >
-      <header className="flex items-center gap-1 px-2 pt-2 pb-1.5">
-        <div
-          ref={setHandleRef}
-          {...(props.canMove ? attributes : {})}
-          {...(props.canMove ? listeners : {})}
-          {...(props.canMove ? { "aria-label": `Move ${labelText} column` } : {})}
-          className={cn(
-            "flex min-w-0 items-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-            props.canMove && "cursor-grab",
+      {props.lane !== undefined ? null : (
+        <header className="flex items-center gap-1 px-2 pt-2 pb-1.5">
+          <div
+            ref={setHandleRef}
+            {...(props.canMove ? attributes : {})}
+            {...(props.canMove ? listeners : {})}
+            {...(props.canMove ? { "aria-label": `Move ${labelText} column` } : {})}
+            className={cn(
+              "flex min-w-0 items-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              props.canMove && "cursor-grab",
+            )}
+          >
+            <ColumnLabel text={labelText} color={labelColor} />
+          </div>
+          <span className="text-xs text-muted-foreground">{bucket.count}</span>
+          {props.headerAggregates === "" ? null : (
+            <span className="truncate text-xs text-muted-foreground">{props.headerAggregates}</span>
           )}
-        >
-          <ColumnLabel text={labelText} color={labelColor} />
-        </div>
-        <span className="text-xs text-muted-foreground">{bucket.count}</span>
-        <span className="ms-auto flex items-center gap-0.5">
-          {props.canAdd ? (
-            <button
-              type="button"
-              aria-label={`Add a card to ${labelText}`}
-              disabled={props.adding}
-              className={cn(BUTTON, "size-6")}
-              onClick={() => handlers.addCard(bucket.key)}
-            >
-              <PlusIcon className="size-3.5" />
-            </button>
-          ) : null}
-          {props.canHide ? (
-            <Menu>
-              <MenuTrigger
-                render={
-                  <button
-                    type="button"
-                    aria-label={`${labelText} options`}
-                    className={cn(BUTTON, "size-6")}
-                  />
-                }
+          <span className="ms-auto flex items-center gap-0.5">
+            {props.canAdd ? (
+              <button
+                type="button"
+                aria-label={`Add a card to ${labelText}`}
+                disabled={props.adding}
+                className={cn(BUTTON, "size-6")}
+                onClick={() => handlers.addCard(bucket.key, props.lane)}
               >
-                <MoreHorizontalIcon className="size-3.5" />
-              </MenuTrigger>
-              <MenuPopup align="end">
-                <MenuItem onClick={() => handlers.setHidden(bucket.key, true)}>
-                  <EyeOffIcon />
-                  Hide group
-                </MenuItem>
-              </MenuPopup>
-            </Menu>
-          ) : null}
-        </span>
-      </header>
+                <PlusIcon className="size-3.5" />
+              </button>
+            ) : null}
+            {props.canHide ? (
+              <Menu>
+                <MenuTrigger
+                  render={
+                    <button
+                      type="button"
+                      aria-label={`${labelText} options`}
+                      className={cn(BUTTON, "size-6")}
+                    />
+                  }
+                >
+                  <MoreHorizontalIcon className="size-3.5" />
+                </MenuTrigger>
+                <MenuPopup align="end">
+                  <MenuItem onClick={() => handlers.setHidden(bucket.key, true)}>
+                    <EyeOffIcon />
+                    Hide group
+                  </MenuItem>
+                </MenuPopup>
+              </Menu>
+            ) : null}
+          </span>
+        </header>
+      )}
       <div
         role="list"
         aria-label={`${labelText} cards`}
@@ -165,6 +197,14 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
             key={row.page.id}
             row={row}
             group={bucket.key}
+            lane={props.lane}
+            wrap={props.wrap}
+            coverPropertyId={props.coverPropertyId}
+            coverContent={props.coverContent}
+            coverHeight={props.coverHeight}
+            coverFit={props.coverFit}
+            intrinsicHeight={props.intrinsicHeight}
+            environmentId={props.environmentId}
             lines={props.lines}
             relatedPages={props.relatedPages}
             optionHint={props.optionHint}
@@ -178,7 +218,7 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
             type="button"
             disabled={props.loadingMore}
             className={cn(BUTTON, "h-7 w-full")}
-            onClick={() => handlers.loadBucket(bucket.key)}
+            onClick={() => handlers.loadBucket(bucket.key, props.lane)}
           >
             {props.loadingMore ? "Loading…" : "Load more"}
           </button>
@@ -188,7 +228,7 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
             type="button"
             disabled={props.adding}
             className={cn(BUTTON, "h-7 w-full justify-start px-1.5")}
-            onClick={() => handlers.addCard(bucket.key)}
+            onClick={() => handlers.addCard(bucket.key, props.lane)}
           >
             <PlusIcon className="size-3.5" />
             New

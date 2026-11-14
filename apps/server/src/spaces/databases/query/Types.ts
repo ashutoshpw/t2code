@@ -11,7 +11,10 @@ export type { Fragment };
 /** What every compiler function needs: the statement builder, the schema and the viewer's calendar. */
 export interface Compile {
   readonly sql: Sql;
+  /** The schema as the compiler sees it: computed properties carry their query type. */
   readonly snapshot: Snapshot;
+  /** The stored schema, for hydrating rows. */
+  readonly full: Snapshot;
   readonly dates: DateContext;
 }
 

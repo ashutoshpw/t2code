@@ -1,4 +1,5 @@
 import * as C from "@t2code/contracts/spaces";
+import { renderSource } from "@t2code/shared/formula";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
@@ -8,6 +9,7 @@ import * as DatabaseStore from "./DatabaseStore.ts";
 import { fold } from "./Fold.ts";
 import * as Ids from "./Ids.ts";
 import { type Json, type JsonObject, isObject, parseJson } from "./Json.ts";
+import { type ComputedRecord, parseRecord, queryTypeOf } from "./computed/Record.ts";
 import { optionTypes } from "./PropertyConfig.ts";
 import { placeInList } from "./Position.ts";
 import {
@@ -31,6 +33,8 @@ export interface Property {
   readonly position: number;
   readonly deletedAtMs: number | null;
   readonly options: readonly OptionRecord[];
+  /** Formula and rollup only: the compiled definition; null until the server first compiles it. */
+  readonly computed: ComputedRecord | null;
 }
 export interface Snapshot {
   readonly source: DataSourceRecord;
@@ -60,6 +64,7 @@ export const load = Effect.fn("SpacesDatabases.loadSchema")(function* (dataSourc
       position: record.position,
       deletedAtMs: record.deleted_at_ms,
       options: options.filter((option) => option.property_id === record.property_id),
+      computed: parseRecord(record.computed),
     });
   }
   return {
@@ -85,10 +90,38 @@ const optionsWire = (property: Property) =>
     ...(property.type === "status" && option.status_group ? { group: option.status_group } : {}),
   }));
 
-const wireProperty = (property: Property): C.SpaceDatabaseProperty => {
+/** The property name to show for a reference held by a formula; undefined keeps the stored text. */
+export type NameOf = (dataSourceId: string, propertyId: string) => string | undefined;
+
+const computedWire = (property: Property) => {
+  const record = property.computed;
+  if (record === null) return undefined;
+  const queryType = queryTypeOf(record);
+  return {
+    resultType: record.type as Json,
+    ...(queryType === undefined ? {} : { queryType }),
+    ...(record.volatile ? { volatile: true } : {}),
+    inputs: record.deps.own.map((id) => C.SpacePropertyId.make(id)),
+    ...(record.error === undefined ? {} : { error: { message: record.error } }),
+  } satisfies C.SpaceComputedInfo;
+};
+
+const wireProperty = (property: Property, nameOf?: NameOf): C.SpaceDatabaseProperty => {
+  const computed = computedWire(property);
   const config: Json = optionTypes.has(property.type)
     ? { ...property.config, options: optionsWire(property) }
-    : property.config;
+    : property.type === "formula" &&
+        nameOf !== undefined &&
+        typeof property.config.expression === "string"
+      ? {
+          ...property.config,
+          expression: renderSource(
+            property.config.expression,
+            property.computed?.refs ?? [],
+            nameOf,
+          ),
+        }
+      : property.config;
   return {
     id: C.SpacePropertyId.make(property.id),
     name: property.name,
@@ -96,11 +129,14 @@ const wireProperty = (property: Property): C.SpaceDatabaseProperty => {
     config,
     position: property.position,
     ...(property.description === null ? {} : { description: property.description }),
+    ...(computed === undefined ? {} : { computed }),
   };
 };
 
-export const wireProperties = (snapshot: Snapshot) =>
-  Object.fromEntries(snapshot.live.map((property) => [property.id, wireProperty(property)]));
+export const wireProperties = (snapshot: Snapshot, nameOf?: NameOf) =>
+  Object.fromEntries(
+    snapshot.live.map((property) => [property.id, wireProperty(property, nameOf)]),
+  );
 
 export const wireDeleted = (snapshot: Snapshot) =>
   snapshot.all

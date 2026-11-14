@@ -19,6 +19,9 @@ export const register = Effect.fn("SpacesDatabases.registerId")(function* (
   return id;
 });
 
+/** A fresh block id; `BlockStore.apply` registers it with the insert. */
+export const newBlockId = () => NodeCrypto.randomUUID();
+
 export const retire = Effect.fn("SpacesDatabases.retireId")(function* (id: string) {
   const sql = yield* SpacesSql.SpacesSql;
   yield* sql`UPDATE spaces_ids SET deleted = 1 WHERE id = ${id}`;

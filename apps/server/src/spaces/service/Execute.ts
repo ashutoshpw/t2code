@@ -7,7 +7,11 @@ import { byteLength } from "../CorePolicy.ts";
 import * as Receipts from "../Receipts.ts";
 import * as RevisionStore from "../RevisionStore.ts";
 import * as PageUpdate from "../PageUpdate.ts";
+import * as Settle from "../databases/computed/Settle.ts";
+import * as DatabaseStore from "../databases/DatabaseStore.ts";
 import * as DatabaseHooks from "../databases/Hooks.ts";
+import * as Touched from "../databases/Touched.ts";
+import { isoNow } from "../databases/Types.ts";
 import * as DatabaseMutations from "../databases/Mutations.ts";
 import { applyBatch } from "./BlockBatch.ts";
 import * as PageStore from "../PageStore.ts";
@@ -127,15 +131,24 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
               meta.observed_time_ms,
               request.operation === "createChildPage" ? request.input.title : undefined,
             );
-      if (
+      const affectedDataSourceIds =
         request.operation === "trashPage" ||
         request.operation === "restorePage" ||
         request.operation === "permanentlyDeletePage"
-      )
-        yield* DatabaseHooks.afterRecovery(request.operation, recoveryRows, meta.observed_time_ms);
+          ? yield* DatabaseHooks.afterRecovery(
+              request.operation,
+              recoveryRows,
+              meta.observed_time_ms,
+            )
+          : [];
       return decodeReceipt({
         operation: request.operation,
-        result: { status: "saved", ...ack, ...result },
+        result: {
+          status: "saved",
+          ...ack,
+          ...result,
+          ...(affectedDataSourceIds.length === 0 ? {} : { affectedDataSourceIds }),
+        },
       });
     }
     case "createSpace": {
@@ -247,9 +260,24 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
         input.mutationId,
         meta.observed_time_ms,
       );
+      const affectedDataSourceIds: C.SpaceDataSourceId[] = [];
+      if (page.data_source_id !== null && page.title !== input.title) {
+        const touched = Touched.touched();
+        Touched.recordCell(touched, page.page_id, page.data_source_id, "title");
+        yield* Settle.settleAndDrain(touched);
+        for (const id of touched.sources)
+          yield* DatabaseStore.bumpData(id, isoNow(meta.observed_time_ms));
+        for (const id of Touched.affected(touched, page.data_source_id))
+          affectedDataSourceIds.push(C.SpaceDataSourceId.make(id));
+      }
       return decodeReceipt({
         operation: request.operation,
-        result: { status: "saved", ...ack, page: pageSummary(yield* getPageRow(input.pageId)) },
+        result: {
+          status: "saved",
+          ...ack,
+          page: pageSummary(yield* getPageRow(input.pageId)),
+          ...(affectedDataSourceIds.length === 0 ? {} : { affectedDataSourceIds }),
+        },
       });
     }
     case "applyBlockBatch": {

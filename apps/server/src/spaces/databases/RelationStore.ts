@@ -9,7 +9,7 @@ import { fold, truncateBytes } from "./Fold.ts";
 import * as Liveness from "./Liveness.ts";
 import * as SchemaStore from "./SchemaStore.ts";
 import type { Property, Snapshot } from "./SchemaStore.ts";
-import type { Touched } from "./Touched.ts";
+import { type Touched, recordCell } from "./Touched.ts";
 import { dbError, isoNow } from "./Types.ts";
 import * as ViewStore from "./ViewStore.ts";
 import { clientIdPattern } from "./Ids.ts";
@@ -45,9 +45,10 @@ export const loadTwin = Effect.fn("SpacesDatabases.loadTwin")(function* (
     : undefined;
 });
 
-const touch = (touched: Touched, pageId: string, dataSourceId: string) => {
+const touch = (touched: Touched, pageId: string, dataSourceId: string, propertyId: string) => {
   touched.rows.set(pageId, dataSourceId);
   touched.sources.add(dataSourceId);
+  recordCell(touched, pageId, dataSourceId, propertyId);
 };
 
 /** Every target must be a live, non-template row of the target data source. */
@@ -130,7 +131,7 @@ export const write = Effect.fn("SpacesDatabases.writeRelation")(function* (input
         if (yield* reachesRow(pageId, child, twin.id)) return yield* dbError("cycle", property.id);
   }
   yield* CellStore.replace(pageId, sourceId, property.id, next.map(refItem));
-  touch(touched, pageId, sourceId);
+  touch(touched, pageId, sourceId, property.id);
   if (!twinRef) return true;
   const { twin } = twinRef;
   const twinLimit = relationOf(twin).limit;
@@ -142,7 +143,7 @@ export const write = Effect.fn("SpacesDatabases.writeRelation")(function* (input
       twin.id,
       refs.filter((id) => id !== pageId).map(refItem),
     );
-    touch(touched, removed, twinSource);
+    touch(touched, removed, twinSource, twin.id);
   }
   for (const added of targets.filter((id) => !stored.includes(id))) {
     const refs = yield* refsOf(added, twin.id);
@@ -156,14 +157,14 @@ export const write = Effect.fn("SpacesDatabases.writeRelation")(function* (input
         property.id,
         theirs.filter((id) => id !== added).map(refItem),
       );
-      touch(touched, displaced!, sourceId);
+      touch(touched, displaced!, sourceId, property.id);
       yield* CellStore.replace(added, twinSource, twin.id, [refItem(pageId)]);
     } else {
       if (refs.length + 1 > databaseLimits.maxCellItems)
         return yield* dbError("relation_limit", twin.id);
       yield* CellStore.replace(added, twinSource, twin.id, [...refs, pageId].map(refItem));
     }
-    touch(touched, added, twinSource);
+    touch(touched, added, twinSource, twin.id);
   }
   return true;
 });

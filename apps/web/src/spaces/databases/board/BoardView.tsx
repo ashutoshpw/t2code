@@ -9,6 +9,8 @@ import {
 } from "@dnd-kit/core";
 import {
   canonicalJson,
+  cellForGroupKey,
+  laneKeys,
   newRowCells,
   orderBuckets,
   regroupBuckets,
@@ -30,8 +32,17 @@ import type { DatabaseViewProps } from "../shell/viewTypes";
 import { groupLabel } from "../table/groupLabel";
 import { CARD_FACE, CardBody, type CardLine } from "./BoardCard";
 import { BoardColumn, ColumnGhost, type BoardHandlers } from "./BoardColumn";
+import { BoardLanes } from "./BoardLanes";
 import { boardKeyboardCoordinates, columnCollision } from "./boardDom";
 import { canWriteGroup } from "./boardDrag";
+import {
+  boardCardIntrinsicHeight,
+  boardColumnWidth,
+  boardCoverHeight,
+  boardPreview,
+  headerAggregates,
+  laneCellId,
+} from "./boardLayout";
 import { BoardSetup } from "./BoardSetup";
 import { HiddenGroups } from "./HiddenGroups";
 import { createCard } from "./newCard";
@@ -79,11 +90,23 @@ function Board({ search }: DatabaseViewProps) {
   const groupColumn = columns.find((entry) => entry.property.id === groupDef.property)!;
   const known = groupColumn.known;
   const knownGroup = knownView?.group;
+  const boardLayout = knownView?.type === "board" ? knownView.layout : undefined;
+  const preview = boardPreview(boardLayout?.cardPreview);
+  const hasCover = preview.propertyId !== null || preview.content;
+  const subDef = knownView?.type === "board" ? knownView.subGroup : undefined;
+  const subColumn =
+    subDef === undefined
+      ? undefined
+      : columns.find((entry) => entry.property.id === subDef.property);
+  const subKnown = subColumn?.known ?? null;
+  const lanesOn = subColumn !== undefined;
   const query = useViewQuery(view, columns, {
     mode: "groups",
     rowsPerGroup: Math.min(GROUP_ROWS, limits.maxGroupPreviewRows),
     search,
+    ...(preview.content ? { cover: true } : {}),
   });
+  const [collapsedLanes, setCollapsedLanes] = useState<ReadonlySet<string>>(new Set());
   const [adding, setAdding] = useState<string | null>(null);
   const [busy] = useState(() => ({ adding: false }));
   const root = useRef<HTMLDivElement>(null);
@@ -111,38 +134,48 @@ function Board({ search }: DatabaseViewProps) {
   const [latest] = useState(() => new Latest<(BoardHandlers & { dummy?: never }) | null>(null));
   const [handlers] = useState<BoardHandlers>(() => ({
     open: (pageId) => latest.get()?.open(pageId),
-    addCard: (key) => latest.get()?.addCard(key),
-    loadBucket: (key) => latest.get()?.loadBucket(key),
+    addCard: (key, lane) => latest.get()?.addCard(key, lane),
+    loadBucket: (key, lane) => latest.get()?.loadBucket(key, lane),
     setHidden: (key, value) => latest.get()?.setHidden(key, value),
   }));
   // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Point the stable column handlers at the latest view and query so memoized columns keep their props.
   useLayoutEffect(() => {
     latest.set({
       open: (pageId) => actions.openRow(pageId),
-      loadBucket: (key) => query.loadBucket(key),
+      loadBucket: (key, lane) => query.loadBucket(key, lane),
       setHidden: (key, value) => {
         if (knownGroup === undefined || !isKnownGroupKey(key)) return;
         const id = canonicalJson(key);
         const rest = (knownGroup.hidden ?? []).filter((entry) => canonicalJson(entry) !== id);
         actions.editView({ group: { ...knownGroup, hidden: value ? [...rest, key] : rest } });
       },
-      addCard: (key) => {
+      addCard: (key, lane) => {
         if (busy.adding || !permissions.rows || !isKnownGroupKey(key)) return;
         busy.adding = true;
-        setAdding(canonicalJson(key));
+        setAdding(laneCellId(lane, key));
+        const laneValue =
+          lane === undefined || subKnown === null || !isKnownGroupKey(lane)
+            ? undefined
+            : cellForGroupKey(lane, subKnown);
         void createCard({
           actions,
           hold: query.hold,
-          placeRow: query.placeRow,
+          // Lanes show no optimistic card: the refresh after the write places it.
+          placeRow: lanesOn ? () => {} : query.placeRow,
           key,
-          cells: newRowCells({
-            filter: view.filter,
-            properties: Object.fromEntries(
-              columns.map((entry) => [entry.property.id, entry.property]),
-            ),
-            group: { property: groupDef.property, key },
-            today: localDay(),
-          }),
+          cells: {
+            ...(laneValue === undefined || laneValue === null || subDef === undefined
+              ? {}
+              : { [subDef.property]: laneValue }),
+            ...newRowCells({
+              filter: view.filter,
+              properties: Object.fromEntries(
+                columns.map((entry) => [entry.property.id, entry.property]),
+              ),
+              group: { property: groupDef.property, key },
+              today: localDay(),
+            }),
+          },
         }).finally(() => {
           busy.adding = false;
           setAdding(null);
@@ -161,6 +194,8 @@ function Board({ search }: DatabaseViewProps) {
     group: knownGroup,
     property: groupDef.property,
     known,
+    subProperty: lanesOn ? subDef?.property : undefined,
+    subKnown,
     shown,
     hidden,
     canCards: permissions.cells,
@@ -184,17 +219,78 @@ function Board({ search }: DatabaseViewProps) {
 
   const labelOf = (bucket: (typeof shown)[number]) =>
     groupLabel(bucket, known, groupColumn.property.name, optionHint);
-  const tint = (view.layout as { colorColumns?: boolean }).colorColumns === true;
+  const tint = boardLayout?.colorColumns === true;
+  const size = boardLayout?.cardSize;
+  const width = boardColumnWidth(size);
+  const calculated = new Map(
+    columns.flatMap((entry) =>
+      entry.aggregate === undefined ? [] : [[entry.property.id as string, entry.known] as const],
+    ),
+  );
+  const aggregatesOf = (bucket: (typeof shown)[number]) =>
+    headerAggregates(bucket, calculated, VIEWER_ZONE);
+  const cardProps = {
+    wrap: boardLayout?.wrapProperties === true,
+    coverPropertyId: preview.propertyId,
+    coverContent: preview.content,
+    coverHeight: boardCoverHeight(size),
+    coverFit: boardLayout?.fitImage === true,
+    intrinsicHeight: boardCardIntrinsicHeight(size, hasCover),
+    environmentId: model.environmentId,
+  };
+  const overlayBucket = (drag.active?.kind === "card" ? regrouped : null)?.find(
+    (bucket) =>
+      canonicalJson(bucket.key) === canonicalJson((drag.active as { group: SpaceGroupKey }).group),
+  );
+  const overlayLane = (drag.active as { lane?: SpaceGroupKey } | null)?.lane;
   const overlayRow =
     drag.active?.kind === "card"
-      ? regrouped
-          ?.find(
-            (bucket) =>
-              canonicalJson(bucket.key) ===
-              canonicalJson((drag.active as { group: SpaceGroupKey }).group),
-          )
-          ?.rows.find((row) => row.page.id === (drag.active as { pageId: string }).pageId)
+      ? (overlayLane === undefined
+          ? overlayBucket
+          : overlayBucket?.subGroups?.find(
+              (sub) => canonicalJson(sub.key) === canonicalJson(overlayLane),
+            )
+        )?.rows.find((row) => row.page.id === (drag.active as { pageId: string }).pageId)
       : undefined;
+  const lanes = lanesOn ? laneKeys(shown, subDef) : [];
+  const subName = subColumn?.property.name ?? "value";
+  const renderColumn = (
+    bucket: (typeof shown)[number],
+    lane?: SpaceGroupKey,
+    cell?: NonNullable<(typeof shown)[number]["subGroups"]>[number],
+  ) => {
+    const label = labelOf(bucket);
+    const writable = canWriteGroup(bucket.key, known);
+    const id = laneCellId(lane, bucket.key);
+    // A lane cell shows that lane's rows and count under the column's key.
+    const shownBucket = cell === undefined ? bucket : { ...bucket, ...cell, key: bucket.key };
+    return (
+      <BoardColumn
+        key={id}
+        id={id}
+        bucket={shownBucket}
+        labelText={label.text}
+        labelColor={label.color}
+        lines={lines}
+        relatedPages={query.relatedPages}
+        optionHint={optionHint}
+        timeZone={VIEWER_ZONE}
+        canAdd={permissions.rows && writable}
+        adding={adding === id}
+        canDragCards={permissions.cells && writable}
+        canMove={permissions.views && bucket.key.kind !== "empty" && lane === undefined}
+        canHide={permissions.views}
+        tint={tint}
+        loadingMore={query.bucketLoading(bucket.key, lane)}
+        page={pageLayout === "page"}
+        handlers={handlers}
+        width={width}
+        headerAggregates={aggregatesOf(bucket)}
+        lane={lane}
+        {...cardProps}
+      />
+    );
+  };
 
   return (
     <DndContext
@@ -210,33 +306,26 @@ function Board({ search }: DatabaseViewProps) {
         aria-busy={query.stale}
         className="flex items-start gap-3 overflow-x-auto overscroll-x-contain pb-2"
       >
-        {shown.map((bucket) => {
-          const label = labelOf(bucket);
-          const writable = canWriteGroup(bucket.key, known);
-          const id = canonicalJson(bucket.key);
-          return (
-            <BoardColumn
-              key={id}
-              id={id}
-              bucket={bucket}
-              labelText={label.text}
-              labelColor={label.color}
-              lines={lines}
-              relatedPages={query.relatedPages}
-              optionHint={optionHint}
-              timeZone={VIEWER_ZONE}
-              canAdd={permissions.rows && writable}
-              adding={adding === id}
-              canDragCards={permissions.cells && writable}
-              canMove={permissions.views && bucket.key.kind !== "empty"}
-              canHide={permissions.views}
-              tint={tint}
-              loadingMore={query.bucketLoading(bucket.key)}
-              page={pageLayout === "page"}
-              handlers={handlers}
-            />
-          );
-        })}
+        {lanesOn ? (
+          <BoardLanes
+            columns={shown}
+            lanes={lanes}
+            collapsed={collapsedLanes}
+            onToggle={(laneId) =>
+              setCollapsedLanes((current) => {
+                const next = new Set(current);
+                if (!next.delete(laneId)) next.add(laneId);
+                return next;
+              })
+            }
+            headerOf={(bucket) => ({ label: labelOf(bucket), aggregates: aggregatesOf(bucket) })}
+            laneLabelOf={(lane) => groupLabel({ key: lane }, subKnown, subName, optionHint)}
+            columnWidth={width}
+            renderCell={(bucket, lane, cell) => renderColumn(bucket, lane, cell)}
+          />
+        ) : (
+          shown.map((bucket) => renderColumn(bucket))
+        )}
         {hidden.length > 0 ? (
           <HiddenGroups
             buckets={hidden}

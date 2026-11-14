@@ -34,7 +34,7 @@ Check that the case builds with `--dry-run --case <id>`. Then run it on the text
 
 ## Spaces database cases
 
-`cases/spaces-databases.ndjson` checks the `t2_spaces_databases_*` tools: reading the schema before writing a row and passing option ids, filtering on the server instead of paging, renaming a column with one schema operation, and a control that edits page text with the block tools. The sources are the Spaces databases spec's stage e eval list.
+`cases/spaces-databases.ndjson` checks the `t2_spaces_databases_*` tools: reading the schema before writing a row and passing option ids, filtering on the server instead of paging, renaming a column with one schema operation, a control that edits page text with the block tools, and cases for formula properties (writing one from a description, fixing one from the error detail, filtering by one), a two-way relation with a rollup. The sources are the Spaces databases spec's stage e eval list.
 
 ## Device manager cases
 

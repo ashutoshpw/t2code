@@ -1,4 +1,4 @@
-import { ColumnsIcon, CopyIcon, PencilIcon, TableIcon, Trash2Icon } from "lucide-react";
+import { CopyIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import type { SpaceDatabaseView } from "@t2code/contracts/spaces";
 
 import {
@@ -20,6 +20,8 @@ import {
   MenuSeparator,
 } from "~/components/ui/menu";
 import type { DatabaseActions } from "../data/actions";
+import { isViewType } from "@t2code/client-runtime/spaces";
+import { VIEW_REGISTRY, VIEW_TYPES } from "./viewRegistry";
 
 /** Rename, duplicate, layout and delete of the active tab. */
 export function ViewTabMenu({
@@ -51,21 +53,20 @@ export function ViewTabMenu({
         <MenuRadioGroup
           value={view.type}
           onValueChange={(type) => {
-            if (type === "table" || type === "board") actions.changeViewType(view.id, type);
+            if (isViewType(type) && type !== view.type) actions.changeViewType(view.id, type);
           }}
         >
-          <MenuRadioItem value="table">
-            <span className="flex items-center gap-2">
-              <TableIcon className="size-4" />
-              Table
-            </span>
-          </MenuRadioItem>
-          <MenuRadioItem value="board">
-            <span className="flex items-center gap-2">
-              <ColumnsIcon className="size-4" />
-              Board
-            </span>
-          </MenuRadioItem>
+          {VIEW_TYPES.map((type) => {
+            const { icon: Icon, label } = VIEW_REGISTRY[type];
+            return (
+              <MenuRadioItem key={type} value={type}>
+                <span className="flex items-center gap-2">
+                  <Icon className="size-4" />
+                  {label}
+                </span>
+              </MenuRadioItem>
+            );
+          })}
         </MenuRadioGroup>
       </MenuGroup>
       <MenuSeparator />

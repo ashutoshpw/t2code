@@ -1,5 +1,12 @@
 import { useRouter } from "@tanstack/react-router";
-import { ExpandIcon, LinkIcon, MoreHorizontalIcon, PanelRightIcon, Trash2Icon } from "lucide-react";
+import {
+  CornerDownRightIcon,
+  ExpandIcon,
+  LinkIcon,
+  MoreHorizontalIcon,
+  PanelRightIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { memo } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpacePageId } from "@t2code/contracts/spaces";
@@ -8,7 +15,7 @@ import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
 import { toastManager } from "~/components/ui/toast";
 import type { GridHandlers } from "./tableTypes";
 
-function CopyLinkItem({
+export function CopyLinkItem({
   environmentId,
   spaceId,
   pageId,
@@ -95,6 +102,12 @@ export const RowActions = memo(function RowActions({
             Open as full page
           </MenuItem>
           <CopyLinkItem environmentId={environmentId} spaceId={spaceId} pageId={pageId} />
+          {grid.canSubItems && canTrash ? (
+            <MenuItem onClick={() => grid.addSubItem(pageId)}>
+              <CornerDownRightIcon />
+              Add sub-item
+            </MenuItem>
+          ) : null}
           {canTrash ? (
             <MenuItem variant="destructive" onClick={() => grid.trash(pageId)}>
               <Trash2Icon />

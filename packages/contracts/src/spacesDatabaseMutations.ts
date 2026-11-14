@@ -38,7 +38,7 @@ export class SpaceDatabaseError extends Schema.TaggedError<SpaceDatabaseError>()
     reason: Schema.Literals([
       // Declared in the contract but not implemented in this server version.
       "unsupported",
-      // Filter, sort, group or aggregate on formula or rollup until workflow 3.
+      // Filter, sort, group or aggregate on a formula or rollup that has no query type (volatile or in error).
       "property_not_queryable",
       "operator_not_supported",
       "invalid_filter",
@@ -67,6 +67,8 @@ export class SpaceDatabaseError extends Schema.TaggedError<SpaceDatabaseError>()
       "not_a_row",
     ]),
     propertyId: optional(SpacePropertyId),
+    /** Formula, rollup and cycle failures: "line:column message" or the cycle path. */
+    detail: optional(Schema.String.check(Schema.isMaxLength(500))),
   },
 ) {
   override get message(): string {
@@ -355,6 +357,8 @@ export const SpaceRowsCreateResult = Schema.Struct({
   dataSourceId: SpaceDataSourceId,
   dataRevision: NonNegativeInt,
   rows: Schema.Array(Schema.Struct({ pageId: SpacePageId, number: PositiveInt })),
+  /** Data sources whose computed values changed with the new rows. */
+  affectedDataSourceIds: optional(Schema.Array(SpaceDataSourceId)),
 });
 export type SpaceRowsCreateResult = typeof SpaceRowsCreateResult.Type;
 

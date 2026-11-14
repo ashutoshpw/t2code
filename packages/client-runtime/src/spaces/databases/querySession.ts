@@ -46,6 +46,8 @@ export interface QuerySnapshot {
   readonly error: unknown;
   /** A continuation or refresh failed; the loaded windows stay usable and `retryLoad` asks again. */
   readonly loadError: unknown;
+  /** The server is still bringing computed values up to date; the session asks again by itself. */
+  readonly computedPending: boolean;
 }
 
 const EMPTY_SET: ReadonlySet<string> = new Set();
@@ -63,11 +65,16 @@ const IDLE: QuerySnapshot = {
   acked: EMPTY_PENDING_CELL_EDITS,
   error: undefined,
   loadError: undefined,
+  computedPending: false,
 };
 
+const PENDING_DELAYS_MS = [400, 800, 1600, 3200] as const;
+/** After the backoff, a slow fixed interval: a large recompute can run for minutes. */
+const PENDING_SLOW_DELAY_MS = 5000;
 const REFRESH_DELAY_MS = 150;
 const ACK_REFRESH_DELAY_MS = 1000;
 const MAX_REFRESH_WINDOWS = 5;
+const MAX_FILL_WINDOWS = 50;
 
 const bucketId = (group: SpaceGroupKey, subGroup?: SpaceGroupKey) =>
   subGroup === undefined
@@ -160,14 +167,24 @@ export class DatabaseQuerySession {
   #disposed = false;
   #ackedRevision = 0;
   #retry: (() => void) | null = null;
+  #fillRows = 0;
+  /** Bumped by every placement and hold: a refresh that started before one must not answer over it. */
+  #pinEpoch = 0;
+  #followAttempt = 0;
+  #followRun = false;
 
   constructor(ports: QuerySessionPorts) {
     this.#ports = ports;
   }
 
-  setInput(input: SpaceDatabaseQueryInput | null): void {
+  /**
+   * `fillRows` makes the session keep following `nextCursor` after the first window until the
+   * query is complete or that many rows are loaded, so a bounded range (a calendar month) is whole.
+   */
+  setInput(input: SpaceDatabaseQueryInput | null, options?: { readonly fillRows?: number }): void {
     if (this.#disposed) return;
     const key = input === null ? null : queryKey(input);
+    this.#fillRows = options?.fillRows ?? 0;
     if (key === this.#key) return;
     this.#key = key;
     this.#input = input;
@@ -175,6 +192,8 @@ export class DatabaseQuerySession {
     this.#clearTimer();
     this.#refreshWanted = false;
     this.#staleRetried = false;
+    this.#followAttempt = 0;
+    this.#followRun = false;
     if (input === null) {
       this.#set(IDLE);
       return;
@@ -321,6 +340,7 @@ export class DatabaseQuerySession {
 
   placeRow(row: SpaceDatabaseRow, group: SpaceGroupKey | null): void {
     if (this.#disposed) return;
+    this.#pinEpoch++;
     this.#set({
       ...this.#snapshot,
       placed: [
@@ -333,6 +353,7 @@ export class DatabaseQuerySession {
   /** `undefined` for a page clears its placement; a refresh answer clears them all. */
   setPlacement(pageId: string, placement: RowPlacement | undefined): void {
     if (this.#disposed) return;
+    if (placement !== undefined) this.#pinEpoch++;
     const { [pageId]: _dropped, ...rest } = this.#snapshot.placements;
     this.#set({
       ...this.#snapshot,
@@ -343,6 +364,7 @@ export class DatabaseQuerySession {
   /** Refreshes wait until every hold is released. */
   hold(): () => void {
     this.#holds++;
+    this.#pinEpoch++;
     let released = false;
     return () => {
       if (released) return;
@@ -395,9 +417,26 @@ export class DatabaseQuerySession {
     }, delayMs);
   }
 
+  /** While an answer says computed values are pending, refresh again with a growing delay. */
+  #followPending(pending: boolean) {
+    if (!pending) {
+      this.#followAttempt = 0;
+      return;
+    }
+    const delay = PENDING_DELAYS_MS[this.#followAttempt] ?? PENDING_SLOW_DELAY_MS;
+    this.#followAttempt++;
+    this.#followRun = true;
+    this.#requestRefresh(delay);
+  }
+
   #firstInput(input: SpaceDatabaseQueryInput): SpaceDatabaseQueryInput {
-    const { cursor: _cursor, scope: _scope, ...rest } = input;
-    return { ...rest, include: { total: true, aggregates: true } };
+    const { cursor: _cursor, scope, ...rest } = input;
+    const parent = scope?.parentRowId;
+    return {
+      ...rest,
+      ...(parent === undefined ? {} : { scope: { parentRowId: parent } }),
+      include: { ...input.include, total: true, aggregates: true },
+    };
   }
 
   async #loadFirst(input: SpaceDatabaseQueryInput, generation: number) {
@@ -413,11 +452,36 @@ export class DatabaseQuerySession {
         aggregates: result.aggregates ?? [],
         relatedPages: result.relatedPages,
         acked: behind ? this.#snapshot.acked : EMPTY_PENDING_CELL_EDITS,
+        computedPending: result.computedPending === true,
       });
       if (behind) this.#requestRefresh(REFRESH_DELAY_MS);
+      else this.#followPending(result.computedPending === true);
+      await this.#fill(generation);
     } catch (error) {
       if (this.#disposed || generation !== this.#generation) return;
       this.#set({ ...this.#snapshot, status: "error", error, loadingMore: false });
+    }
+  }
+
+  /** Follows the cursor until the query is whole or the row cap is reached, window by window. */
+  async #fill(generation: number) {
+    const input = this.#input;
+    if (this.#fillRows <= 0 || input === null || input.mode !== "rows") return;
+    for (let step = 0; step < MAX_FILL_WINDOWS; step++) {
+      const windows = this.#snapshot.windows;
+      if (
+        this.#disposed ||
+        generation !== this.#generation ||
+        windows === null ||
+        windows.nextCursor === null ||
+        windows.rows.length >= this.#fillRows
+      )
+        return;
+      this.#retry = () => this.refresh();
+      const before = windows.rows.length;
+      await this.#append({ ...input, cursor: windows.nextCursor }, generation, () => {});
+      if (this.#snapshot.loadError !== undefined) return;
+      if ((this.#snapshot.windows?.rows.length ?? before) === before) return;
     }
   }
 
@@ -507,6 +571,9 @@ export class DatabaseQuerySession {
     const input = this.#input;
     if (input === null || this.#disposed) return;
     const generation = ++this.#generation;
+    const epoch = this.#pinEpoch;
+    if (!this.#followRun) this.#followAttempt = 0;
+    this.#followRun = false;
     const previous = this.#snapshot.windows;
     if (previous === null) {
       this.#set({ ...IDLE, status: "loading" });
@@ -548,6 +615,13 @@ export class DatabaseQuerySession {
         );
         if (this.#disposed || generation !== this.#generation) return;
       }
+      if (this.#holds > 0 || this.#pinEpoch !== epoch) {
+        // A drag or a placement began while this answer was on the way; it would reshuffle them.
+        this.#set({ ...this.#snapshot, stale: false });
+        this.#refreshWanted = true;
+        if (this.#holds === 0) this.#requestRefresh(REFRESH_DELAY_MS);
+        return;
+      }
       this.#staleRetried = false;
       const behind = firstResult.dataRevision < this.#ackedRevision;
       this.#set({
@@ -568,8 +642,11 @@ export class DatabaseQuerySession {
         acked: behind ? this.#snapshot.acked : EMPTY_PENDING_CELL_EDITS,
         error: undefined,
         loadError: undefined,
+        computedPending: firstResult.computedPending === true,
       });
       if (behind) this.#requestRefresh(REFRESH_DELAY_MS);
+      else this.#followPending(firstResult.computedPending === true);
+      await this.#fill(generation);
     } catch (error) {
       if (this.#disposed || generation !== this.#generation) return;
       if (isStaleCursor(error) && !this.#staleRetried) {

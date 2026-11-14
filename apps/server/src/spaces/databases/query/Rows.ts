@@ -2,6 +2,7 @@ import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 
 import { byteLength, databaseLimits, ensureDatabaseLimit } from "../../CorePolicy.ts";
+import * as RowExtras from "../RowExtras.ts";
 import * as RowStore from "../RowStore.ts";
 import * as SpacesSql from "../../SpacesSql.ts";
 import * as Cursor from "./Cursor.ts";
@@ -70,6 +71,7 @@ export const total = Effect.fn("SpacesDatabases.total")(function* (plan: Plan) {
 export const hydrate = Effect.fn("SpacesDatabases.hydrateHits")(function* (
   plan: Plan,
   hits: readonly Hit[],
+  options?: { readonly cover?: boolean },
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const pages = new Map<string, RowStore.HydratePage>();
@@ -84,7 +86,15 @@ export const hydrate = Effect.fn("SpacesDatabases.hydrateHits")(function* (
     const page = pages.get(id);
     return page ? [page] : [];
   });
-  return yield* RowStore.hydrate(plan.c.snapshot, ordered, plan.e.properties);
+  const hydrated = yield* RowStore.hydrate(plan.c.full, ordered, plan.e.properties, {
+    nowMs: plan.c.dates.nowMs,
+    timeZone: plan.c.dates.timeZone,
+  });
+  const rows = yield* RowExtras.attach(plan.c.full, hydrated.rows, {
+    children: plan.e.scope.parentRowId !== undefined,
+    cover: options?.cover === true,
+  });
+  return { rows, related: hydrated.related };
 });
 
 interface RowsResult {
@@ -99,12 +109,13 @@ export const page = Effect.fn("SpacesDatabases.rowsPage")(function* (
   limit: number,
   after: Cursor.Position | undefined,
   overhead: number,
+  options?: { readonly cover?: boolean },
 ) {
   yield* ensureDatabaseLimit("maxQueryRows", limit);
   const fetched = yield* fetchWindow(plan, limit, after);
   const more = fetched.length > limit;
   let hits = fetched.slice(0, limit);
-  const { rows, related } = yield* hydrate(plan, hits);
+  const { rows, related } = yield* hydrate(plan, hits, options);
   let kept = rows.length;
   const fits = (count: number) =>
     byteLength({ rows: rows.slice(0, count), related }) + overhead <=

@@ -87,7 +87,7 @@ export const seed = Effect.fn("DatabaseQueryTestkit.seed")(function* (dbPath: st
       { id: ids.created, name: "Made", type: "created_time" },
       { id: ids.edited, name: "Edited", type: "last_edited_time" },
       { id: ids.number, name: "No", type: "unique_id", config: { prefix: "T" } },
-      { id: ids.calc, name: "Calc", type: "formula", config: { expression: "1" } },
+      { id: ids.calc, name: "Calc", type: "formula", config: { expression: "now()" } },
     ],
   });
   const projects = (yield* service.createDataSource({

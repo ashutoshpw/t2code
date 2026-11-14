@@ -1,8 +1,11 @@
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
+import * as Drain from "../databases/computed/Drain.ts";
+import { processZone } from "../databases/computed/Zone.ts";
 import * as DatabaseStore from "../databases/DatabaseStore.ts";
 import * as Liveness from "../databases/Liveness.ts";
+import { makeContext } from "../databases/query/Dates.ts";
 import * as Query from "../databases/query/Run.ts";
 import * as RowStore from "../databases/RowStore.ts";
 import * as SchemaStore from "../databases/SchemaStore.ts";
@@ -142,14 +145,19 @@ export const make = (rt: Runtime) => {
     const environmentId = yield* admit();
     const input = yield* decoded(raw, decodeRow);
     yield* checkEnvironment(environmentId, input.environmentId);
-    return yield* readWithAdmission(environmentId, (_meta, admission) =>
+    return yield* readWithAdmission(environmentId, (meta, admission) =>
       Effect.gen(function* () {
+        const timeZone = input.timeZone ?? processZone;
+        yield* makeContext(meta.observed_time_ms, timeZone, undefined);
         const page = yield* PageStore.load(input.pageId);
         if (page.data_source_id === null) return yield* dbError("not_a_row");
         if (page.trash_batch_id !== null) return yield* trashed();
         const source = yield* DatabaseStore.getLiveDataSource(page.data_source_id);
         const snapshot = yield* SchemaStore.load(source.data_source_id);
-        const { rows, related } = yield* RowStore.hydrate(snapshot, [page], input.properties);
+        const { rows, related } = yield* RowStore.hydrate(snapshot, [page], input.properties, {
+          nowMs: meta.observed_time_ms,
+          timeZone,
+        });
         const result: C.SpaceDatabaseRowGetResult = {
           row: rows[0]!,
           template: page.row_template === 1,
@@ -160,6 +168,7 @@ export const make = (rt: Runtime) => {
             dataRevision: source.data_revision,
           },
           relatedPages: related,
+          ...((yield* Drain.pending(source.data_source_id)) ? { computedPending: true } : {}),
           mutationAdmission: admission,
         };
         return result;

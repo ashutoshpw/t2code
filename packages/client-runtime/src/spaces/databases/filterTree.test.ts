@@ -128,6 +128,35 @@ describe("default conditions", () => {
   });
 });
 
+describe("computed properties filter as their query type", () => {
+  const formula = property("f", "formula", { expression: "1" });
+  it("starts a number formula at a number operator and carries the query type through changes", () => {
+    expect(defaultCondition(formula, "number")).toEqual({
+      property: "f",
+      operator: "equals",
+      value: 0,
+    });
+    expect(defaultCondition(formula, "checkbox")).toEqual({
+      property: "f",
+      operator: "equals",
+      value: true,
+    });
+    const text = defaultCondition(formula, "text");
+    expect(text).toMatchObject({ value: "" });
+    expect(conditionForOperator(text, formula, "contains" as never, "text")).toMatchObject({
+      operator: "contains",
+      value: "",
+    });
+    expect(
+      conditionForProperty(
+        { property: "p", operator: "equals", value: 1 } as never,
+        formula,
+        "date",
+      ),
+    ).toMatchObject({ property: "f", value: { relative: "today" } });
+  });
+});
+
 describe("operator and property changes", () => {
   const status = property("s", "status", {
     options: [{ id: "x", name: "X", color: "gray", group: "todo" }],

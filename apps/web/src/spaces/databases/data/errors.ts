@@ -19,11 +19,22 @@ const LIMITS: Record<string, string> = {
   maxOptionsPerProperty: "This property has reached its option limit.",
 };
 
+/** The server's explanation of a refused formula, rollup or dependency cycle. */
+export function databaseErrorDetail(failure: unknown): string | undefined {
+  if (field(failure, "_tag") !== "SpaceDatabaseError") return undefined;
+  const detail = field(failure, "detail");
+  return typeof detail === "string" && detail !== "" ? detail : undefined;
+}
+
 /** Plain copy for a failed database request. */
 export function databaseErrorMessage(failure: unknown): string {
   const tag = field(failure, "_tag");
   if (tag === "SpaceDatabaseError") {
     const reason = field(failure, "reason");
+    const detail = databaseErrorDetail(failure);
+    if (detail !== undefined && (reason === "invalid_property_config" || reason === "cycle"))
+      return detail;
+    if (reason === "cycle") return "These properties depend on each other in a loop.";
     if (typeof reason === "string" && DATABASE_REASONS[reason]) return DATABASE_REASONS[reason];
     return "The database request couldn't be completed.";
   }

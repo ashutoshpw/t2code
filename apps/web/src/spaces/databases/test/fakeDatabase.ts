@@ -7,9 +7,10 @@ import type {
   SpaceDatabaseQueryResult,
   SpaceDatabaseRow,
   SpaceDatabaseView,
-  SpaceGroupBucket,
 } from "@t2code/contracts/spaces";
 
+import { computeFormulas } from "./fakeComputed";
+import { matchesFilter, sortRows } from "./fakeFilter";
 import {
   FIXTURE_IDS,
   fixtureDataSource,
@@ -24,6 +25,13 @@ type AnyRegistry = {
 };
 type Json = Record<string, unknown>;
 
+export interface FakeOtherDatabase {
+  readonly database: SpaceDatabase;
+  readonly dataSource: SpaceDataSource;
+  readonly rows: SpaceDatabaseRow[];
+  readonly views?: ReadonlyArray<SpaceDatabaseView>;
+}
+
 export interface FakeCall {
   readonly method: string;
   readonly input: Json;
@@ -31,8 +39,18 @@ export interface FakeCall {
 
 export interface FakeDatabaseOptions {
   readonly rows?: number;
+  /** Replaces the fixture schema; keep its id so row atoms and counters still line up. */
+  readonly dataSource?: SpaceDataSource;
+  /** Replaces the generated rows. */
+  readonly rowData?: ReadonlyArray<SpaceDatabaseRow>;
   readonly views?: ReadonlyArray<SpaceDatabaseView>;
+  /** Other databases of the same space: relation targets and linked-view sources. */
+  readonly others?: ReadonlyArray<FakeOtherDatabase>;
+  /** Databases per page of `listAtom`; the rest come through `listPage`. */
+  readonly listLimit?: number;
   readonly live?: boolean;
+  /** The next this many queries answer `computedPending: true`. */
+  readonly computedPending?: number;
   /** Row writes leave the database counter alone, as the production commands do. */
   readonly quietRowWrites?: boolean;
   readonly permissions?: Partial<
@@ -57,8 +75,14 @@ export class FakeDatabase {
   dataSource: SpaceDataSource = fixtureDataSource();
   views: SpaceDatabaseView[];
   rows: SpaceDatabaseRow[];
+  others: FakeOtherDatabase[];
+  /** Template pages of the main data source, kept out of queries as the server does. */
+  readonly templateRows = new Map<string, SpaceDatabaseRow>();
+  readonly #listLimit: number;
   dataRevision = 1;
   revision = 1;
+  /** Queries left that still report `computedPending`. */
+  computedPendingLeft: number;
   /** Fails the next call of a method once, with this value. */
   readonly failNext = new Map<string, unknown>();
   readonly permissions: Record<
@@ -73,6 +97,9 @@ export class FakeDatabase {
 
   constructor(options: FakeDatabaseOptions = {}) {
     this.#quietRowWrites = options.quietRowWrites ?? false;
+    this.computedPendingLeft = options.computedPending ?? 0;
+    this.others = [...(options.others ?? [])];
+    this.#listLimit = options.listLimit ?? 100;
     this.database = fixtureDatabase(options.live ?? true);
     this.views = [
       ...(options.views ?? [
@@ -80,7 +107,9 @@ export class FakeDatabase {
         fixtureView(FIXTURE_IDS.boardView, "board", "Board", 1),
       ]),
     ];
-    this.rows = fixtureRows(options.rows ?? 0);
+    if (options.dataSource !== undefined) this.dataSource = options.dataSource;
+    this.rows =
+      options.rowData === undefined ? fixtureRows(options.rows ?? 0) : [...options.rowData];
     this.permissions = {
       cells: true,
       rows: true,
@@ -102,6 +131,94 @@ export class FakeDatabase {
     });
   }
 
+  readonly #otherAtoms = new Map<string, Atom.Atom<AsyncResult.AsyncResult<unknown, unknown>>>();
+  /** The model atom of a database: the main one, or another database of the space. */
+  #modelAtom(databaseId: string) {
+    const other = this.others.find((entry) => entry.database.id === databaseId);
+    if (other === undefined) return this.#databaseAtom;
+    let atom = this.#otherAtoms.get(databaseId);
+    if (atom === undefined) {
+      atom = Atom.make((get) => {
+        get(this.counter(`database:${databaseId}`));
+        return AsyncResult.success({
+          database: other.database,
+          dataSources: [other.dataSource],
+          views: [...(other.views ?? [])],
+          mutationAdmission: admission,
+        });
+      });
+      this.#otherAtoms.set(databaseId, atom);
+    }
+    return atom;
+  }
+
+  #listItems() {
+    return [
+      {
+        database: { ...this.database, revision: this.revision },
+        dataSources: [{ id: this.dataSource.id, name: this.dataSource.name }],
+      },
+      ...this.others.map((entry) => ({
+        database: entry.database,
+        dataSources: [{ id: entry.dataSource.id, name: entry.dataSource.name }],
+      })),
+    ];
+  }
+
+  #listResult(from: number) {
+    const items = this.#listItems();
+    const page = items.slice(from, from + this.#listLimit);
+    return {
+      items: page,
+      nextCursor: from + this.#listLimit < items.length ? String(from + this.#listLimit) : null,
+      mutationAdmission: admission,
+    };
+  }
+
+  #listAtomValue: Atom.Atom<AsyncResult.AsyncResult<unknown, unknown>> | null = null;
+  #listAtom() {
+    this.#listAtomValue ??= Atom.make((get) => {
+      get(this.counter("database"));
+      return AsyncResult.success(this.#listResult(0));
+    });
+    return this.#listAtomValue;
+  }
+
+  /** Rows and schema of any data source of the fake. */
+  sourceOf(dataSourceId: string): { dataSource: SpaceDataSource; rows: SpaceDatabaseRow[] } {
+    const other = this.others.find((entry) => entry.dataSource.id === dataSourceId);
+    return other === undefined
+      ? { dataSource: this.dataSource, rows: this.rows }
+      : { dataSource: other.dataSource, rows: other.rows };
+  }
+
+  /** `relatedPages` of an answer: every page a relation cell of the rows points at. */
+  #relatedOf(
+    source: SpaceDataSource,
+    rows: ReadonlyArray<SpaceDatabaseRow>,
+  ): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    for (const property of Object.values(source.properties)) {
+      if (property.type !== "relation") continue;
+      const targetId = (property.config as { dataSourceId?: string }).dataSourceId ?? "";
+      const target = this.sourceOf(targetId);
+      for (const row of rows) {
+        const value = row.cells[property.id];
+        if (!Array.isArray(value)) continue;
+        for (const id of value as string[]) {
+          const page = target.rows.find((entry) => entry.page.id === id);
+          if (page !== undefined)
+            out[id] = {
+              title: page.page.title,
+              ...(page.page.icon === undefined ? {} : { icon: page.page.icon }),
+              dataSourceId: targetId,
+            };
+        }
+      }
+    }
+    return out;
+  }
+
   /** Rows moved to trash, by page id, for `restoreRow`. */
   readonly trashed = new Map<string, SpaceDatabaseRow>();
   readonly #rowAtoms = new Map<string, Atom.Atom<AsyncResult.AsyncResult<unknown, unknown>>>();
@@ -113,11 +230,12 @@ export class FakeDatabase {
       atom = Atom.make((get) => {
         get(this.counter(`row:${pageId}`));
         get(this.counter(`dataSource:${FIXTURE_IDS.dataSource}`));
-        const row = this.rows.find((entry) => entry.page.id === pageId);
+        const template = this.templateRows.get(pageId);
+        const row = template ?? this.rows.find((entry) => entry.page.id === pageId);
         if (row === undefined) return AsyncResult.fail(new Error("The row is gone"));
         return AsyncResult.success({
           row,
-          template: false,
+          template: template !== undefined,
           dataSource: {
             id: FIXTURE_IDS.dataSource,
             databaseId: FIXTURE_IDS.database,
@@ -166,19 +284,124 @@ export class FakeDatabase {
     this.#bump(registry, `dataSource:${FIXTURE_IDS.dataSource}`);
   }
 
+  /** Brings formula values and `computed` info up to date; throws the refusal of a bad formula. */
+  recomputeFormulas() {
+    const lookup = (id: string) => this.sourceOf(id).dataSource;
+    const result = computeFormulas(this.dataSource, this.rows, lookup, Date.UTC(2026, 0, 1));
+    this.dataSource = result.dataSource;
+    this.rows = result.rows;
+  }
+
   callsOf(method: string): FakeCall[] {
     return this.calls.filter((call) => call.method === method);
   }
 
+  /** Created and edited times are not stored cells: the server adds them when they are requested. */
+  #withVirtualCells(row: SpaceDatabaseRow, requested: ReadonlyArray<string> | undefined) {
+    const extra: Json = {};
+    for (const id of requested ?? []) {
+      const type = (this.dataSource.properties[id] as { type?: string } | undefined)?.type;
+      if (type === "created_time") extra[id] = row.page.createdAt;
+      else if (type === "last_edited_time") extra[id] = row.page.updatedAt;
+    }
+    return Object.keys(extra).length === 0
+      ? row
+      : ({ ...row, cells: { ...row.cells, ...extra } } as SpaceDatabaseRow);
+  }
+
   #matching(input: SpaceDatabaseQueryInput): SpaceDatabaseRow[] {
+    const { dataSource, rows: all } = this.sourceOf(input.dataSourceId);
     const search = input.search?.toLowerCase();
-    return this.rows.filter(
-      (row) =>
-        search === undefined ||
-        String(row.cells.title ?? "")
-          .toLowerCase()
-          .includes(search),
+    const parentProperty = dataSource.subItems?.parentPropertyId;
+    const parent = input.scope?.parentRowId;
+    const matching = all.filter((row) => {
+      if (parent !== undefined && parentProperty !== undefined) {
+        const value = row.cells[parentProperty];
+        const parents = Array.isArray(value) ? (value as string[]) : [];
+        if (parent === null ? parents.length > 0 : !parents.includes(parent)) return false;
+      }
+      return (
+        (search === undefined ||
+          String(row.cells.title ?? "")
+            .toLowerCase()
+            .includes(search)) &&
+        matchesFilter(row, input.filter, dataSource) &&
+        matchesFilter(row, input.extraFilter, dataSource)
+      );
+    });
+    const withCounts = matching.map((row) => {
+      if (parent === undefined || dataSource.subItems === undefined) return row;
+      const childProperty = dataSource.subItems.childrenPropertyId;
+      const children = row.cells[childProperty];
+      const own = all.filter((entry) => {
+        const value = entry.cells[dataSource.subItems!.parentPropertyId];
+        return Array.isArray(value) && (value as string[]).includes(row.page.id);
+      }).length;
+      return { ...row, childCount: Array.isArray(children) ? children.length : own };
+    });
+    return sortRows(withCounts, input.sorts, dataSource).map((row) =>
+      this.#withVirtualCells(row, input.properties),
     );
+  }
+
+  #buckets(
+    rows: ReadonlyArray<SpaceDatabaseRow>,
+    input: SpaceDatabaseQueryInput,
+    group: { property: string },
+    per: number,
+    dataSource: SpaceDataSource,
+  ) {
+    const optionsOf = (property: string) =>
+      (dataSource.properties[property]?.config as { options?: { id: string }[] })?.options ?? [];
+    const keysOf = (property: string) => [
+      ...optionsOf(property).map((option): { kind: string; optionId?: string } => ({
+        kind: "option",
+        optionId: option.id,
+      })),
+      { kind: "empty" } as { kind: string; optionId?: string },
+    ];
+    const inKey = (
+      row: SpaceDatabaseRow,
+      property: string,
+      key: { kind: string; optionId?: string },
+    ) => {
+      const value = row.cells[property];
+      return key.kind === "empty" ? value == null : value === key.optionId;
+    };
+    const aggregatesOf = (inBucket: ReadonlyArray<SpaceDatabaseRow>) =>
+      input.include?.aggregates
+        ? {
+            aggregates: (input.aggregates ?? []).map((aggregate) => ({
+              property: aggregate.property,
+              function: aggregate.function,
+              number: inBucket.length,
+            })),
+          }
+        : {};
+    const bucketOf = (inBucket: ReadonlyArray<SpaceDatabaseRow>, key: object) => ({
+      key,
+      count: inBucket.length,
+      ...aggregatesOf(inBucket),
+      rows: inBucket.slice(0, per),
+      nextCursor: inBucket.length > per ? String(per) : null,
+    });
+    return keysOf(group.property).map((key) => {
+      const inBucket = rows.filter((row) => inKey(row, group.property, key));
+      const sub = input.subGroup?.property;
+      return {
+        ...bucketOf(inBucket, key),
+        ...(sub === undefined
+          ? {}
+          : {
+              subGroups: keysOf(sub).map((subKey) =>
+                bucketOf(
+                  inBucket.filter((row) => inKey(row, sub, subKey)),
+                  subKey,
+                ),
+              ),
+            }),
+      };
+    });
   }
 
   async query(
@@ -188,11 +411,13 @@ export class FakeDatabase {
     this.#log("query", input as unknown as Json);
     const limit = input.limit ?? 50;
     const rows = this.#matching(input);
+    const { dataSource } = this.sourceOf(input.dataSourceId);
     const base = {
       dataSourceId: input.dataSourceId,
       schemaRevision: 1,
       dataRevision: this.dataRevision,
-      relatedPages: {},
+      relatedPages: this.#relatedOf(dataSource, rows),
+      ...(this.computedPendingLeft > 0 ? { computedPending: this.computedPendingLeft-- > 0 } : {}),
       ...(input.include?.total ? { total: rows.length } : {}),
       ...(input.include?.aggregates
         ? {
@@ -205,29 +430,13 @@ export class FakeDatabase {
         : {}),
     };
     if (input.mode === "groups" && input.group) {
-      const property = input.group.property;
-      const options =
-        (this.dataSource.properties[property]?.config as { options?: { id: string }[] })?.options ??
-        [];
-      const per = input.rowsPerGroup ?? 0;
-      const buckets: SpaceGroupBucket[] = [
-        ...options.map((option) => ({ kind: "option", optionId: option.id })),
-        { kind: "empty" },
-      ].map((key) => {
-        const inBucket = rows.filter((row) => {
-          const value = row.cells[property];
-          return key.kind === "empty"
-            ? value == null
-            : value === (key as { optionId: string }).optionId;
-        });
-        return {
-          key: key as never,
-          count: inBucket.length,
-          rows: inBucket.slice(0, per),
-          nextCursor: inBucket.length > per ? (String(per) as never) : null,
-        };
-      });
-      return { ...base, rows: [], groups: buckets, nextCursor: null } as SpaceDatabaseQueryResult;
+      const buckets = this.#buckets(rows, input, input.group, input.rowsPerGroup ?? 0, dataSource);
+      return {
+        ...base,
+        rows: [],
+        groups: buckets,
+        nextCursor: null,
+      } as unknown as SpaceDatabaseQueryResult;
     }
     let pool = rows;
     const scope = input.scope?.group as { optionId?: string; kind: string } | undefined;
@@ -268,9 +477,18 @@ export class FakeDatabase {
       return atom;
     };
     return {
-      databaseAtom: () => this.#databaseAtom,
+      databaseAtom: (_environmentId: string, databaseId: string) => this.#modelAtom(databaseId),
       rowAtom: (_environmentId: string, pageId: string) => this.#rowAtom(pageId),
-      listAtom: () => Atom.make(AsyncResult.initial<never, never>()),
+      listAtom: () => this.#listAtom(),
+      listPage: async (
+        _registry: AnyRegistry,
+        _environmentId: string,
+        _spaceId: string | undefined,
+        cursor: string | undefined,
+      ) => {
+        this.#log("listPage", { cursor });
+        return this.#listResult(Number(cursor ?? 0));
+      },
       query: (registry: AnyRegistry, input: SpaceDatabaseQueryInput) => this.query(registry, input),
       run: {
         create: run(
@@ -294,17 +512,45 @@ export class FakeDatabase {
         updateSchema: run(
           "updateSchema",
           (input) => {
+            const before = { dataSource: this.dataSource, rows: this.rows };
             for (const operation of (input.operations as Json[]) ?? []) {
               if (operation.op === "addProperty") {
-                const draft = operation.property as { id: string; name: string; type: string };
+                const draft = operation.property as {
+                  id: string;
+                  name: string;
+                  type: string;
+                  config?: unknown;
+                };
                 this.dataSource = {
                   ...this.dataSource,
                   properties: {
                     ...this.dataSource.properties,
-                    [draft.id]: { ...draft, config: {}, position: 99 } as never,
+                    [draft.id]: { ...draft, config: draft.config ?? {}, position: 99 } as never,
                   },
                 };
+              } else if (operation.op === "updateProperty") {
+                const id = String(operation.propertyId);
+                const existing = this.dataSource.properties[id];
+                if (existing !== undefined)
+                  this.dataSource = {
+                    ...this.dataSource,
+                    properties: {
+                      ...this.dataSource.properties,
+                      [id]: {
+                        ...existing,
+                        ...(operation.name === undefined ? {} : { name: operation.name }),
+                        ...(operation.config === undefined ? {} : { config: operation.config }),
+                      } as never,
+                    },
+                  };
               }
+            }
+            try {
+              this.recomputeFormulas();
+            } catch (refusal) {
+              this.dataSource = before.dataSource;
+              this.rows = before.rows;
+              throw refusal;
             }
             return {
               dataSourceId: FIXTURE_IDS.dataSource,
@@ -356,26 +602,79 @@ export class FakeDatabase {
         createRows: run(
           "createRows",
           (input) => {
-            const drafts = (input.rows as { title?: string; cells?: Json }[]) ?? [];
+            const drafts =
+              (input.rows as {
+                title?: string;
+                cells?: Json;
+                asTemplate?: boolean;
+                templateId?: string;
+              }[]) ?? [];
+            const target = this.sourceOf(String(input.dataSourceId));
             const created = drafts.map((draft) => {
-              const number = this.rows.length + 1;
+              const number = target.rows.length + 1;
+              const template =
+                draft.templateId === undefined
+                  ? undefined
+                  : this.templateRows.get(draft.templateId);
               const title = draft.title ?? "";
-              this.rows.push({
+              const id = `row-new-${this.#nextId++}`;
+              const row = {
                 page: {
-                  id: `row-new-${this.#nextId++}`,
+                  id,
                   title,
+                  ...(template?.page.icon === undefined ? {} : { icon: template.page.icon }),
                   revision: 1,
                   createdAt: "t",
                   updatedAt: "t",
                 },
                 number,
-                cells: { ...draft.cells, title },
-              } as unknown as SpaceDatabaseRow);
-              return { pageId: this.rows.at(-1)!.page.id, number };
+                cells: { ...template?.cells, ...draft.cells, title },
+              } as unknown as SpaceDatabaseRow;
+              if (draft.asTemplate === true) {
+                this.templateRows.set(id, row);
+                this.dataSource = {
+                  ...this.dataSource,
+                  templates: [...this.dataSource.templates, { pageId: id, title } as never],
+                };
+              } else target.rows.push(row);
+              return { pageId: id, number };
             });
             return { rows: created, dataRevision: ++this.dataRevision };
           },
           "dataSource",
+        ),
+        updateDataSource: run(
+          "updateDataSource",
+          (input) => {
+            const { subItems, defaultTemplateId } = input as {
+              subItems?: { parentPropertyId: string } | null;
+              defaultTemplateId?: string | null;
+            };
+            let next: Json = { ...this.dataSource };
+            if (subItems === null) delete next.subItems;
+            else if (subItems !== undefined) {
+              const twin = Object.values(this.dataSource.properties).find(
+                (property) =>
+                  (property.config as { twoWay?: { propertyId: string } }).twoWay?.propertyId !==
+                    undefined && property.id === subItems.parentPropertyId,
+              );
+              next.subItems = {
+                parentPropertyId: subItems.parentPropertyId,
+                childrenPropertyId:
+                  (twin?.config as { twoWay?: { propertyId: string } } | undefined)?.twoWay
+                    ?.propertyId ?? "children",
+              };
+            }
+            if (defaultTemplateId === null) delete next.defaultTemplateId;
+            else if (defaultTemplateId !== undefined) next.defaultTemplateId = defaultTemplateId;
+            this.dataSource = next as unknown as SpaceDataSource;
+            return {
+              schemaRevision: 2,
+              dataRevision: this.dataRevision,
+              revision: ++this.revision,
+            };
+          },
+          "database",
         ),
         updateRows: run(
           "updateRows",
@@ -391,6 +690,7 @@ export class FakeDatabase {
                 return { ...row, cells } as SpaceDatabaseRow;
               });
             }
+            this.recomputeFormulas();
             return { dataRevision: ++this.dataRevision };
           },
           "dataSource",
@@ -419,6 +719,11 @@ export class FakeDatabase {
         const gone = this.rows.find((row) => row.page.id === pageId);
         if (gone !== undefined) this.trashed.set(pageId, gone);
         this.rows = this.rows.filter((row) => row.page.id !== pageId);
+        if (this.templateRows.delete(pageId))
+          this.dataSource = {
+            ...this.dataSource,
+            templates: this.dataSource.templates.filter((entry) => entry.pageId !== pageId),
+          };
         this.#bump(registry, `dataSource:${FIXTURE_IDS.dataSource}`);
       },
     };

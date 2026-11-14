@@ -138,7 +138,9 @@ function RowFields({
   );
 
   // Properties added from here are shown in the first view of the data source, as in the grid.
+  const openedFrom = stores.openedFrom.get(pageId);
   const view =
+    model.views.find((entry) => entry.id === openedFrom && entry.dataSourceId === dataSource.id) ??
     model.views.find((entry) => entry.dataSourceId === dataSource.id) ??
     syntheticView(model, dataSource);
   const [latest] = useState(() => new Latest<ActionsState | null>(null));
@@ -204,6 +206,14 @@ function RowFields({
       <OpenControlContext.Provider value={NO_OPEN_CONTROL}>
         <DatabaseContext.Provider value={context}>
           <section aria-label="Row properties" className="mt-4 space-y-0.5 border-b pb-3 text-sm">
+            {data.template ? (
+              <p
+                role="status"
+                className="mb-2 rounded-md bg-accent/50 px-2 py-1 text-xs text-muted-foreground"
+              >
+                You're editing a template for {model.database.title.trim() || "this database"}
+              </p>
+            ) : null}
             <div role="list" className="space-y-0.5" onKeyDown={onKeyDown}>
               {properties.map((property) => {
                 const known = knownProperty(property);
