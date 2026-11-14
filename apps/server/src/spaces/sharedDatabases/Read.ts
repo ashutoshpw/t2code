@@ -195,8 +195,9 @@ export const query = Effect.fn("SharedDatabases.query")(function* (input: {
   const { params } = input;
   const scope = yield* resolveView(input.rootPageId, input.pageId, input.blockId, input.viewId);
   const { type, group } = scope.shape;
+  if (type === "form") return yield* notFound("view", input.viewId);
   const dated = type === "calendar" || type === "timeline";
-  const grouped = group !== null && !dated;
+  const grouped = group !== null && !dated && type !== "feed";
   const bad = { _tag: "Bad" } as const;
   const ids = [...scope.exposed.columns.map((c) => c.propertyId), ...scope.exposed.extras];
   const timeZone = yield* resolveZone(input.nowMs, params.timeZone);
@@ -226,6 +227,22 @@ export const query = Effect.fn("SharedDatabases.query")(function* (input: {
       limit: SPACE_SHARED_DATABASE_WINDOW_ROWS,
       ...(cursor === undefined ? {} : { cursor }),
     };
+  } else if (type === "chart") {
+    if (params.from !== undefined || params.to !== undefined) return bad;
+    if (params.group !== undefined || params.cursor !== undefined) return bad;
+    const y = scope.shape.layout.y;
+    const aggregate =
+      isObject(y) && typeof y.property === "string" && typeof y.function === "string"
+        ? [{ property: C.SpacePropertyId.make(y.property), function: y.function }]
+        : [];
+    request = {
+      ...base,
+      mode: "groups",
+      rowsPerGroup: 0,
+      properties: [],
+      include: { aggregates: true },
+      aggregates: aggregate,
+    };
   } else {
     if (params.from !== undefined || params.to !== undefined) return bad;
     if (!grouped) {
@@ -233,6 +250,7 @@ export const query = Effect.fn("SharedDatabases.query")(function* (input: {
       request = {
         ...base,
         mode: "rows",
+        ...(type === "feed" ? { group: null } : {}),
         limit: SPACE_SHARED_DATABASE_WINDOW_ROWS,
         ...(cursor === undefined ? {} : { cursor }),
       };
@@ -286,6 +304,7 @@ export interface RowParams {
 /** The scope and the plan that answers "does this view's own filter return the row". */
 const gate = Effect.fn("SharedDatabases.gate")(function* (input: RowParams) {
   const scope = yield* resolveView(input.rootPageId, input.pageId, input.blockId, input.viewId);
+  if (scope.shape.type === "form") return yield* notFound("page", input.rowId);
   const ids = [...scope.exposed.columns.map((c) => c.propertyId), ...scope.exposed.extras];
   const timeZone = yield* resolveZone(input.nowMs, input.timeZone);
   const prepared = yield* Query.prepare({

@@ -478,6 +478,17 @@ describe("DatabaseQuerySession", () => {
     expect(session.getSnapshot().stale).toBe(false);
   });
 
+  it("keeps the bucket scope on the first window and on a refresh", async () => {
+    const { session, calls, fire, settle } = setup();
+    const group = { kind: "option", optionId: "o" } as never;
+    session.setInput(input({ mode: "rows", scope: { group } }));
+    await settle({ rows: [row("a")] });
+    expect(calls[0]?.scope).toEqual({ group });
+    session.refresh();
+    fire();
+    expect(calls.at(-1)?.scope).toEqual({ group });
+  });
+
   it("continues a bucket in rows mode and refreshes once on a stale cursor", async () => {
     const { session, calls, fire, settle, pending } = setup();
     const group = { kind: "option", optionId: "o" } as never;

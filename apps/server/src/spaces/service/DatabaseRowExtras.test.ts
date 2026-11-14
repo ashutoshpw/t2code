@@ -201,4 +201,101 @@ it.layer(NodeServices.layer)("Spaces database row extras", (it) => {
       }),
     ),
   );
+
+  it.effect("returns the first body blocks of each row only when include.preview is set", () =>
+    fixture((dbPath) =>
+      Effect.gen(function* () {
+        const { service, common, page } = yield* boot();
+        const kit = databaseKit(service, common, page.spaceId);
+        const created = yield* kit.create("Feed", { appendToPageId: page.id });
+        const source = created.dataSourceId;
+        const made = yield* kit.addRows(source, [
+          { title: "rich" },
+          { title: "long" },
+          ...Array.from({ length: 28 }, (_, index) => ({ title: `row ${index}` })),
+        ]);
+        const [rich, long] = made.rows.map((row) => row.pageId);
+        const runs = (text: string) => [{ text, marks: [] }];
+        yield* exec(
+          dbPath,
+          Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            const block = (
+              id: string,
+              pageId: string,
+              parent: string | null,
+              rank: number,
+              type: string,
+              content: object,
+            ) => {
+              const order = String(rank).padStart(32, "0");
+              const payload = JSON.stringify({
+                id,
+                parentId: parent,
+                order,
+                type,
+                version: 1,
+                content,
+              });
+              return sql`INSERT INTO spaces_ids (id, kind) VALUES (${id}, 'block')`.pipe(
+                Effect.andThen(
+                  sql`INSERT INTO spaces_blocks (block_id, page_id, parent_id, rank, payload, logical_bytes, deleted)
+                    VALUES (${id}, ${pageId}, ${parent}, ${order}, ${payload}, ${payload.length}, 0)`,
+                ),
+              );
+            };
+            yield* block("b1", rich!, null, 1, "heading", { runs: runs("Title"), level: 2 });
+            yield* block("b2", rich!, null, 2, "todo_item", { runs: runs("Task"), checked: true });
+            yield* block("b3", rich!, null, 3, "paragraph", { runs: runs("three") });
+            yield* block("b4", rich!, null, 4, "image", { assetId: "a" });
+            yield* block("b5", rich!, null, 5, "paragraph", { runs: runs("five") });
+            yield* block("child", rich!, "b1", 1, "paragraph", { runs: runs("nested") });
+            yield* block("l1", long!, null, 1, "paragraph", { runs: runs("x".repeat(10_000)) });
+          }),
+        );
+        const query = (extra: object) =>
+          service.queryDatabase({
+            ...env,
+            dataSourceId: source,
+            mode: "rows",
+            timeZone: "UTC",
+            ...extra,
+          });
+        assert.isTrue((yield* query({})).rows.every((row) => !("preview" in row)));
+        const three = (yield* query({ include: { preview: 3 } })).rows.find(
+          (row) => row.page.id === rich,
+        );
+        assert.deepEqual(three?.preview, {
+          blocks: [
+            { type: "heading", runs: runs("Title"), level: 2 },
+            { type: "todo_item", runs: runs("Task"), checked: true },
+            { type: "paragraph", runs: runs("three") },
+          ],
+          more: true,
+        });
+        const all = (yield* query({ include: { preview: 10 } })).rows.find(
+          (row) => row.page.id === rich,
+        );
+        assert.deepEqual(
+          all?.preview?.blocks.map((entry) => [entry.type, entry.runs.length]),
+          [
+            ["heading", 1],
+            ["todo_item", 1],
+            ["paragraph", 1],
+            ["image", 0],
+            ["paragraph", 1],
+          ],
+        );
+        assert.isFalse(all?.preview?.more);
+        const cut = (yield* query({ include: { preview: 1 } })).rows.find(
+          (row) => row.page.id === long,
+        );
+        assert.equal(cut?.preview?.blocks[0]?.runs[0]?.text.length, C.SPACE_FEED_PREVIEW_ROW_BYTES);
+        assert.isTrue(cut?.preview?.more);
+        const window = yield* query({ include: { preview: 1 }, limit: 100 });
+        assert.equal(window.rows.length, C.SPACE_FEED_WINDOW_ROWS);
+        assert.isNotNull(window.nextCursor);
+      }),
+    ),
+  );
 });

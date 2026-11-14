@@ -44,6 +44,8 @@ export interface FakeDatabaseOptions {
   /** Replaces the generated rows. */
   readonly rowData?: ReadonlyArray<SpaceDatabaseRow>;
   readonly views?: ReadonlyArray<SpaceDatabaseView>;
+  /** Body previews by row page id, attached to rows when a query sets `include.preview`. */
+  readonly previews?: Readonly<Record<string, SpaceDatabaseRow["preview"]>>;
   /** Other databases of the same space: relation targets and linked-view sources. */
   readonly others?: ReadonlyArray<FakeOtherDatabase>;
   /** Databases per page of `listAtom`; the rest come through `listPage`. */
@@ -95,7 +97,10 @@ export class FakeDatabase {
   readonly #permissionAtoms = new Map<string, Atom.Atom<boolean>>();
   readonly #databaseAtom: Atom.Atom<AsyncResult.AsyncResult<unknown, unknown>>;
 
+  readonly #previews: Readonly<Record<string, SpaceDatabaseRow["preview"]>>;
+
   constructor(options: FakeDatabaseOptions = {}) {
+    this.#previews = options.previews ?? {};
     this.#quietRowWrites = options.quietRowWrites ?? false;
     this.computedPendingLeft = options.computedPending ?? 0;
     this.others = [...(options.others ?? [])];
@@ -447,7 +452,11 @@ export class FakeDatabase {
       });
     }
     const start = input.cursor === undefined ? 0 : Number(input.cursor);
-    const page = pool.slice(start, start + limit);
+    const page = pool.slice(start, start + limit).map((row) => {
+      const preview =
+        input.include?.preview === undefined ? undefined : this.#previews[row.page.id];
+      return preview === undefined ? row : { ...row, preview };
+    });
     return {
       ...base,
       rows: page,

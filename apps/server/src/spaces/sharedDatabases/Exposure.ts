@@ -185,6 +185,12 @@ export const layoutProperties = (view: SharedViewShape) => {
       )
         optional.push(preview.propertyId);
       break;
+    case "chart": {
+      if (view.group !== null) required.push(view.group.property);
+      const y = view.layout.y;
+      if (isObject(y) && typeof y.property === "string") required.push(y.property);
+      break;
+    }
     case "calendar": {
       const id = text(view.layout.datePropertyId);
       if (id !== undefined) required.push(id);
@@ -201,8 +207,34 @@ export const layoutProperties = (view: SharedViewShape) => {
   const dated = view.type === "calendar" || view.type === "timeline";
   const missing =
     (view.type === "calendar" && required.length === 0) ||
-    (view.type === "timeline" && required.length === 0);
+    (view.type === "timeline" && required.length === 0) ||
+    (view.type === "chart" && view.group === null);
   return { required, optional, dated, missing };
+};
+
+/** The questions of a form view that may be asked on a link: usable, answerable, in layout order. */
+export const formQuestionIds = (view: SharedViewShape): readonly string[] => {
+  const questions = view.layout.questions;
+  if (!Array.isArray(questions)) return [];
+  const ids: string[] = [];
+  for (const entry of questions) {
+    if (isObject(entry) && typeof entry.propertyId === "string" && !ids.includes(entry.propertyId))
+      ids.push(entry.propertyId);
+  }
+  return ids;
+};
+
+const formExposed = (
+  snapshot: Snapshot,
+  view: SharedViewShape,
+  usable: (id: string, dated: boolean) => boolean,
+): Exposed => {
+  const extras = formQuestionIds(view).filter((id) => {
+    if (id === C.SPACE_TITLE_PROPERTY_ID) return false;
+    const property = snapshot.byId.get(id);
+    return property !== undefined && C.isFormAnswerType(property.type) && usable(id, false);
+  });
+  return { columns: [{ propertyId: C.SPACE_TITLE_PROPERTY_ID }], extras };
 };
 
 /** What a view shows on a link, or null when the view cannot be served (omitted everywhere). */
@@ -221,6 +253,7 @@ export const exposed = (
       (!dated || dateQueryable(property))
     );
   };
+  if (view.type === "form") return formExposed(snapshot, view, usable);
   const { required, optional, dated, missing } = layoutProperties(view);
   if (missing) return null;
   for (const id of required) if (!usable(id, dated)) return null;

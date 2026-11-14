@@ -23,6 +23,7 @@ import {
   WsSpacesCommentsDispatchRpc,
   WsSpacesSharesCreateRpc,
   WsSpacesSharesGetRpc,
+  WsSpacesSharesSetResponsesRpc,
   WsSpacesSharesStopRpc,
 } from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
@@ -942,6 +943,7 @@ it.effect("gates page share links: managing needs operate scope and viewing need
       WsSpacesSharesCreateRpc,
       WsSpacesSharesStopRpc,
       WsSpacesSharesGetRpc,
+      WsSpacesSharesSetResponsesRpc,
       WsSpacesCommentsDispatchRpc,
     ).middleware(RpcScopeAuthorization);
     const clientWith = (
@@ -954,13 +956,14 @@ it.effect("gates page share links: managing needs operate scope and viewing need
               "spaces.shares.create": handler as never,
               "spaces.shares.stop": handler as never,
               "spaces.shares.get": handler as never,
+              "spaces.shares.setResponses": handler as never,
               "spaces.comments.dispatch": handler as never,
             }),
             RpcAuthorization.layer([scope]),
           ),
         ),
       );
-    const input = { pageId: C.SpacePageId.make("page") };
+    const input = { pageId: C.SpacePageId.make("page"), acceptResponses: true };
     const denied = <A, E>(call: Effect.Effect<A, E>) =>
       call.pipe(Effect.match({ onFailure: (error) => error, onSuccess: () => null }));
 
@@ -975,6 +978,7 @@ it.effect("gates page share links: managing needs operate scope and viewing need
     for (const call of [
       reader[WS_METHODS.spacesSharesCreate](input),
       reader[WS_METHODS.spacesSharesStop](input),
+      reader[WS_METHODS.spacesSharesSetResponses](input),
     ]) {
       expect(yield* denied(call)).toMatchObject({
         _tag: "EnvironmentAuthorizationError",
@@ -994,7 +998,8 @@ it.effect("gates page share links: managing needs operate scope and viewing need
     yield* reader[WS_METHODS.spacesSharesGet](input);
     yield* operator[WS_METHODS.spacesSharesCreate](input);
     yield* operator[WS_METHODS.spacesSharesStop](input);
+    yield* operator[WS_METHODS.spacesSharesSetResponses](input);
     yield* operator[WS_METHODS.spacesCommentsDispatch](dispatchInput);
-    expect(handled).toBe(4);
+    expect(handled).toBe(5);
   }).pipe(Effect.scoped),
 );

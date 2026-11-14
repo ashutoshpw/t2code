@@ -276,6 +276,28 @@ const sanitizeLayout = (scope: ViewScope, shown: ReadonlySet<string>): JsonObjec
       out.cardPreview = { kind: "property", propertyId: value.propertyId };
   };
   switch (scope.shape.type) {
+    case "chart": {
+      word("chartType");
+      flag("colorByOption");
+      word("sortByValue");
+      flag("showValues");
+      const y = layout.y;
+      if (
+        isObject(y) &&
+        typeof y.property === "string" &&
+        shown.has(y.property) &&
+        typeof y.function === "string" &&
+        (C.SPACE_CHART_Y_FUNCTIONS as ReadonlyArray<string>).includes(y.function)
+      )
+        out.y = { property: y.property, function: y.function };
+      break;
+    }
+    case "feed":
+      if (typeof layout.previewBlocks === "number") out.previewBlocks = layout.previewBlocks;
+      break;
+    case "form":
+      word("description");
+      break;
     case "table":
       flag("wrapCells");
       break;
@@ -312,7 +334,7 @@ export const sanitizeView = (scope: ViewScope): SpaceSharedDatabaseView => {
   const shown = shownProperties(scope);
   const { group, type } = scope.shape;
   const by = group === null ? undefined : groupBy(group.by);
-  const grouped = group !== null && type !== "calendar" && type !== "timeline";
+  const grouped = group !== null && type !== "calendar" && type !== "timeline" && type !== "feed";
   return {
     id: scope.view.view_id,
     dataSourceId: scope.view.data_source_id,
@@ -436,6 +458,34 @@ export const sanitizeRow = (
   };
 };
 
+const chartAggregate = (scope: ViewScope) => {
+  const y = scope.shape.layout.y;
+  return scope.shape.type === "chart" &&
+    isObject(y) &&
+    typeof y.property === "string" &&
+    typeof y.function === "string" &&
+    shownProperties(scope).has(y.property)
+    ? { property: C.SpacePropertyId.make(y.property), function: y.function }
+    : undefined;
+};
+
+/** A chart bucket keeps only the y aggregate. */
+const bucketAggregates = (
+  results: ReadonlyArray<C.SpaceAggregateResult> | undefined,
+  y: { readonly property: C.SpacePropertyId; readonly function: string },
+) => {
+  const found = results?.find(
+    (result) => result.property === y.property && result.function === y.function,
+  );
+  return [
+    {
+      property: y.property,
+      function: y.function,
+      ...(found?.number === undefined ? {} : { number: found.number }),
+    },
+  ];
+};
+
 /** One window of query results as a link may see it. Cursors stay raw; the service seals them. */
 export const sanitizeWindow = (scope: ViewScope, result: C.SpaceDatabaseQueryResult) => {
   const relatedPages = sanitizeRelated(scope, result.relatedPages);
@@ -443,6 +493,7 @@ export const sanitizeWindow = (scope: ViewScope, result: C.SpaceDatabaseQueryRes
   const ledger = optionLedger(scope);
   const rows = result.rows.map((row) => sanitizeRow(scope, row, related, ledger));
   const hidden = new Set((scope.shape.group?.hidden ?? []).map((key) => canonical(key)));
+  const aggregate = chartAggregate(scope);
   const groups = result.groups
     ?.filter((bucket) => bucket.count > 0 && !hidden.has(canonical(bucket.key)))
     .map((bucket) => {
@@ -453,6 +504,9 @@ export const sanitizeWindow = (scope: ViewScope, result: C.SpaceDatabaseQueryRes
         count: bucket.count,
         rows: bucket.rows.map((row) => sanitizeRow(scope, row, related, ledger)),
         nextCursor: bucket.nextCursor,
+        ...(aggregate === undefined
+          ? {}
+          : { aggregates: bucketAggregates(bucket.aggregates, aggregate) }),
       };
     });
   return {

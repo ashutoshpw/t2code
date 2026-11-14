@@ -25,3 +25,7 @@ export * from "./errors.ts";
 export * from "./rowCells.ts";
 export * from "./remoteChanges.ts";
 export * from "./optionColor.ts";
+export * from "./viewTraits.ts";
+export * from "./feed.ts";
+export * from "./chart.ts";
+export * from "./formFill.ts";
