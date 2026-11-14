@@ -75,6 +75,7 @@ const makeHarness = Effect.gen(function* () {
     humanStartedDownload: () => false,
     placeDownload: () => false,
     pointers: Stream.empty,
+    painting: Stream.empty,
   };
   const client = yield* PreviewHostClient.PreviewHostClient.pipe(
     Effect.provide(

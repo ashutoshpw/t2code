@@ -1,5 +1,4 @@
 import type { PreviewCloseInput, PreviewSessionSnapshot, ScopedThreadRef } from "@t2code/contracts";
-import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 

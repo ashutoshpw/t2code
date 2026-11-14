@@ -30,7 +30,6 @@ import {
   ServerCliDevelopmentIconSourceMissingError,
   ServerCliDevelopmentIconTargetMissingError,
   ServerCliExecutableImportError,
-  ServerCliNpmPublishError,
 } from "./cliErrors.ts";
 
 const RepoRoot = Effect.service(Path.Path).pipe(

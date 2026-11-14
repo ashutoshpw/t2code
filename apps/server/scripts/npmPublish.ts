@@ -1,6 +1,5 @@
 // @effect-diagnostics nodeBuiltinImport:off - npm publish probes run on plain Node streams and fetch APIs.
 import * as NodeCrypto from "node:crypto";
-import * as NodeFS from "node:fs";
 import * as NodeTimersPromises from "node:timers/promises";
 import * as Effect from "effect/Effect";
 
@@ -157,7 +156,7 @@ export function parseNpmPackageMetadata(json: string, source = "package.json"): 
   return { name: manifest.name, version: manifest.version };
 }
 
-export function parseNpmPackageManifest(json: string, source = "package.json"): NpmPackageManifest {
+function parseNpmPackageManifest(json: string, source = "package.json"): NpmPackageManifest {
   let value: unknown;
   try {
     value = JSON.parse(json);
@@ -248,15 +247,6 @@ const streamSha512 = async (response: Response): Promise<string> => {
   }
   return hash.digest("base64");
 };
-
-/** Hashes a local package tarball without retaining its bytes in memory. */
-export async function sha512File(filePath: string): Promise<string> {
-  const hash = NodeCrypto.createHash("sha512");
-  for await (const chunk of NodeFS.createReadStream(filePath)) {
-    hash.update(chunk);
-  }
-  return `sha512-${hash.digest("base64")}`;
-}
 
 type VisibilityProbeResult =
   | { readonly ready: true; readonly tarballUrl: string }

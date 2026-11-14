@@ -2431,7 +2431,7 @@ describe("PreviewManager", () => {
             message: JSON.stringify({
               id: 1,
               method: "Page.captureScreenshot",
-              sessionId: "t3-preview-page",
+              sessionId: "t2-preview-page",
             }),
           }),
         );
