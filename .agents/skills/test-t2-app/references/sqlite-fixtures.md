@@ -8,6 +8,8 @@ When `--base-dir` or `--home-dir` is explicit, runtime state lives under `<base-
 
 The server copies the V1 `state.sqlite` into `statev2.sqlite` only when `statev2.sqlite` is missing. After the first start, edits to `state.sqlite` change nothing.
 
+Spaces owns the separate `spaces.sqlite` beside the chat database. The helper below targets chat only; do not put Spaces fixtures into chat tables. `migrate-dev-db` initializes a missing sandbox Spaces database with only its default space and preserves an existing one; it never copies source Spaces or media. `doctor` reports an existing Spaces database without creating one.
+
 Start the target runtime once before seeding so all migrations have run. Use an isolated base directory. Stop the server before writes to avoid racing application state or an active projection.
 
 ## Use the helper

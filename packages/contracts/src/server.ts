@@ -1,3 +1,4 @@
+import { SpaceCapability } from "./spaces.ts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { AcpRegistryUrlAuthAction } from "./acpRegistry.ts";
@@ -809,6 +810,7 @@ export type ServerConfigProviderStatusDeltasPayload =
   typeof ServerConfigProviderStatusDeltasPayload.Type;
 
 export const ServerConfigSettingsUpdatedPayload = Schema.Struct({
+  spaces: Schema.optionalKey(Schema.NullOr(SpaceCapability)),
   settings: ServerSettings,
 });
 export type ServerConfigSettingsUpdatedPayload = typeof ServerConfigSettingsUpdatedPayload.Type;
