@@ -10,6 +10,8 @@ import * as SqlClient from "effect/sql/SqlClient";
 import { assertSpacesDatabase, SpacesDatabaseMismatchError } from "./Migrations.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as Sqlite from "./Sqlite.ts";
+import * as Reconciliation from "./assets/Reconciliation.ts";
+import type { SpacesStorageStatus } from "@t2code/contracts";
 
 export class SpacesDatabaseInspectError extends Schema.TaggedError<SpacesDatabaseInspectError>()(
   "SpacesDatabaseInspectError",
@@ -47,6 +49,10 @@ export class SpacesDatabaseTools extends Context.Service<
         readonly walBytes: number;
         readonly sharedMemoryBytes: number;
         readonly reclaimableBytes: number;
+        readonly assetAccounting: Omit<
+          SpacesStorageStatus,
+          "databaseBytes" | "walBytes" | "sharedMemoryBytes"
+        > | null;
       } | null,
       SpacesDatabaseInspectError
     >;
@@ -74,7 +80,7 @@ const make = Effect.gen(function* () {
   const inspect = Effect.fn("SpacesDatabaseTools.inspect")(
     function* (databasePath: string) {
       if (!(yield* fs.exists(databasePath))) return null;
-      const reclaimableBytes = yield* Effect.gen(function* () {
+      const inspected = yield* Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient;
         return yield* sql.withTransaction(
           Effect.gen(function* () {
@@ -85,7 +91,29 @@ const make = Effect.gen(function* () {
             }
             const [free] = yield* sql<{ readonly freelist_count: number }>`PRAGMA freelist_count`;
             const [size] = yield* sql<{ readonly page_size: number }>`PRAGMA page_size`;
-            return (free?.freelist_count ?? 0) * (size?.page_size ?? 0);
+            const available =
+              yield* sql`SELECT 1 FROM sqlite_schema WHERE name = 'spaces_asset_reconciliation'`;
+            const assetAccounting = available.length
+              ? yield* Effect.gen(function* () {
+                  const [usage] = yield* sql<{
+                    readonly physical_bytes: number;
+                    readonly reserved_bytes: number;
+                  }>`SELECT physical_bytes,reserved_bytes FROM spaces_asset_usage WHERE singleton = 1`;
+                  const current = yield* Reconciliation.state();
+                  return {
+                    registeredAssetBytes: usage!.physical_bytes,
+                    reservedBytes: usage!.reserved_bytes,
+                    observedAssetFileBytes: current.assets_bytes,
+                    observedStagingFileBytes: current.staging_bytes,
+                    observedAt: current.observed_at_ms,
+                    reconciliation: yield* Reconciliation.status(),
+                  };
+                }).pipe(Effect.provideService(SpacesSql.SpacesSql, sql))
+              : null;
+            return {
+              reclaimableBytes: (free?.freelist_count ?? 0) * (size?.page_size ?? 0),
+              assetAccounting,
+            };
           }),
         );
       }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: databasePath, readonly: true })));
@@ -94,7 +122,7 @@ const make = Effect.gen(function* () {
         walBytes: fileBytes(`${databasePath}-wal`),
         sharedMemoryBytes: fileBytes(`${databasePath}-shm`),
       });
-      return { ...bytes, reclaimableBytes };
+      return { ...bytes, ...inspected };
     },
     (effect, databasePath) =>
       effect.pipe(
