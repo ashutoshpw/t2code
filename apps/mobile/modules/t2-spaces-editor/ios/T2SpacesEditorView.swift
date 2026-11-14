@@ -68,6 +68,8 @@ public final class T2SpacesEditorView: ExpoView, UITextViewDelegate {
   private var initialized = false
   private var applying = false
   private var wasComposing = false
+  private var editable = true
+  private var paused = false
   private let boldKey = NSAttributedString.Key("T2SpacesBold")
   private let italicKey = NSAttributedString.Key("T2SpacesItalic")
   private let codeKey = NSAttributedString.Key("T2SpacesCode")
@@ -168,12 +170,17 @@ public final class T2SpacesEditorView: ExpoView, UITextViewDelegate {
 
   private func emit(change: Bool) {
     guard initialized, !applying else { return }
+    let payload = snapshotPayload()
+    if change { onSpacesChange(payload) } else { onSpacesSelection(payload) }
+  }
+
+  private func snapshotPayload() -> [String: Any] {
     let selection = editor.selectedRange
     let encodedRuns = (try? JSONEncoder().encode(runs())).flatMap { try? JSONSerialization.jsonObject(with: $0) } ?? []
     let typingRun = run(editor.typingAttributes, text: "")
     var typing: [String: Any] = ["bold": typingRun.bold, "italic": typingRun.italic, "code": typingRun.code]
     if let link = typingRun.link { typing["link"] = link }
-    let payload: [String: Any] = [
+    return [
       "version": 1,
       "revision": revision,
       "runs": encodedRuns,
@@ -181,7 +188,27 @@ public final class T2SpacesEditorView: ExpoView, UITextViewDelegate {
       "composing": editor.composing,
       "typing": typing,
     ]
-    if change { onSpacesChange(payload) } else { onSpacesSelection(payload) }
+  }
+
+  func setEditable(_ value: Bool) {
+    editable = value
+    editor.isEditable = editable && !paused
+  }
+
+  func freeze() -> String? {
+    guard initialized, !editor.composing else { return nil }
+    paused = true
+    editor.isEditable = false
+    guard let data = try? JSONSerialization.data(withJSONObject: snapshotPayload()) else { return nil }
+    return String(data: data, encoding: .utf8)
+  }
+
+  func resume(_ expected: Int) -> Bool {
+    guard initialized, editable, expected == revision, !editor.composing else { return false }
+    paused = false
+    editor.isEditable = true
+    editor.becomeFirstResponder()
+    return true
   }
 
   public func textViewDidChange(_ textView: UITextView) {
@@ -201,6 +228,7 @@ public final class T2SpacesEditorView: ExpoView, UITextViewDelegate {
   }
 
   private func canReplace(_ range: NSRange, text: String) -> Bool {
+    guard editable, !paused else { return false }
     let value = editor.attributedText ?? NSAttributedString(string: "")
     guard range.location <= value.length, NSMaxRange(range) <= value.length else { return false }
     if editor.undoManager?.isUndoing == true || editor.undoManager?.isRedoing == true { return true }
@@ -229,7 +257,7 @@ public final class T2SpacesEditorView: ExpoView, UITextViewDelegate {
   }
 
   private func restore(_ value: NSAttributedString, selection: NSRange, typing: [NSAttributedString.Key: Any]) {
-    guard withinBudget(value) else { return }
+    guard editable, !paused, withinBudget(value) else { return }
     let inverse = NSAttributedString(attributedString: editor.attributedText)
     let inverseSelection = editor.selectedRange
     let inverseTyping = editor.typingAttributes
@@ -248,7 +276,7 @@ public final class T2SpacesEditorView: ExpoView, UITextViewDelegate {
   func format(_ json: String) -> Bool {
     guard let data = json.data(using: .utf8),
           let command = try? JSONDecoder().decode(FormatCommand.self, from: data),
-          command.revision == revision, initialized, !editor.composing,
+          command.revision == revision, initialized, editable, !paused, !editor.composing,
           command.selection.start == editor.selectedRange.location,
           command.selection.end == NSMaxRange(editor.selectedRange),
           ["bold", "italic", "code"].contains(command.mark) else { return false }
@@ -275,7 +303,7 @@ public final class T2SpacesEditorView: ExpoView, UITextViewDelegate {
   }
 
   func history(_ backwards: Bool, revision expected: Int) -> Bool {
-    guard initialized, expected == revision, !editor.composing,
+    guard initialized, editable, !paused, expected == revision, !editor.composing,
           let manager = editor.undoManager else { return false }
     if backwards {
       guard manager.canUndo else { return false }

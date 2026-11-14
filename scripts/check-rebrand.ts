@@ -58,7 +58,7 @@ const T3TOOLS_WORD = /\bt3tools\b/gi;
 const UPSTREAM_FIRST_PARTY_URL = /(?<![\w-])t3\.codes\b/i;
 
 // Product nouns that only survive as "T2 <noun>" copy. Bare identifiers like
-// T3ConnectUserProfilePage and T2CODE_HOME are not noun copy and stay.
+// T3ConnectUserProfilePage and T3CODE_HOME are not noun copy and stay.
 const T3_NOUN_COPY =
   /\bt3 (?:environments?|threads?|prox(?:y|ies)|captures?|marks?|binar(?:y|ies)|windows?|process(?:es)?)\b/i;
 const T3_POSSESSIVE_COPY = /\bt3['’]s\b/i;

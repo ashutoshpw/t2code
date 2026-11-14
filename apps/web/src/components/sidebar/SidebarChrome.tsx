@@ -307,7 +307,7 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
             onClick={handleUsageClick}
           />
         </>
-      )}
+      ) : null}
       <SidebarThreadUndoNotice />
       <SidebarUpdatePill />
     </SidebarMenu>

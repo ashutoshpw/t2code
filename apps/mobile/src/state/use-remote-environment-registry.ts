@@ -214,14 +214,9 @@ export function useRemoteConnections() {
           ? [{ text: "Cancel", style: "cancel" }, remove]
           : [{ text: "Cancel", style: "cancel" }, openAccount, remove],
       );
-      return;
-    }
-    Dialog.alert(
-      "Remove from this device?",
-      `Forget ${environment.environmentLabel} and its cached threads on this device. Switch it off instead to keep it saved.`,
-      [{ text: "Cancel", style: "cancel" }, remove],
-    );
-  };
+    },
+    [connectedEnvironments, controller, navigation],
+  );
 
   return {
     connectionPairingUrl,

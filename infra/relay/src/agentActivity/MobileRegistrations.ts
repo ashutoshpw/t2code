@@ -1,4 +1,3 @@
-import { makeAggregateState } from "./agentActivityAggregate.ts";
 import type {
   RelayAgentActivitySnapshotResponse,
   RelayDeviceRegistrationRequest,
@@ -41,7 +40,7 @@ export class MobileRegistrations extends Context.Service<
   }
 >()("t2code-relay/agentActivity/MobileRegistrations") {}
 
-const make = Effect.gen(function* () {
+export const make = Effect.gen(function* () {
   const rows = yield* AgentActivityRows.AgentActivityRows;
   const devices = yield* Devices.Devices;
   const liveActivities = yield* LiveActivities.LiveActivities;
@@ -96,7 +95,7 @@ const make = Effect.gen(function* () {
         const activeStates = yield* rows.listForUser({ userId: input.userId });
         const now = yield* DateTime.now;
         return {
-          aggregate: makeAggregateState({
+          aggregate: AgentActivityPublisher.makeAggregateState({
             activeStates,
             terminalState: null,
             nowMs: now.epochMilliseconds,
