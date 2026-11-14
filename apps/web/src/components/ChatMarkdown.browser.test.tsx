@@ -12,7 +12,6 @@ import { filesystemEnvironment } from "../state/filesystem";
 import { useRightPanelStore } from "../rightPanelStore";
 import { remarkEnableOrderedListNumbers } from "@t2code/shared/markdownPipeline";
 import { setMarkdownTaskChecked } from "@t2code/shared/markdownTaskList";
-import { remarkEnableOrderedListNumbers } from "@t2code/shared/markdownPipeline";
 import { HostImageUrlContext } from "./chat/hostImageUrl";
 import { getSyntaxHighlighterPromise } from "~/lib/syntaxHighlighting";
 

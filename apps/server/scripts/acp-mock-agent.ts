@@ -97,7 +97,6 @@ const supportsSessionLifecycle = process.env.T2_ACP_SESSION_LIFECYCLE === "1";
 const supportsAcpMcp = process.env.T2_ACP_MCP_ACP === "1";
 const supportsHttpMcp = process.env.T2_ACP_MCP_HTTP === "1";
 const supportsV2Management = process.env.T2_ACP_V2_MANAGEMENT === "1";
-const failDeleteSession = process.env.T2_ACP_FAIL_DELETE_SESSION === "1";
 const advertisedAuthMethodId = process.env.T2_ACP_AUTH_METHOD_ID?.trim();
 const initializeAuthMethodId =
   advertisedAuthMethodId ?? (supportsSessionLifecycle ? "test" : undefined);

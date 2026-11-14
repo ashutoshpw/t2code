@@ -3,7 +3,6 @@ import {
   composerImageDedupKey,
 } from "./components/chat/composerAttachmentFiles";
 import { FanoutRetry } from "./lib/composerFanout";
-import { composerFileAttachmentMimeType } from "./components/chat/composerAttachmentFiles";
 import { elementContextToPreviewAnnotation } from "./lib/elementContext";
 import {
   ResponseContextRecord,
