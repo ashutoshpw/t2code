@@ -76,6 +76,7 @@ export class DeliveryAttempts extends Context.Service<
 >()("t2code-relay/agentActivity/DeliveryAttempts") {}
 
 const SOURCE_JOB_CLAIM_LEASE_MINUTES = 10;
+
 export const DELIVERY_ATTEMPT_RETENTION_DAYS = 7;
 export const DELIVERY_ATTEMPT_PRUNE_BATCH_SIZE = 5_000;
 // Caps each cron run so draining the pre-retention backlog cannot monopolize the database.
