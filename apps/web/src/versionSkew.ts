@@ -103,7 +103,7 @@ export function manualServerUpdateCommand(
   if (installation?.kind === "npm-global") {
     return `npm install --global --prefix ${quote(installation.prefix)} @t2code/cli@${targetVersion}`;
   }
-  if (installation?.kind === "t3-launcher") {
+  if (installation?.kind === "t2-launcher") {
     // An inherited T2CODE_HOME would otherwise send the update to a home the launcher is not in.
     return `${quote(installation.launcher)} update --base-dir ${quote(installation.baseDir)} ${targetVersion}`;
   }

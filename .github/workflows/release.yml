@@ -489,11 +489,11 @@ jobs:
           set -euo pipefail
 
           if [[ "$PREVIEW" == "true" ]]; then
-            env_example() { sed -n "s|^T3CODE_$1=||p" .env.example; }
+            env_example() { sed -n "s|^T2CODE_$1=||p" .env.example; }
             CLERK_PUBLISHABLE_KEY="$(env_example CLERK_PUBLISHABLE_KEY)"
             CLERK_JWT_TEMPLATE="$(env_example CLERK_JWT_TEMPLATE)"
             CLERK_CLI_OAUTH_CLIENT_ID="$(env_example CLERK_CLI_OAUTH_CLIENT_ID)"
-            RELAY_DOMAIN="$(sed -n 's|^T3CODE_RELAY_URL=https://||p' .env.example)"
+            RELAY_DOMAIN="$(sed -n 's|^T2CODE_RELAY_URL=https://||p' .env.example)"
           fi
 
           relay_domain="${RELAY_DOMAIN:-}"
@@ -854,7 +854,7 @@ jobs:
         timeout-minutes: 5
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          PACKAGE_NAME: com.t3tools.t3code
+          PACKAGE_NAME: com.t2tools.t2code
           APK_OUTPUT_DIR: ${{ runner.temp }}/android-apk
         run: |
           if [ -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then

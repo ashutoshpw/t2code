@@ -79,7 +79,7 @@ describe("DesktopPreReadyPlatform", () => {
   });
 
   it.effect("persists Linux scaling synchronously across relaunches and settings rewrites", () => {
-    vi.stubEnv("T3CODE_HOME", "/isolated");
+    vi.stubEnv("T2CODE_HOME", "/isolated");
     vi.stubEnv("VITE_DEV_SERVER_URL", "");
     const settingsPath = "/isolated/userdata/desktop-settings.json";
     const files = new Map([[settingsPath, "{}"]]);
@@ -239,13 +239,13 @@ describe("DesktopPreReadyPlatform", () => {
               DesktopConfig.layerTest({
                 XDG_DATA_HOME: "/xdg",
                 APPIMAGE: "/Applications/current.AppImage",
-                T3CODE_DESKTOP_LAUNCHER_PATH: " /opt/T3 Code/t3code ",
+                T2CODE_DESKTOP_LAUNCHER_PATH: " /opt/T2 Code/t2code ",
               }),
             ),
           ),
         );
         const entry = writeFileSyncMock.mock.calls.find(
-          ([path]) => path === "/xdg/applications/com.t3tools.T3Code.desktop",
+          ([path]) => path === "/xdg/applications/com.t2tools.T2Code.desktop",
         )?.[1];
         assert.include(entry, 'Exec="/opt/T3 Code/t3code" %U');
       }),

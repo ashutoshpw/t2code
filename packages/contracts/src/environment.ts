@@ -67,9 +67,9 @@ const InstalledPath = Schema.String.check(Schema.isNonEmpty());
 export const ServerInstallation = Schema.Union([
   Schema.Struct({ kind: Schema.Literals(["npx", "pnpm-dlx", "bunx"]) }),
   Schema.Struct({ kind: Schema.Literal("npm-global"), prefix: TrimmedNonEmptyString }),
-  // A launcher symlink into a downloaded runtime, as the install script and `t3 update` leave.
+  // A launcher symlink into a downloaded runtime, as the install script and `t2 update` leave.
   Schema.Struct({
-    kind: Schema.Literal("t3-launcher"),
+    kind: Schema.Literal("t2-launcher"),
     launcher: InstalledPath,
     baseDir: InstalledPath,
   }),

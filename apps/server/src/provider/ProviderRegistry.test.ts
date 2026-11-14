@@ -510,7 +510,7 @@ it.layer(
         const fiber = yield* checkCodexProviderStatus(
           defaultCodexSettings,
           () => Effect.sleep("22 seconds").pipe(Effect.as(makeCodexProbeSnapshot())),
-          { T3CODE_CODEX_PROBE_TIMEOUT_MS: "60000" },
+          { T2CODE_CODEX_PROBE_TIMEOUT_MS: "60000" },
         ).pipe(Effect.forkChild);
         yield* TestClock.adjust("22 seconds");
         const status = yield* Fiber.join(fiber);
@@ -1421,7 +1421,7 @@ it.layer(
         checkedAt: "2026-10-03T00:02:00.000Z",
         status: "ready",
         version: "1.0.0",
-        message: "Pi is available, but T3 Code could not refresh its models and commands.",
+        message: "Pi is available, but T2 Code could not refresh its models and commands.",
       } satisfies ServerProvider;
 
       it("retains Pi inventories during incomplete probes without restoring removed custom models", () => {
