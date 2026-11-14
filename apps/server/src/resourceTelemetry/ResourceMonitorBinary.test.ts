@@ -95,7 +95,7 @@ describe("ResourceMonitorBinary", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-resource-monitor-binary-",
+          prefix: "t2-resource-monitor-binary-",
         });
         const projectDirectory = path.join(baseDir, "repo");
         const distDirectory = path.join(projectDirectory, "apps", "server", "dist");
@@ -106,7 +106,7 @@ describe("ResourceMonitorBinary", () => {
           "target",
           profile,
         );
-        const binaryPath = path.join(binaryDirectory, "t3-resource-monitor.exe");
+        const binaryPath = path.join(binaryDirectory, "t2-resource-monitor.exe");
         yield* fileSystem.makeDirectory(distDirectory, { recursive: true });
         yield* fileSystem.makeDirectory(binaryDirectory, { recursive: true });
         yield* fileSystem.writeFileString(binaryPath, "binary");

@@ -260,7 +260,12 @@ describe("OtelEnvironment", () => {
         name: "T2CODE_OTLP_*_URL wins over an OTEL endpoint",
         otel: withLogs(otelExport),
         t2Url: "http://t2:4318/v1/logs",
-        expected: { url: "http://t2:4318/v1/logs", export: t2Export },
+        expected: {
+          url: "http://t2:4318/v1/logs",
+          export: t2Export,
+          source: "environment" as const,
+          variable: "T2CODE_OTLP_LOGS_URL",
+        },
       },
       {
         name: "T2CODE_OTLP_*_URL wins over a signal the OTEL variables turned off",
