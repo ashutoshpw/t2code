@@ -1,4 +1,4 @@
-import type { SpeechCustomWords } from "@t3tools/contracts";
+import type { SpeechCustomWords } from "@t2code/contracts";
 
 // These scripts are written without spaces, so a neighbor in one of them still ends a word.
 const UNSPACED_SCRIPTS = "\\p{scx=Han}\\p{scx=Hiragana}\\p{scx=Katakana}";

@@ -923,8 +923,8 @@ function acpMcpContext(
         args: [...selfInvocationArgs(self, ["acp-mcp-bridge"])],
         env: [
           { name: "ELECTRON_RUN_AS_NODE", value: "1" },
-          { name: "T3_ACP_MCP_ENDPOINT", value: session.endpoint },
-          { name: "T3_ACP_MCP_AUTHORIZATION", value: session.authorizationHeader },
+          { name: "T2_ACP_MCP_ENDPOINT", value: session.endpoint },
+          { name: "T2_ACP_MCP_AUTHORIZATION", value: session.authorizationHeader },
         ],
       },
     ],
@@ -953,10 +953,10 @@ function acpMcpContext(
       // the same variable (PortScanner.AGENT_THREAD_ENV; a string literal here
       // because this package cannot reach apps/server).
       T2CODE_THREAD_ID: session.threadId,
-      T3_ACP_MCP_ENDPOINT: session.endpoint,
-      T3_ACP_MCP_AUTHORIZATION: session.authorizationHeader,
-      T3_ACP_MCP_NODE: self.command,
-      ...(self.entrypoint === undefined ? {} : { T3_ACP_MCP_ENTRYPOINT: self.entrypoint }),
+      T2_ACP_MCP_ENDPOINT: session.endpoint,
+      T2_ACP_MCP_AUTHORIZATION: session.authorizationHeader,
+      T2_ACP_MCP_NODE: self.command,
+      ...(self.entrypoint === undefined ? {} : { T2_ACP_MCP_ENTRYPOINT: self.entrypoint }),
     },
   };
 }
@@ -8271,7 +8271,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
                 "failed",
                 makeProviderFailure({
                   class: "provider_error",
-                  message: `${flavor.runtimeHarness ?? driver} sent nothing for ${minutes} ${minutes === 1 ? "minute" : "minutes"}, so T3 Code stopped the turn and restarted the agent. Send a message to continue.`,
+                  message: `${flavor.runtimeHarness ?? driver} sent nothing for ${minutes} ${minutes === 1 ? "minute" : "minutes"}, so T2 Code stopped the turn and restarted the agent. Send a message to continue.`,
                 }),
               );
               return "retired" as const;

@@ -1,7 +1,7 @@
 import { ANDROID_PLAY_STORE_URL, GITHUB_REPOSITORY_URL } from "./site";
 
-export const SITE_ORIGIN = "https://t3.codes";
-export const SITE_NAME = "T3 Code";
+export const SITE_ORIGIN = "https://t2.codes";
+export const SITE_NAME = "T2 Code";
 export const SITE_TAGLINE = "The open-source control plane for coding agents";
 
 // The canonical set of official properties. Search engines and AI answer engines read `sameAs`

@@ -20,8 +20,8 @@ timings, environment identifiers and the connected machine's name. Failed spans 
 messages and stack traces; error text can quote a value the app was handling.
 
 To disable product events and relay tracing from the server, set
-`T3CODE_TELEMETRY_ENABLED=false` in its environment before starting it. Relay tracing also stops
-when `T3CODE_OTEL_SDK_DISABLED` or `OTEL_SDK_DISABLED` turns OpenTelemetry export off.
+`T2CODE_TELEMETRY_ENABLED=false` in its environment before starting it. Relay tracing also stops
+when `T2CODE_OTEL_SDK_DISABLED` or `OTEL_SDK_DISABLED` turns OpenTelemetry export off.
 
 An administrator can turn product events and relay tracing off in the server and desktop app with
 a [managed policy](./managed-policy.md#other-capabilities). This does not control traces sent by
@@ -52,7 +52,7 @@ managed policy do not disable mobile tracing.
 ## Agent activity for mobile notifications
 
 When **Publish agent activity** is enabled on a host, it sends project and thread titles, model
-names, activity status, and environment and thread identifiers to the T3 Connect relay for
+names, activity status, and environment and thread identifiers to the T2 Connect relay for
 [mobile notifications and live activities](./mobile-notifications.md). This is separate from
 product events and relay diagnostics. The telemetry opt-out does not disable it.
 

@@ -550,20 +550,18 @@ fs.createReadStream(null, { fd: 3 }).on("end", quit).on("data", (chunk) => {
     }),
   );
 
-  it.live(
-    "keeps every local file but the page itself out of the browser",
-    (ctx) =>
-      Effect.gen(function* () {
-        const executable = (yield* HostProcess.Environment)[TEST_BROWSER_ENV];
-        if (!executable) return ctx.skip(`Set ${TEST_BROWSER_ENV} to run this test.`);
-        yield* Effect.gen(function* () {
-          const fileSystem = yield* FileSystem.FileSystem;
-          const path = yield* Path.Path;
-          const htmlRender = yield* HtmlRender.HtmlRender;
-          const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-html-files-" });
-          const secret = path.join(directory, "secret.js");
-          yield* fileSystem.writeFileString(secret, 'window.secret = "abc123";');
-          const secretUrl = NodeURL.pathToFileURL(secret).href;
+  it.live("keeps every local file but the page itself out of the browser", (ctx) =>
+    Effect.gen(function* () {
+      const executable = (yield* HostProcess.Environment)[TEST_BROWSER_ENV];
+      if (!executable) return ctx.skip(`Set ${TEST_BROWSER_ENV} to run this test.`);
+      yield* Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const htmlRender = yield* HtmlRender.HtmlRender;
+        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-html-files-" });
+        const secret = path.join(directory, "secret.js");
+        yield* fileSystem.writeFileString(secret, 'window.secret = "abc123";');
+        const secretUrl = NodeURL.pathToFileURL(secret).href;
 
         const preview = yield* htmlRender.preview({
           html: [

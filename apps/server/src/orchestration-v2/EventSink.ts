@@ -75,7 +75,7 @@ interface ProviderBatchPublication {
   eventCount: number;
 }
 const CurrentProviderBatch = Context.Reference<ProviderBatchPublication | undefined>(
-  "t3/orchestration-v2/EventSink/CurrentProviderBatch",
+  "@t2code/cli/orchestration-v2/EventSink/CurrentProviderBatch",
   { defaultValue: () => undefined },
 );
 

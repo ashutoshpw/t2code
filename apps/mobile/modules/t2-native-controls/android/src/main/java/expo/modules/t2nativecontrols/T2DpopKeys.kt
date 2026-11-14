@@ -15,7 +15,7 @@ import java.security.spec.ECPrivateKeySpec
 import java.security.spec.ECPublicKeySpec
 
 /** P-256 keys for DPoP proofs, as 32-byte private scalars and 65-byte uncompressed public points. */
-internal object T3DpopKeys {
+internal object T2DpopKeys {
   private const val SCALAR_BYTES = 32
   private const val CURVE = "secp256r1"
   private const val ALGORITHM = "SHA256withECDSA"

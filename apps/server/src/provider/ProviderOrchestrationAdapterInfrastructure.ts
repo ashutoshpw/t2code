@@ -5,6 +5,7 @@ import * as SqlClient from "effect/sql/SqlClient";
 import * as ClaudeAdapterV2 from "../orchestration-v2/Adapters/ClaudeAdapterV2.ts";
 import * as CodexAdapterV2 from "../orchestration-v2/Adapters/CodexAdapterV2.ts";
 import * as CursorAgentSdk from "@t2code/provider-cursor/server/CursorAgentSdk";
+import * as CursorKeychain from "@t2code/provider-cursor/server/CursorKeychain";
 import * as CursorSdk from "@t2code/provider-cursor/server/CursorSdk";
 import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import * as ProviderContinuationRequests from "@t2code/provider-core/server/ProviderContinuationRequests";
@@ -14,6 +15,7 @@ export type ProviderOrchestrationAdapterInfrastructure =
   | CodexAdapterV2.CodexAppServerClientFactory
   | CursorAgentSdk.CursorAgentSdkRunner
   | CursorSdk.CursorSdk
+  | CursorKeychain.CursorKeychain
   | IdAllocator.IdAllocatorV2;
 
 // Subagent threads created before short ids keep their stored id when an adapter resumes them.

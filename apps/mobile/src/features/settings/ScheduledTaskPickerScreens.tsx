@@ -1,7 +1,7 @@
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
 import { LegendList } from "@legendapp/list/react-native";
 import { useNavigation } from "@react-navigation/native";
-import { isListedThreadLineage } from "@t3tools/contracts";
+import { isListedThreadLineage } from "@t2code/contracts";
 import * as Haptics from "expo-haptics";
 import { useMemo, useState } from "react";
 import { Platform } from "react-native";

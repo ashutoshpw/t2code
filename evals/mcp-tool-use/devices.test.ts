@@ -105,7 +105,7 @@ it.effect("answers device calls with T2's handlers over the case's world", () =>
   }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
 );
 
-it.effect("lists the boot state T3 left a device in", () =>
+it.effect("lists the boot state T2 left a device in", () =>
   Effect.gen(function* () {
     const { devices, deviceHosts } = deviceCase({}).setup.world ?? {};
     const stopped = (devices ?? []).map((device) => ({ ...device, booted: false }));
@@ -118,13 +118,13 @@ it.effect("lists the boot state T3 left a device in", () =>
   }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
 );
 
-it("decodes only T3 device errors as injected failures", () => {
+it("decodes only T2 device errors as injected failures", () => {
   assert.isDefined(deviceFailure(screenshotFailure));
   assert.isUndefined(deviceFailure({ error: "Synthetic hub is unavailable", isError: true }));
   assert.isUndefined(deviceFailure("default"));
 });
 
-it.effect("rebuilds prior device results with T3, whose sessions reach the measured turn", () =>
+it.effect("rebuilds prior device results with T2, whose sessions reach the measured turn", () =>
   Effect.gen(function* () {
     const testCase = deviceCase({
       priorTurns: [
@@ -184,7 +184,7 @@ it.effect("gives a native subagent T2's SubagentStart context instead of T2's ap
   }),
 );
 
-it.effect("tells the shell simulator the launchers T3 returned and agent-device's real CLI", () =>
+it.effect("tells the shell simulator the launchers T2 returned and agent-device's real CLI", () =>
   Effect.gen(function* () {
     const sample = makeSample(deviceCase({}), base);
     yield* withDevices(sample);
@@ -235,7 +235,7 @@ it("prints agent-device's own help for a lone help command on a returned launche
   assert.isUndefined(asked(`/usr/local/bin/agent-device help`));
 });
 
-it("pins agent-device's help to the version T3 installs", () => {
+it("pins agent-device's help to the version T2 installs", () => {
   const versions = JSON.parse(
     NodeFS.readFileSync(
       new URL("../../apps/server/src/device/deviceToolVersions.json", import.meta.url),
@@ -605,7 +605,7 @@ const deviceTools = (extra: object) =>
     base.environment,
   );
 
-it.effect("lists a host whose discovery fails as T3 does: failed, with none of its devices", () =>
+it.effect("lists a host whose discovery fails as T2 does: failed, with none of its devices", () =>
   Effect.gen(function* () {
     // F1's saved device_list: the hub answered, but its device list timed out.
     const failure = new DeviceOperationError({
@@ -660,12 +660,12 @@ it.effect("denies every device tool with T2's own error when agent device access
         `${name}: ${result.text}`,
       );
     }
-    // T3 drops its device text for a thread without the capability, on refs that have it.
+    // T2 drops its device text for a thread without the capability, on refs that have it.
     assert.notInclude(t3SystemAppend(model, false), "## T2 Code devices");
   }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
 );
 
-it.effect("reports an unreadable capture as T3 does: a successful 0×0 screenshot", () =>
+it.effect("reports an unreadable capture as T2 does: a successful 0×0 screenshot", () =>
   Effect.gen(function* () {
     const tools = yield* deviceTools({ deviceInvalidCapture: true });
     yield* tools.call("device_open", { hostId: MAC, deviceId: IPHONE });
@@ -685,12 +685,12 @@ it.effect("reports an unreadable capture as T3 does: a successful 0×0 screensho
 it.effect("refuses an open on a device another thread's agent-device session holds", () =>
   Effect.gen(function* () {
     const tools = yield* deviceTools({ deviceOwners: { [IPHONE]: "acme-design-review" } });
-    // T3 names the owner's session as it names every thread's.
+    // T2 names the owner's session as it names every thread's.
     const owner = "t2-a062c547ef0b6bf8ee839b67";
     assert.deepEqual(tools.owners, [
       { deviceId: IPHONE, threadId: "acme-design-review", session: owner },
     ]);
-    // T3 has no cross-thread gate: device_open succeeds, and device_list shows only this thread.
+    // T2 has no cross-thread gate: device_open succeeds, and device_list shows only this thread.
     const opened = json((yield* tools.call("device_open", { hostId: MAC, deviceId: IPHONE })).text);
     assert.deepEqual(json((yield* tools.call("device_list", {})).text).open, [
       { hostId: MAC, deviceId: IPHONE },

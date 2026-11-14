@@ -593,7 +593,7 @@ export default function FileBrowserPanel({
         event.preventDefault();
         focusSearch();
       }}
-     onDragEnter={fileDropHandlers.onDragEnter}
+      onDragEnter={fileDropHandlers.onDragEnter}
       onDragOver={fileDropHandlers.onDragOver}
       onDragLeave={fileDropHandlers.onDragLeave}
       onDrop={fileDropHandlers.onDrop}

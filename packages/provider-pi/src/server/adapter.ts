@@ -3315,20 +3315,73 @@ export const makePiAdapterV2 = Effect.fn("makePiAdapterV2")(function* (
                 ) {
                   return yield* protocolError("Pi turn ownership changed before it could start");
                 }
-              } else if (continuation) {
-                yield* finalizeTurn(state);
-              }
-              if (outOfTurnExtensionErrors.length > 0) {
-                yield* Queue.offer(connection.events, { type: "t2.flush_extension_errors" });
-              }
-            }).pipe(
-              sessionEventPermit.withPermits(1),
-              Effect.tapError(() =>
-                Effect.sync(() => {
-                  if (state.activeTurn === activeTurn) state.activeTurn = null;
-                }),
-              ),
-            );
+                if (pendingPromptResponsesDrained !== null) return pendingPromptResponsesDrained;
+                const wake = pendingWake?.state === state ? pendingWake : null;
+                if (wake !== null && wake.state.providerThread.appThreadId !== turnInput.threadId) {
+                  return yield* protocolError("Pi native wake belongs to a different app thread");
+                }
+                pendingWake = null;
+                state.providerThread = turnInput.providerThread;
+                state.activeTurn = activeTurn;
+                activeTurn.adoptedWake = wake !== null && !continuation;
+                if (compactCommand !== null) {
+                  yield* connection.send(compactRpcRecord(compactCommand));
+                  pendingCompactResponses.push({
+                    providerTurnId: providerTurn.id,
+                    kind: "turn_start",
+                  });
+                } else if (payload !== null) {
+                  yield* sendPrompt({
+                    providerTurnId: providerTurn.id,
+                    kind: "turn_start",
+                    record: {
+                      type: "prompt",
+                      message: payload.message,
+                      streamingBehavior: "steer",
+                      ...(payload.images.length === 0 ? {} : { images: payload.images }),
+                    },
+                  });
+                }
+                yield* emit({
+                  type: "provider_turn.updated",
+                  driver: PI_PROVIDER,
+                  threadId: turnInput.threadId,
+                  providerTurn,
+                });
+                yield* updateProviderThread(state, {
+                  status: "active",
+                  firstRunOrdinal: state.providerThread.firstRunOrdinal ?? turnInput.runOrdinal,
+                  lastRunOrdinal: turnInput.runOrdinal,
+                });
+                yield* updateProviderSession("running", null);
+                if (wake !== null) {
+                  for (const event of wake.events) {
+                    if (!continuation && event["type"] === "agent_settled") {
+                      activeTurn.nativeAborted = event["aborted"] === true;
+                      activeTurn.settleWhenIdle = true;
+                      continue;
+                    }
+                    yield* handleSessionEvent(event);
+                  }
+                } else if (continuation) {
+                  yield* finalizeTurn(state);
+                }
+                if (outOfTurnExtensionErrors.length > 0) {
+                  yield* Queue.offer(connection.events, { type: "t3.flush_extension_errors" });
+                }
+                return null;
+              }).pipe(
+                sessionEventPermit.withPermits(1),
+                Effect.tapError(() =>
+                  Effect.sync(() => {
+                    if (state.activeTurn === activeTurn) state.activeTurn = null;
+                  }),
+                ),
+              );
+              if (pendingAck === null) break;
+              // The native event pump needs the permit to consume the actual ACK.
+              yield* Deferred.await(pendingAck);
+            }
             // Pi acks `prompt` only after slash-command expansion completes,
             // and extension commands may block on user dialogs indefinitely.
             // Correlated responses therefore return later through the event pump.

@@ -16,16 +16,6 @@ import rootPackageJson from "../../../package.json" with { type: "json" };
 import * as HostProcess from "@t2code/shared/HostProcess";
 import { resolveSpawnCommand } from "@t2code/shared/shell";
 import {
-  createNpmPublishInvocation,
-  createNpmPublishPlan,
-  type NpmPackageArtifactMetadata,
-  runNpmPublishPlan,
-  parseNpmPackageManifest,
-  sha512File,
-  waitForNpmPackagesVisibility,
-  waitForNpmPackageVisibility,
-} from "./npmPublish.ts";
-import {
   ServerCliBootstrapTooLargeError,
   ServerCliBuildAssetMissingError,
   ServerCliCommandExitError,
@@ -141,7 +131,7 @@ const buildExeCmd = Command.make(
         (yield* HostProcess.Platform) === "linux" &&
         (yield* HostProcess.Architecture) === "arm64";
       const spawnCommand = yield* resolveSpawnCommand("vp", ["pack"]);
-      const cliAssetDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-cli-asset-" });
+      const cliAssetDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-cli-asset-" });
       const pack = (packMode: "bundle" | "bootstrap" | "1") =>
         runCommand(
           ChildProcess.make(spawnCommand.command, spawnCommand.args, {
@@ -183,15 +173,6 @@ const buildExeCmd = Command.make(
         yield* injectLinuxArm64Sea({
           bundlePath: bootstrapPath,
           cliAssetPath: cliMainPath,
-          outputPath: path.join(serverDir, "dist-exe/t3"),
-          nodeVersion: rootPackageJson.engines.node,
-          verbose: config.verbose,
-        });
-      }
-      // TEMPORARY one-time Node fix. Remove when fixed: https://github.com/nodejs/node/issues/67048
-      if (linuxArm64) {
-        yield* injectLinuxArm64Sea({
-          bundlePath,
           outputPath: path.join(serverDir, "dist-exe/t2"),
           nodeVersion: rootPackageJson.engines.node,
           verbose: config.verbose,

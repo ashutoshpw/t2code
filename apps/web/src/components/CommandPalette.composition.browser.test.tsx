@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t2code/shared/keybindings";
 import { DEFAULT_CLIENT_SETTINGS } from "@t2code/contracts/settings";
-import { AuthOrchestrationOperateScope, AuthSourceControlWriteScope } from "@t3tools/contracts";
+import { AuthOrchestrationOperateScope, AuthSourceControlWriteScope } from "@t2code/contracts";
 import { act, render } from "../../test/render";
 import { CommandPalette } from "./CommandPalette";
 import { openCommandPalette } from "../commandPaletteBus";

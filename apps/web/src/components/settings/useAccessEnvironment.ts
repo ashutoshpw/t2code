@@ -1,4 +1,4 @@
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId } from "@t2code/contracts";
 
 import { isDesktopLocalConnectionTarget } from "../../connection/desktopLocal";
 import { useEnvironments, usePrimaryEnvironmentId } from "../../state/environments";

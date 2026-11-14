@@ -1,4 +1,4 @@
-import type { EnvironmentSpeechModel, SpeechBenchmarkTier } from "@t3tools/contracts";
+import type { EnvironmentSpeechModel, SpeechBenchmarkTier } from "@t2code/contracts";
 
 import { languageLabel } from "./SpeechLanguageSelect";
 

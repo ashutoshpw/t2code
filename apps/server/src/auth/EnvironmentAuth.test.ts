@@ -305,7 +305,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
     );
 
     it.effect(
-      "holds an untrusted T3 Connect device until it is approved, and revocation cuts it off",
+      "holds an untrusted T2 Connect device until it is approved, and revocation cuts it off",
       () =>
         Effect.gen(function* () {
           const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
@@ -377,8 +377,8 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
           });
           const [oldestDeviceSession, newestDeviceSession] = yield* deviceSessions();
           expect(newestDeviceSession).toBeDefined();
-          // Authorized clients lists T3 Connect sessions under this name.
-          expect(newestDeviceSession?.client.label).toBe("T3 Connect");
+          // Authorized clients lists T2 Connect sessions under this name.
+          expect(newestDeviceSession?.client.label).toBe("T2 Connect");
           // Revoking any one of the device's sessions ends all of them and its trust.
           expect(
             yield* serverAuth.revokeClientSession(admin.sessionId, oldestDeviceSession!.sessionId),
@@ -882,11 +882,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
             url: "/api/auth/session",
             cookies: {},
             headers: {
-              host: "192.168.1.50:3773",
+              host: "192.168.1.50:3772",
               authorization: `${scheme} ${token}`,
               dpop: key.sign({
                 method: "GET",
-                url: "http://192.168.1.50:3773/api/auth/session",
+                url: "http://192.168.1.50:3772/api/auth/session",
                 token,
                 iat,
               }),

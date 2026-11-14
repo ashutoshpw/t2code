@@ -343,9 +343,9 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
   }
   assertMutable(key: C.SpacePageTarget) {
     if (this.isBlocked(key))
-      throw new SpaceImageAdmissionError(
-        "Finish the retained image insertion before editing or saving",
-      );
+      throw new SpaceImageAdmissionError({
+        message: "Finish the retained image insertion before editing or saving",
+      });
   }
   reserve(environmentId: EnvironmentId, pages: readonly C.SpacePageId[]) {
     if (this.#snapshot.busy)
@@ -654,10 +654,11 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
         this.#sameSession({ key: request.key }, session, true);
       }
     } catch (error) {
-      throw new SpaceImageAdmissionError(
-        "Image is unavailable for a new save; original and draft retained for explicit recovery",
-        { cause: error },
-      );
+      throw new SpaceImageAdmissionError({
+        message:
+          "Image is unavailable for a new save; original and draft retained for explicit recovery",
+        cause: error,
+      });
     }
   }
   insert(id: string, target: SpaceImageInsertion) {

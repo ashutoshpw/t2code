@@ -5,7 +5,7 @@ import {
   computeDpopAccessTokenHash,
   computeDpopJwkThumbprint,
   type DpopPublicJwk,
-} from "@t3tools/shared/dpop";
+} from "@t2code/shared/dpop";
 
 /** A client's DPoP key, signing proofs the way a browser or the mobile app does. */
 export const makeDpopKey = () => {

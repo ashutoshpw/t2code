@@ -6,7 +6,7 @@ import {
   EnvironmentId,
   SOURCE_CONTROL_MEDIA_ASSET,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 const harness = vi.hoisted(() => ({
   refreshAssetUrl:

@@ -466,7 +466,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
       <TooltipPopup>{submitTooltip}</TooltipPopup>
     </Tooltip>
   );
- const sendLaterMenu =
+  const sendLaterMenu =
     onSendLater && !showResume && !isEditingQueuedMessage ? (
       <Menu>
         <MenuTrigger

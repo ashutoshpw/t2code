@@ -584,8 +584,9 @@ describe("AssetAccess", () => {
             const response = HttpServerResponse.toWeb(yield* assetFileResponse(asset));
             expect(yield* Effect.promise(() => response.text())).toBe("recording bytes");
           }
-        }).pipe(Effect.provideService(HostProcess.HomeDirectory, home));
-      }).pipe(Effect.provide(layerTest)),
+        }
+      }).pipe(Effect.provideService(HostProcess.HomeDirectory, home));
+    }).pipe(Effect.provide(layerTest)),
   );
 
   it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(

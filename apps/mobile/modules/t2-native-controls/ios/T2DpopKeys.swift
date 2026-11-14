@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 /// P-256 keys for DPoP proofs, as 32-byte private scalars and 65-byte uncompressed public points.
-enum T3DpopKeys {
+enum T2DpopKeys {
   /// The private scalar followed by the public point.
   static func generate() -> Data {
     let key = P256.Signing.PrivateKey()

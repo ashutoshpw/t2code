@@ -40,7 +40,7 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { taskPrompt } from "../../apps/server/src/mcp/delegatedTaskModes.ts";
 import * as McpInvocationContext from "../../apps/server/src/mcp/McpInvocationContext.ts";
 import { advertisedJsonSchema } from "../../apps/server/src/mcp/advertisedJsonSchema.ts";
-import * as Contracts from "@t3tools/contracts";
+import * as Contracts from "@t2code/contracts";
 import {
   EnvironmentId,
   ORCHESTRATOR_MCP_RUNNING_TASK_NEXT,
@@ -50,6 +50,7 @@ import {
 import { projectComposerContextForProvider } from "@t2code/shared/composerContextReferences";
 import { formatThreadLink } from "@t2code/shared/threadLinks";
 import { buildCodexAdditionalContext } from "../../apps/server/src/provider/CodexDeveloperInstructions.ts";
+import { FileLinksExpect, gradeFileLinks } from "./file-link-grading.ts";
 import { makeSideChatContext } from "../../apps/server/src/orchestration-v2/ContextHandoffService.ts";
 import { withInlineContext } from "../../apps/server/src/orchestration-v2/ContextHandoffDelivery.ts";
 import { SpacesToolkit } from "../../apps/server/src/mcp/toolkits/spaces/tools.ts";
@@ -77,7 +78,6 @@ import { proxyConfig } from "../shared/proxy.ts";
 import { changeRequestsCreatedBy } from "../../apps/server/src/orchestration-v2/PullRequestSyncReactor.ts";
 import { type BackgroundWait, makeBackgroundWait } from "./backgroundWait.ts";
 import { DeviceExpect, gradeDevice } from "./device-grading.ts";
-import { FileLinksExpect, gradeFileLinks } from "./file-link-grading.ts";
 import {
   AGENT_DEVICE_SHELL,
   deviceFailure,
@@ -159,7 +159,7 @@ export type SampleRun = {
   stopReason: string;
   /** The agent's final answer: its last response's text, if it ended its turn. */
   readonly finalText?: string;
-  /** PRs linked to the thread when the sample ends, by the agent or by T3. */
+  /** PRs linked to the thread when the sample ends, by the agent or by T2. */
   readonly linked?: ReadonlyArray<string>;
   /** The thread's working directory, which chat resolves relative file pills against. */
   readonly cwd?: string;
@@ -205,15 +205,15 @@ const McpToolUseExpect = Schema.Struct({
   minCalls: Schema.optional(Schema.Record(Schema.String, Schema.Number)),
   maxCalls: Schema.optional(Schema.Record(Schema.String, Schema.Number)),
   /**
-   * One `args`-style value per new top-level thread the agent asks for, by `t3_thread_launch` or a
+   * One `args`-style value per new top-level thread the agent asks for, by `t2_thread_launch` or a
    * `create_threads` entry. Each matches a different thread's request; no other thread is asked for.
    */
   newThreads: Schema.optional(Schema.Array(Schema.Unknown)),
   /** The last step with tool calls includes this tool, then the turn ends. */
   endsTurnAfter: Schema.optional(Schema.String),
   /**
-   * Regexes that no shell command may match. A command also carries the source of the scripts it
-   * runs that the agent wrote earlier in the sample.
+   * Regexes that no shell command may match. In a case with `secret` checks, a command also carries
+   * the source of the scripts it runs that the agent wrote earlier in the sample.
    */
   shellMustNot: Schema.optional(Schema.Array(Schema.String)),
   /** Regexes that some shell command must match, each. */
@@ -325,7 +325,7 @@ export const McpToolUseCase = Schema.Struct({
     world: Schema.optional(McpToolUseWorld),
     /**
      * Canned tool results by bare name, T2 or native. `"default"` uses the runner's result. For a
-     * device tool, a T2 `DeviceError` (`{"_tag": ..., "cause": null}`) fails it inside T3; for a
+     * device tool, a T2 `DeviceError` (`{"_tag": ..., "cause": null}`) fails it inside T2; for a
      * preview tool, a `PreviewAutomationError` fails it with that error's message. A
      * `{"$sequence": [...]}` mock answers its nth call with the nth result, then repeats the last.
      */
@@ -495,7 +495,7 @@ const enabledWhen = (predicate: () => boolean) =>
   );
 // Claude Code loads a tool whose `_meta` sets anthropic/alwaysLoad up front instead of deferring it.
 const alwaysLoaded = new Set(
-  t3SourceTools
+  t2SourceTools
     .filter((tool) => {
       const meta = Context.getOrUndefined(tool.annotations, Tool.Meta);
       return meta !== undefined && meta["anthropic/alwaysLoad"] === true;
@@ -503,7 +503,7 @@ const alwaysLoaded = new Set(
     .map((tool) => `${T2_PREFIX}${tool.name}`),
 );
 // Refs whose request_secret takes `value` save a secret the user already pasted, with no card.
-export const savesPastedSecrets = t3Tools.some(
+export const savesPastedSecrets = t2Tools.some(
   (tool) =>
     tool.name === `${T2_PREFIX}request_secret` &&
     isRecord(tool.input_schema) &&
@@ -530,7 +530,7 @@ const visibleT3Tools = (options: { readonly subagent?: boolean; readonly links?:
  * and browser access decide.
  */
 const claudeQueryOptions = (model: Model, device = true, browser = true) => {
-  // Refs whose text follows a capability read its flag; older ones ignore it.
+  // Refs whose device text follows the capability read deviceToolsAvailable; older ones ignore it.
   const input: Parameters<typeof makeClaudeQueryOptions>[0] & {
     readonly deviceToolsAvailable?: boolean;
     readonly browserToolsAvailable?: boolean;
@@ -739,7 +739,7 @@ const buildCodexBase = (
       ? item.content.map((block: Block) => valueText(block.text)).join("\n")
       : valueText(item.content);
   const joined = template.input.map(contentText).join("\n");
-  if (!joined.includes("<t3_code_runtime>"))
+  if (!joined.includes("<t2_code_runtime>"))
     throw new Error("Codex template needs full T2 context.");
   const cwd = /<cwd>(.*?)<\/cwd>/.exec(joined)?.[1] ?? "/home/user/app";
   const home = /^\/(?:home|Users)\/[^/]+/.exec(cwd)?.[0];
@@ -753,7 +753,7 @@ const buildCodexBase = (
   // The captured <collaboration_mode> message stays: Codex supplies its own mode text natively.
   const input = template.input.flatMap((item) => {
     const content = contentText(item);
-    if (content.includes("<t3_code_")) return [];
+    if (content.includes("<t2_code_")) return [];
     if (item.role === "user") {
       const env = /<environment_context>[\s\S]*?<\/environment_context>/.exec(content)?.[0];
       return env ? [message(clean(options.keepUserInstructions ? content : env), "user")] : [];
@@ -766,7 +766,10 @@ const buildCodexBase = (
   });
   const context = buildCodexAdditionalContext(
     { model: options.model, reasoningEffort: effort },
-    { browser: options.browserAccess ?? true, device: options.deviceAccess ?? true },
+    {
+      browser: options.browserAccess ?? true,
+      device: options.deviceAccess ?? true,
+    },
   );
   input.push(
     ...Object.entries(context).map(([key, entry]) => message(`<${key}>${entry.value}</${key}>`)),
@@ -1195,7 +1198,7 @@ export const t3Default = (
     };
   };
   switch (name) {
-    case "t3_thread_launch":
+    case "t2_thread_launch":
       return newThread(input, input.message);
     case "create_threads":
       return {
@@ -1321,7 +1324,7 @@ export const t3Default = (
         nextCursor: end < matching.length ? String(end) : null,
       };
     }
-    case "t3_thread_read": {
+    case "t2_thread_read": {
       const threadId = valueText(input.threadId);
       const launched = sample.threads.get(threadId);
       if (launched !== undefined) {
@@ -1399,16 +1402,16 @@ const withProductFields = (name: string, value: unknown, child: boolean): unknow
       const running = task.status === "running" && task.next === undefined;
       return running ? { ...task, next: ORCHESTRATOR_MCP_RUNNING_TASK_NEXT } : task;
     }
-    case "t3_thread_read":
+    case "t2_thread_read":
       return { ...value, thread: linked(value.thread) };
-    case "t3_thread_launch":
-    case "t3_thread_send":
+    case "t2_thread_launch":
+    case "t2_thread_send":
     case "run_scheduled_task_now":
       return linked(value);
-    case "t3_thread_list":
+    case "t2_thread_list":
     case "create_threads":
       return listed("threads");
-    case "t3_thread_search":
+    case "t2_thread_search":
       return listed("matches");
     case "link_pull_request":
     case "link_pull_requests":
@@ -1682,7 +1685,7 @@ export const answerToolCall = Effect.fn("evaluateMcpToolUse.answerToolCall")(fun
     const previewError = previewFailure(mock);
     if (previewError !== undefined) return failed(previewError.message);
   }
-  // T2 answers device calls from the world. A mock that is a T2 device error fails inside T3.
+  // T2 answers device calls from the world. A mock that is a T2 device error fails inside T2.
   const failure = deviceFailure(mock);
   const fromWorld = mock === undefined || mock === "default" || failure !== undefined;
   if (sample.devices && isT3Name(call.name) && isDeviceTool(name) && fromWorld) {
@@ -1761,7 +1764,7 @@ const matches = (expected: unknown, actual: unknown): boolean => {
 const newThreadRequests = (calls: ReadonlyArray<Call>) =>
   calls.flatMap((call): ReadonlyArray<{ request: unknown; brief: unknown }> => {
     if (call.failed === true || !isRecord(call.input)) return [];
-    if (call.tool === "t3_thread_launch")
+    if (call.tool === "t2_thread_launch")
       return [{ request: call.input, brief: call.input.message }];
     if (call.tool !== "create_threads" || !Array.isArray(call.input.threads)) return [];
     return call.input.threads.map((request: unknown) => ({
@@ -1856,9 +1859,9 @@ export const gradeSample = (
     ),
   }));
   const calls = attempted.filter((call) => !(call.failed && isPageTool(call.tool)));
-  // `tool` may list alternatives, as in "link_pull_request|watch_pull_request"; counts add up.
   const count = (tool: string) =>
     calls.filter((call) => tool.split("|").includes(call.tool)).length;
+  // `tool` may list alternatives, as in "link_pull_request|watch_pull_request".
   const found = ({ tool, args = {} }: McpToolUseCall, among = calls) =>
     among.some((call) => tool.split("|").includes(call.tool) && matches(args, call.input));
   const label = ({ tool, args }: McpToolUseCall) => (args ? `${tool} ${valueText(args)}` : tool);

@@ -633,7 +633,6 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       assert.notMatch(output, /serverPort=3773 /);
     });
   });
-  });
 
   describe("findFirstAvailableOffset", () => {
     it.effect("advances until all required ports are available", () =>

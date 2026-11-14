@@ -567,6 +567,7 @@ const makeAvailable = Effect.gen(function* () {
         Effect.tryPromise({
           try: async () => {
             const key = structureKey(environmentId);
+            // @effect-diagnostics-next-line globalJsonInEffect:off - stored bytes must match the JSON written.
             const payload = JSON.stringify(decodeSpaceStructureJournal(journal, key));
             const bytes = new TextEncoder().encode(payload).byteLength;
             await database.withExclusiveTransactionAsync(async (transaction) => {
@@ -614,6 +615,7 @@ const makeAvailable = Effect.gen(function* () {
         try: async () => {
           const checkedKey = draftKey(key);
           const payload =
+            // @effect-diagnostics-next-line globalJsonInEffect:off - stored bytes must match the JSON written.
             draft === null ? null : JSON.stringify(decodeSpaceDocumentDraft(draft, checkedKey));
           const bytes = payload === null ? 0 : new TextEncoder().encode(payload).byteLength;
           await database.withExclusiveTransactionAsync(async (transaction) => {
@@ -825,12 +827,12 @@ function makeUnavailable(error: MobileDatabaseError): MobileDatabase["Service"] 
   const fail = Effect.fail(error);
   return MobileDatabase.of({
     loadSpaceMediaRecords: fail,
-    writeSpaceMediaRecord: () => fail,
-    removeSpaceMediaRecord: () => fail,
-    loadSpaceStructureJournal: () => fail,
-    writeSpaceStructureJournal: () => fail,
-    loadSpacePageDraft: () => fail,
-    writeSpacePageDraft: () => fail,
+    writeSpaceMediaRecord: Effect.fn("MobileDatabase.writeSpaceMediaRecord")(() => fail),
+    removeSpaceMediaRecord: Effect.fn("MobileDatabase.removeSpaceMediaRecord")(() => fail),
+    loadSpaceStructureJournal: Effect.fn("MobileDatabase.loadSpaceStructureJournal")(() => fail),
+    writeSpaceStructureJournal: Effect.fn("MobileDatabase.writeSpaceStructureJournal")(() => fail),
+    loadSpacePageDraft: Effect.fn("MobileDatabase.loadSpacePageDraft")(() => fail),
+    writeSpacePageDraft: Effect.fn("MobileDatabase.writeSpacePageDraft")(() => fail),
     loadCache: Effect.fn("MobileDatabase.loadCache")(() => fail),
     listCache: Effect.fn("MobileDatabase.listCache")(() => fail),
     saveCache: Effect.fn("MobileDatabase.saveCache")(() => fail),

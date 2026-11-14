@@ -1,4 +1,4 @@
-import type { EnvironmentCloudLinkStateResult } from "@t3tools/contracts";
+import type { EnvironmentCloudLinkStateResult } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { afterFailedCheck, resolveMcpGate } from "./mcpGate";

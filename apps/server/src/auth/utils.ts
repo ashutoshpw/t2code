@@ -81,6 +81,10 @@ export function base64UrlDecodeUtf8(input: string): string {
   return Result.getOrThrow(Base64Url.decodeString(input));
 }
 
+export function signPayload(payload: string, secret: Uint8Array): string {
+  return NodeCrypto.createHmac("sha256", Buffer.from(secret)).update(payload).digest("base64url");
+}
+
 export function timingSafeEqualBase64Url(left: string, right: string): boolean {
   const leftBytes = Base64Url.decode(left);
   const rightBytes = Base64Url.decode(right);

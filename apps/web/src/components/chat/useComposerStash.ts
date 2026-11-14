@@ -188,8 +188,6 @@ export function useComposerStash(input: {
     return false;
   });
 
-  const restoreStashEntry = async (menuEntry: PromptStashEntry) => {
-
   const refuseOwnedEditMutation = () => {
     if (!isQueuedEditDraftOwned(composerDraftTarget)) return false;
     toastManager.add({

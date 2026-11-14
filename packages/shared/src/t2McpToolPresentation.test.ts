@@ -8,7 +8,7 @@ import {
 } from "./t2McpToolPresentation.ts";
 
 describe("resolveT2McpToolPresentation", () => {
-  it("recognizes every T3 tool across provider prefixes and completion suffixes", () => {
+  it("recognizes every T2 tool across provider prefixes and completion suffixes", () => {
     for (const tool of T2_MCP_TOOL_NAMES) {
       const presentation = resolveT2McpToolPresentation(tool);
       for (const prefix of [
@@ -16,6 +16,9 @@ describe("resolveT2McpToolPresentation", () => {
         "mcp__t2_code__",
         "mcp__t2code__",
         "T2-code.",
+        "t2code.",
+        "t2-code-direct.",
+        "mcp__t2_code_direct__",
         "t2_code/",
         "t2code:",
         "mcp_t2-code_",
@@ -32,16 +35,91 @@ describe("resolveT2McpToolPresentation", () => {
 
   it("matches OpenCode 2's per-thread server names, whose thread ids hold underscores", () => {
     expect(
-      resolveT2McpToolPresentation("t3-code-thread_opencode2-adapter_delegate_task")?.displayName,
+      resolveT2McpToolPresentation("t2-code-thread_opencode2-adapter_delegate_task")?.displayName,
     ).toBe("Delegate a child task");
-    expect(resolveT2McpToolPresentation("t3-code-thread_opencode2-adapter_not_a_tool")).toBeNull();
+    expect(resolveT2McpToolPresentation("t2-code-thread_opencode2-adapter_not_a_tool")).toBeNull();
   });
+});
+
+it("pretty prints Claude and Cursor T2 MCP tool names", () => {
+  expect(resolveT2McpToolPresentation("mcp__t2-code__t2_thread_read")).toEqual({
+    displayName: "Read a T2 thread",
+    logo: "t2-code",
+  });
+});
+
+it("pretty prints Codex T2 MCP tool names", () => {
+  expect(resolveT2McpToolPresentation("t2-code.create_threads")).toEqual({
+    displayName: "Create T2 threads",
+    logo: "t2-code",
+  });
+});
+
+it("pretty prints thread metadata updates", () => {
+  expect(resolveT2McpToolPresentation("mcp__t2-code__t2_thread_update")).toEqual({
+    displayName: "Update T2 thread metadata",
+    logo: "t2-code",
+  });
+});
+
+it("pretty prints bare T2 MCP toolkit names", () => {
+  expect(resolveT2McpToolPresentation("list_scheduled_tasks")).toEqual({
+    displayName: "List scheduled tasks",
+    logo: "t2-code",
+  });
+});
+
+it("pretty prints worktree T2 MCP tool names", () => {
+  expect(resolveT2McpToolPresentation("mcp__t2-code__t2_worktree_handoff")).toEqual({
+    displayName: "Hand off thread to a git worktree",
+    logo: "t2-code",
+  });
+  expect(resolveT2McpToolPresentation("t2-code.t2_worktree_status")).toEqual({
+    displayName: "Get thread worktree status",
+    logo: "t2-code",
+  });
+});
+
+it("pretty prints preview T2 MCP tool names", () => {
+  expect(resolveT2McpToolPresentation("T2-code.preview_open")).toEqual({
+    displayName: "Open a page in the preview browser",
+    logo: "t2-code",
+  });
+  expect(resolveT2McpToolPresentation("mcp__t2-code__preview_status")).toEqual({
+    displayName: "Get preview browser status",
+    logo: "t2-code",
+  });
+});
+
+it("matches the separator variants ACP registry agents emit", () => {
+  for (const name of [
+    "mcp_t2-code_delegate_task",
+    "t2_code:delegate_task",
+    "t2code/delegate_task",
+    "t2-code delegate_task",
+    "T2 Code delegate_task",
+    "t2-code__delegate_task",
+  ]) {
+    expect(resolveT2McpToolPresentation(name)?.displayName).toBe("Delegate a child task");
+  }
+});
+
+it("matches OpenCode 2's per-thread server names, whose thread ids hold underscores", () => {
+  expect(
+    resolveT2McpToolPresentation("t2-code-thread_opencode2-adapter_delegate_task")?.displayName,
+  ).toBe("Delegate a child task");
+  expect(resolveT2McpToolPresentation("t2-code-thread_opencode2-adapter_not_a_tool")).toBeNull();
+});
+
+it("keeps unknown MCP tools on the generic renderer path", () => {
+  expect(resolveT2McpToolPresentation("mcp__github__search_issues")).toBeNull();
+  expect(resolveT2McpToolPresentation("t2-code.not_a_real_tool")).toBeNull();
 });
 
 describe("resolveT2McpToolDefinition", () => {
   it("labels an action tool call as the action it ran", () => {
     expect(
-      resolveT2McpToolDefinition("mcp__t3-code__preview_act", { action: "type" })?.labels,
+      resolveT2McpToolDefinition("mcp__t2-code__preview_act", { action: "type" })?.labels,
     ).toEqual(resolveT2McpToolDefinition("preview_type")?.labels);
     expect(resolveT2McpToolDefinition("t2_thread_transfer", { action: "fork" })?.displayName).toBe(
       resolveT2McpToolDefinition("t2_thread_fork")?.displayName,
@@ -52,57 +130,19 @@ describe("resolveT2McpToolDefinition", () => {
   });
 });
 
-  it("pretty prints bare T2 MCP toolkit names", () => {
-    expect(resolveT2McpToolPresentation("list_scheduled_tasks")).toEqual({
-      displayName: "List scheduled tasks",
-      logo: "t2-code",
-    });
-  });
-
-  it("pretty prints worktree T2 MCP tool names", () => {
-    expect(resolveT2McpToolPresentation("mcp__t2-code__t2_worktree_handoff")).toEqual({
-      displayName: "Hand off thread to a git worktree",
-      logo: "t2-code",
-    });
-    expect(resolveT2McpToolPresentation("t2-code.t2_worktree_status")).toEqual({
-      displayName: "Get thread worktree status",
-      logo: "t2-code",
-    });
-  });
-
-  it("pretty prints preview T2 MCP tool names", () => {
-    expect(resolveT2McpToolPresentation("T2-code.preview_open")).toEqual({
-      displayName: "Open a page in the preview browser",
-      logo: "t2-code",
-    });
-    expect(resolveT2McpToolPresentation("mcp__t2-code__preview_status")).toEqual({
-      displayName: "Get preview browser status",
-      logo: "t2-code",
-    });
-  });
-
-  it("matches the separator variants ACP registry agents emit", () => {
-    for (const name of [
-      "mcp_t2-code_delegate_task",
-      "t2_code:delegate_task",
-      "t2code/delegate_task",
-      "t2-code delegate_task",
-      "T2 Code delegate_task",
-      "t2-code__delegate_task",
-    ]) {
-      expect(resolveT2McpToolPresentation(name)?.displayName).toBe("Delegate a child task");
-    }
-  });
-
-  it("matches OpenCode 2's per-thread server names, whose thread ids hold underscores", () => {
-    expect(
-      resolveT2McpToolPresentation("t2-code-thread_opencode2-adapter_delegate_task")?.displayName,
-    ).toBe("Delegate a child task");
-    expect(resolveT2McpToolPresentation("t2-code-thread_opencode2-adapter_not_a_tool")).toBeNull();
-  });
-
-  it("keeps unknown MCP tools on the generic renderer path", () => {
-    expect(resolveT2McpToolPresentation("mcp__github__search_issues")).toBeNull();
-    expect(resolveT2McpToolPresentation("t2-code.not_a_real_tool")).toBeNull();
+describe("resolveT2McpSummaryAction", () => {
+  it("summarizes an action tool by the action each call ran", () => {
+    expect(resolveT2McpSummaryAction("mcp__t2-code__t2_queue", { action: "list" })).toBe(
+      "queue-list",
+    );
+    expect(resolveT2McpSummaryAction("t2_queue", { action: "edit" })).toBe("queue-edit");
+    expect(resolveT2McpSummaryAction("t2_thread_transfer", { action: "status" })).toBe(
+      "thread-transfers",
+    );
+    expect(resolveT2McpSummaryAction("t2_thread_configure", {})).toBe("thread-configuration");
+    expect(resolveT2McpSummaryAction("schedule_task", { scheduledTaskId: "task-1" })).toBe(
+      "schedule-update",
+    );
+    expect(resolveT2McpSummaryAction("delegate_task", { task: "x" })).toBe("delegate");
   });
 });

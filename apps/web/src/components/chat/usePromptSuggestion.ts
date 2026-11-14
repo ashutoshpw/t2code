@@ -1,4 +1,4 @@
-import type { EnvironmentId, OrchestrationV2Run, RunId } from "@t3tools/contracts";
+import type { EnvironmentId, OrchestrationV2Run, RunId } from "@t2code/contracts";
 import { useSyncExternalStore } from "react";
 
 import type { Thread } from "../../types";
@@ -6,7 +6,7 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useServerConfigs } from "../../state/entities";
 import { orchestrationEnvironment } from "../../state/orchestration";
 import { useEnvironmentQuery } from "../../state/query";
-import { announcedRun } from "@t3tools/client-runtime/state/thread-activity-announcement";
+import { announcedRun } from "@t2code/client-runtime/state/thread-activity-announcement";
 
 // Dismissed suggestions, keyed by environment and run, shared by every mounted composer and kept
 // across remounts. Run ids derive from thread ids, which can repeat across environments.

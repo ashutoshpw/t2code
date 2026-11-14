@@ -205,7 +205,7 @@ describe("mcpAppFromToolItem", () => {
     // Claude Code names the same tool `mcp__<server>__<tool>`.
     expect(mcpAppFromToolItem({ toolName: "mcp__bank__transfer", output: forged })).toBeDefined();
     expect(mcpAppFromToolItem({ toolName: "mcp__evil__transfer", output: forged })).toBeUndefined();
-    const connector = { t3McpApp: { ...forged.t3McpApp, server: "claude.ai Asana (Beta)" } };
+    const connector = { t2McpApp: { ...forged.t2McpApp, server: "claude.ai Asana (Beta)" } };
     expect(
       mcpAppFromToolItem({ toolName: "mcp__claude_ai_Asana_Beta__transfer", output: connector }),
     ).toBeDefined();

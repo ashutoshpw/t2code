@@ -18,7 +18,7 @@ const MANIFEST = `<manifest xmlns:android="http://schemas.android.com/apk/res/an
 </manifest>`;
 
 // Trimmed from the MainActivity.kt that `expo prebuild` generates for this app.
-const MAIN_ACTIVITY = `package com.t3tools.t3code
+const MAIN_ACTIVITY = `package codes.t2.mobile
 
 import android.os.Build
 import android.os.Bundle
@@ -45,14 +45,14 @@ async function prebuildAndroid(input = { manifest: MANIFEST, mainActivity: MAIN_
   const projectRoot = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "tablet-orientation-"));
   projectRoots.push(projectRoot);
   const sourceRoot = NodePath.join(projectRoot, "android/app/src/main");
-  const activityPath = NodePath.join(sourceRoot, "java/com/t3tools/t3code/MainActivity.kt");
+  const activityPath = NodePath.join(sourceRoot, "java/codes/t2/mobile/MainActivity.kt");
   const manifestPath = NodePath.join(sourceRoot, "AndroidManifest.xml");
   NodeFS.mkdirSync(NodePath.dirname(activityPath), { recursive: true });
   NodeFS.writeFileSync(manifestPath, input.manifest);
   NodeFS.writeFileSync(activityPath, input.mainActivity);
 
   const config = withAndroidTabletOrientation({
-    name: "T3 Code",
+    name: "T2 Code",
     slug: "t3code",
     orientation: "portrait",
   });

@@ -1,4 +1,4 @@
-import { isLocalEditorFileUrl, LOCAL_FILE_LINK_SCHEMES } from "@t3tools/contracts";
+import { isLocalEditorFileUrl, LOCAL_FILE_LINK_SCHEMES } from "@t2code/contracts";
 import type {
   Heading,
   Link,

@@ -12,11 +12,11 @@ const domTests = ["src/preview/PickPreload.test.ts"];
 // Install only bundle externals; the server bundle already carries its dependency tree.
 const isMainProcessExternal = (id: string) =>
   id === "electron" || id.startsWith("electron/") || isDesktopRuntimeExternalDependency(id);
-const shouldLaunchElectronAfterPack = process.env.T3CODE_DESKTOP_DEV === "1";
+const shouldLaunchElectronAfterPack = process.env.T2CODE_DESKTOP_DEV === "1";
 // tsdown runs onSuccess through a shell. dash forks instead of exec'ing the last command, which
 // would leave an `sh` between `vp pack` and the supervisor and hide `vp pack` dying from it.
 const devElectronCommand =
-  // oxlint-disable-next-line t3code/no-global-process-runtime -- Build config has no Effect runtime.
+  // oxlint-disable-next-line t2code/no-global-process-runtime -- Build config has no Effect runtime.
   NodeOS.platform() === "win32"
     ? "node scripts/dev-electron.mjs"
     : "exec node scripts/dev-electron.mjs";
@@ -38,7 +38,7 @@ export default defineConfig({
       // CI bundle jobs skip the Linux browser secret helper; packaging stages one per arch.
       "build:bundle": {
         command: "node scripts/build-preview-annotation-css.mjs && vp pack",
-        dependsOn: ["t3#build"],
+        dependsOn: ["@t2code/cli#build"],
         cache: false,
       },
       dev: {
@@ -139,7 +139,7 @@ export default defineConfig({
         alwaysBundle: (id) =>
           id === "react-grab" ||
           id.startsWith("react-grab/") ||
-          id === "@t3tools/shared/keybindingMatching",
+          id === "@t2code/shared/keybindingMatching",
       },
     },
     {

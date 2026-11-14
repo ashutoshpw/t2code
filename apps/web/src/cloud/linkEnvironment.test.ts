@@ -38,8 +38,8 @@ const TARGET = {
 const SAVED_SERVICE_TARGET = {
   environmentId: "saved-service",
   label: "Service",
-  httpBaseUrl: "http://127.0.0.1:3773",
-  wsBaseUrl: "ws://127.0.0.1:3773",
+  httpBaseUrl: "http://127.0.0.1:3772",
+  wsBaseUrl: "ws://127.0.0.1:3772",
 };
 
 const relayClientInstallDialog = vi.hoisted(() => ({

@@ -1,4 +1,4 @@
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { pipe } from "effect/Function";
 import type {
   AssistantCitation,
