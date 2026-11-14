@@ -1,5 +1,4 @@
-import { EnvironmentId, ProjectId } from "@t2code/contracts";
-import { EnvironmentId, ThreadId } from "@t2code/contracts";
+import { EnvironmentId, ProjectId, ThreadId } from "@t2code/contracts";
 import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { Atom, AsyncResult } from "effect/reactivity";

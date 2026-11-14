@@ -25,12 +25,6 @@ import {
   threadContextReference,
 } from "../../lib/composerContextRecords";
 import { usePromptStashStore } from "../../promptStashStore";
-import { formatInlineContextReference } from "../../lib/composerContextReferences";
-import {
-  environmentContextRecord,
-  environmentContextReference,
-  threadContextReference,
-} from "../../lib/composerContextRecords";
 import { deriveComposerSendState } from "../ChatView.logic";
 import { ComposerPrimaryActions } from "./ComposerPrimaryActions";
 import { AppAtomRegistryProvider, appAtomRegistry } from "../../rpc/atomRegistry";

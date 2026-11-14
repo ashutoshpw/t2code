@@ -223,7 +223,6 @@ import {
 } from "./ComposerAttachmentStrip";
 import { CollapsedComposerStopAction, ComposerPrimaryActions } from "./ComposerPrimaryActions";
 import { ComposerFooterPrimaryActions } from "./ComposerFooterControls";
-import { ComposerPrimaryActions } from "./ComposerPrimaryActions";
 import { ComposerPendingUserInputPanel } from "./ComposerPendingUserInputPanel";
 import { ComposerPlanFollowUpBanner } from "./ComposerPlanFollowUpBanner";
 import { resolveComposerMenuActiveItemId } from "./composerMenuHighlight";
@@ -284,6 +283,7 @@ import {
   resolveProviderSlashCommandsForCwd,
 } from "@t2code/client-runtime/providerSkills";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { Kbd } from "../ui/kbd";
 import { useSoftwareKeyboardOpen } from "../../hooks/useSoftwareKeyboardOpen";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import { usePanelAnimationSettings } from "../../panelAnimations";
@@ -725,7 +725,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     attachmentTargetKeyRef.current = attachmentTargetKey;
   });
   const composerMountedRef = useRef(true);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- tracks unmount so an awaited folder conversion cannot write into ChatView's reused promptRef
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- tracks unmount so an awaited folder conversion cannot write into ChatView's reused promptRef
   useLayoutEffect(() => {
     composerMountedRef.current = true;
     return () => {
