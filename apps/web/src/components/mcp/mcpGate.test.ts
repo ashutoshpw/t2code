@@ -17,12 +17,12 @@ const tunnel: EnvironmentCloudLinkStateResult = {
   relayIssuer: "https://relay.example.test",
   managedTunnelActive: true,
   publishAgentActivity: true,
-  tunnelHostname: "prod-a1.t3coderelay.com",
+  tunnelHostname: "prod-a1.t2coderelay.com",
 };
 
 const savedTunnel = {
-  httpBaseUrl: "https://prod-b2.t3coderelay.com",
-  wsBaseUrl: "wss://prod-b2.t3coderelay.com",
+  httpBaseUrl: "https://prod-b2.t2coderelay.com",
+  wsBaseUrl: "wss://prod-b2.t2coderelay.com",
   providerKind: "cloudflare_tunnel",
 } as const;
 
@@ -48,14 +48,14 @@ describe("resolveMcpGate", () => {
   it("opens on a fresh reachable check, at the tunnel's MCP URL", () => {
     expect(resolveMcpGate(open)).toEqual({
       kind: "open",
-      mcpUrl: "https://prod-a1.t3coderelay.com/mcp",
+      mcpUrl: "https://prod-a1.t2coderelay.com/mcp",
     });
-    // A saved machine's address comes from T3 Connect, not from what it reports itself.
+    // A saved machine's address comes from T2 Connect, not from what it reports itself.
     expect(resolveMcpGate(saved)).toEqual({
       kind: "open",
-      mcpUrl: "https://prod-b2.t3coderelay.com/mcp",
+      mcpUrl: "https://prod-b2.t2coderelay.com/mcp",
     });
-    // A disconnected saved machine follows T3 Connect's list. Offline or an unreadable list keeps
+    // A disconnected saved machine follows T2 Connect's list. Offline or an unreadable list keeps
     // a retry; only a list showing nothing wrong asks to reconnect.
     const away = { ...saved, connected: false };
     const listed = (
@@ -72,7 +72,7 @@ describe("resolveMcpGate", () => {
     expect(resolveMcpGate(listed("checking")).kind).toBe("checking");
     expect(resolveMcpGate(listed("offline"))).toEqual({ kind: "disconnected", relay: "offline" });
     expect(resolveMcpGate(listed("error"))).toEqual({ kind: "disconnected", relay: "failed" });
-    // T3 Connect refuses to check a publish-only link, so that failure says nothing.
+    // T2 Connect refuses to check a publish-only link, so that failure says nothing.
     expect(resolveMcpGate(listed("error", "manual"))).toEqual({
       kind: "disconnected",
       relay: null,
@@ -92,8 +92,8 @@ describe("resolveMcpGate", () => {
   });
 
   it.each([
-    ["no T3 Connect sign-in", { ...open, signedIn: false }, "sign-in"],
-    ["no permission to read T3 Connect", { ...open, canReadRelay: false }, "no-relay-read"],
+    ["no T2 Connect sign-in", { ...open, signedIn: false }, "sign-in"],
+    ["no permission to read T2 Connect", { ...open, canReadRelay: false }, "no-relay-read"],
     ["a server without approval codes", { ...open, approvalCodes: false }, "update"],
     ["no tunnel", { ...open, linkState: { ...tunnel, managedTunnelActive: false } }, "turn-on"],
     ["a removed link", { ...open, linkState: { ...tunnel, linkRevoked: true } }, "turn-on"],
@@ -105,7 +105,7 @@ describe("resolveMcpGate", () => {
           status: "listed",
           endpoint: {
             ...savedTunnel,
-            httpBaseUrl: "http://127.0.0.1:3773",
+            httpBaseUrl: "http://127.0.0.1:3772",
             providerKind: "manual",
           },
         },
@@ -113,18 +113,18 @@ describe("resolveMcpGate", () => {
       "turn-on",
     ],
     [
-      "a saved machine T3 Connect does not list",
+      "a saved machine T2 Connect does not list",
       { ...saved, relay: { status: "listed", endpoint: undefined } },
       "turn-on",
     ],
-    ["T3 Connect's list still loading", { ...saved, relay: { status: "loading" } }, "checking"],
+    ["T2 Connect's list still loading", { ...saved, relay: { status: "loading" } }, "checking"],
     [
-      "a disconnected saved machine while T3 Connect's list refreshes",
+      "a disconnected saved machine while T2 Connect's list refreshes",
       { ...saved, connected: false, relay: { status: "loading" } },
       "checking",
     ],
     [
-      "no tunnel, before T3 Connect's list loads",
+      "no tunnel, before T2 Connect's list loads",
       {
         ...saved,
         linkState: { ...tunnel, managedTunnelActive: false },
@@ -143,7 +143,7 @@ describe("resolveMcpGate", () => {
           cause: "no_connector",
           reason: "Cloudflare has no live connection from this machine for the tunnel.",
           hint: null,
-          fix: "Restart T3 Code.",
+          fix: "Restart T2 Code.",
         },
       },
       "offline",

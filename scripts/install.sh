@@ -268,7 +268,6 @@ else
 fi
 
 step "Setting up the t2 command..."
-[ -f "${target_dir}/t2" ] || fail "${target_dir} does not contain a t2 executable"
 mkdir -p "$bin_dir"
 # Exec by absolute path: through a symlink, argv0 is the link, and the Cursor SDK looks for its
 # helpers beside it. t2 update and t2 install write the same script.

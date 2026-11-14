@@ -80,20 +80,18 @@ export function NativePdfPreview(props: {
   return (
     <Pdf
       source={{ uri: localUri }}
-      page={props.tracking?.initialPage ?? pdfInitialPage(props.uri)}
-      onLoadComplete={(pages) => {
-        if (props.tracking && !props.tracking.loaded(pages))
+      initialPage={(props.tracking?.initialPage ?? pdfInitialPage(props.uri)) - 1}
+      onLoad={({ pageCount }) => {
+        if (props.tracking && !props.tracking.loaded(pageCount))
           setError("PDF exceeds the supported 2,000-page bound or its source changed.");
       }}
-      onPageChanged={(page, pages) => {
-        if (props.tracking && !props.tracking.pageChanged(page, pages))
+      onPageChange={({ page, pageCount }) => {
+        if (props.tracking && !props.tracking.pageChanged(page + 1, pageCount))
           setError("PDF page or source is unavailable.");
       }}
-      fitPolicy={0}
-      trustAllCerts={false}
       enableAnnotationRendering
       enableDoubleTapZoom
-      onPressLink={(href) => {
+      onLinkPress={({ url: href }) => {
         const url = pdfLinkUrl(href, props.uri);
         if ((!props.tracking || props.tracking.current()) && url !== null)
           void tryOpenExternalUrl(url, "file-preview");

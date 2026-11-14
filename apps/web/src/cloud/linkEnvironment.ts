@@ -257,7 +257,7 @@ export const readCloudLinkState: (input: {
     );
   });
 
-/** Runs the environment's T3 Connect reachability check now; the link state then reports it. */
+/** Runs the environment's T2 Connect reachability check now; the link state then reports it. */
 export const checkCloudReachability: (input: {
   readonly target: CloudLinkTarget;
 }) => Effect.Effect<EnvironmentConnectReachability, CloudEnvironmentLinkError, CloudLinkServices> =
@@ -271,7 +271,7 @@ export const checkCloudReachability: (input: {
         url: (urls) => urls.checkReachability(),
         request: ({ client, headers }) => client.checkReachability({ headers }),
       },
-      "Could not check T3 Connect.",
+      "Could not check T2 Connect.",
     );
   });
 
@@ -330,7 +330,7 @@ export const unlinkEnvironmentFromCloud: (input: {
       .pipe(
         Effect.mapError(
           decodedRelayClientError(
-            "Disconnected locally, but T3 Connect did not confirm it removed this environment",
+            "Disconnected locally, but T2 Connect did not confirm it removed this environment",
           ),
         ),
       );

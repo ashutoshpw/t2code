@@ -26,7 +26,7 @@ export class CheckoutCloneError extends Schema.TaggedError<CheckoutCloneError>()
  */
 export const CheckoutCloner = Context.Reference<
   ((source: string, destination: string) => Effect.Effect<void, CheckoutCloneError>) | undefined
->("t3/vcs/CheckoutCloner", { defaultValue: () => undefined });
+>("@t2code/cli/vcs/CheckoutCloner", { defaultValue: () => undefined });
 
 // A single-executable server resolves packages on disk only through `require`.
 const requireForFfi = NodeModule.createRequire(import.meta.url);
@@ -40,10 +40,10 @@ export const layer = Layer.effect(
       Effect.try({
         try: () => {
           const { DataType, load, open } = requireForFfi("ffi-rs") as typeof import("ffi-rs");
-          open({ library: "t3-libsystem", path: "/usr/lib/libSystem.B.dylib" });
+          open({ library: "t2-libsystem", path: "/usr/lib/libSystem.B.dylib" });
           return (source: string, destination: string) =>
             load({
-              library: "t3-libsystem",
+              library: "t2-libsystem",
               funcName: "clonefile",
               retType: DataType.I32,
               paramsType: [DataType.String, DataType.String, DataType.I32],

@@ -2,8 +2,10 @@
 // the update; the android-build job adds the client's install link a few minutes later. Each
 // run merges what it knows into the state kept in the comment's first line.
 const MARKER = "mobile-preview-android";
-const PROJECT_ID = "d763fcb8-d37c-41ea-a773-b54a0ab4a454";
-const APP_SCHEME = "t3-code";
+// The fork's EAS project is owner-supplied (repo variable); without it the comment
+// still carries the fingerprint and install link, just no update permalink or QR.
+const PROJECT_ID = process.env.T2CODE_EAS_PROJECT_ID ?? "";
+const APP_SCHEME = "t2code-preview";
 
 function readState(body) {
   const match = new RegExp(`^<!-- ${MARKER} (\\{.*\\}) -->`).exec(body ?? "");
@@ -56,11 +58,13 @@ function render(state, runUrl) {
     `Fingerprint | ${state.fingerprint || "n/a"}`,
     `Dev client | ${state.client ? `[Install](${state.client})` : `Building on Blacksmith ([run](${runUrl})); this comment gets the install link when it finishes`}`,
   ];
-  if (state.group) {
+  if (state.group && PROJECT_ID) {
     rows.push(
       `Update Details | [Update Permalink](https://expo.dev/projects/${PROJECT_ID}/updates/${state.group})`,
       `Update QR | <a href="${qr}"><img src="${qr}" width="250px" height="250px" /></a>`,
     );
+  } else if (state.group) {
+    rows.push(`Update Details | ${state.group}`);
   }
   return rows.join("\n");
 }

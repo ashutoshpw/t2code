@@ -1,5 +1,6 @@
 import { BookOpenIcon } from "lucide-react";
 import { useSpacesEnvironments } from "../state/spaces";
+import { ThreadContextDragGhost } from "./chat/ThreadContextDragGhost";
 import { threadPullRequestLinkMode } from "@t2code/client-runtime/thread-pull-request-compatibility";
 import { visibleThreadPullRequests } from "@t2code/shared/threadPullRequests";
 
@@ -85,9 +86,9 @@ import {
   UserPlusIcon,
 } from "lucide-react";
 import { openThreadFind } from "./chat/threadFindStore";
+import { requestSendLaterFromComposer } from "./chat/sendLaterEvents";
 import { dispatchPreviewAction } from "./preview/previewActionBus";
 import { previewBridge } from "./preview/previewBridge";
-import { requestSendLaterFromComposer } from "./chat/sendLaterEvents";
 import {
   useDeferredValue,
   useEffect,

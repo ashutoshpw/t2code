@@ -317,14 +317,14 @@ describe("releaseManagedTunnelOnShutdown", () => {
               challenge,
               relayIssuer,
               endpoint: {
-                httpBaseUrl: "http://127.0.0.1:3773",
-                wsBaseUrl: "ws://127.0.0.1:3773",
+                httpBaseUrl: "http://127.0.0.1:3772",
+                wsBaseUrl: "ws://127.0.0.1:3772",
                 providerKind: "manual",
               },
-              origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+              origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
             },
             HttpServerRequest.fromWeb(
-              new Request("http://127.0.0.1:3773/api/t3-connect/link-proof"),
+              new Request("http://127.0.0.1:3772/api/t2-connect/link-proof"),
             ),
           )
           .pipe(
@@ -342,7 +342,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
           publicKey: environmentKeys.publicKey,
           token: proof,
           typ: RELAY_LINK_PROOF_TYP,
-          issuer: "t3-env:env_123",
+          issuer: "t2-env:env_123",
           audience: relayIssuer,
         });
 
@@ -1190,7 +1190,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
         "not_linked",
       );
       // The address shows before any check passes.
-      expect(state.tunnelHostname).toBe("prod-abc.t3coderelay.com");
+      expect(state.tunnelHostname).toBe("prod-abc.t2coderelay.com");
     }).pipe(
       provideReleaseHarness({
         store,
@@ -1200,7 +1200,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
         connector: {
           pid: 123,
           readyConnections: 0,
-          hostname: "prod-abc.t3coderelay.com",
+          hostname: "prod-abc.t2coderelay.com",
           origin: null,
           protocol: null,
         },
