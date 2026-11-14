@@ -70,6 +70,7 @@ To try it once without installing, run `npx @t2code/cli@latest`. It offers to in
 
 Get the app from the [App Store](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Google Play](https://play.google.com/store/apps/details?id=com.t3tools.t3code). Then follow [remote access](./docs/user/remote-access.md) to connect it to your computer.
 
+
 ### Sign in to an agent
 
 T2 Code needs one agent that is installed and signed in. For example, install [Claude Code](https://claude.com/product/claude-code) and run `claude auth login`, or install [Codex CLI](https://developers.openai.com/codex/cli) and run `codex login`.
@@ -78,9 +79,11 @@ T2 Code needs one agent that is installed and signed in. For example, install [C
 
 ## "Wait, what are you selling me?"
 
+
 Nothing. We built T2 Code because we wanted the best possible development experience with agents. We were inspired by existing solutions like the Codex desktop app, Conductor, Claude Desktop and Cursor Glass, but none met our bar.
 
 We wanted something performant, remote-ready, and truly open. If we ever go the wrong direction, we want you to have everything you need to fork and build the tool that you want.
+
 
 ## Documentation
 
