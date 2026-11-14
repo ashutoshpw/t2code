@@ -10,6 +10,7 @@ import * as Layer from "effect/Layer";
 import { Atom } from "effect/reactivity";
 
 import { isGuestPage } from "../guestPage";
+import { isSharedPage } from "../sharedPage";
 
 import * as Runtime from "../lib/runtime";
 import * as BackgroundActivityReporter from "../lib/backgroundActivityReporter";
@@ -56,11 +57,12 @@ const layerConnection = BackgroundActivityReporter.layer.pipe(
 /**
  * A guest has no session here. Building the connection would open the page origin's environment
  * with whatever cookie this browser holds, plus every environment saved in it, so on the guest
- * page the runtime fails to build and every atom on it keeps its empty value.
+ * page the runtime fails to build and every atom on it keeps its empty value. The shared Spaces
+ * page is the same kind of page.
  */
 const layerForPage = Layer.unwrap(
   Effect.suspend((): Effect.Effect<typeof layerConnection> =>
-    isGuestPage()
+    isGuestPage() || isSharedPage()
       ? Effect.die(new Error("The guest page has no environment connection."))
       : Effect.succeed(layerConnection),
   ),
