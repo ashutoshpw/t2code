@@ -42,6 +42,7 @@ export const RPC_REQUIRED_SCOPES = {
   [WS_METHODS.spacesAssetsUploadGet]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesDatabasesSubscribeChanges]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesPagesSubscribeChanges]: AuthOrchestrationReadScope,
+  [WS_METHODS.spacesCommentsList]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesAssetsGet]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesAssetsList]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesList]: AuthOrchestrationReadScope,

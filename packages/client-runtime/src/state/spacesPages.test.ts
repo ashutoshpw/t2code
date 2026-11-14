@@ -104,6 +104,16 @@ const edit = (id: SpacePageId, revision: number, tree = false): SpacePageChangeE
   spaces: [],
 });
 
+const comment = (
+  id: SpacePageId,
+  revision: number,
+  commentRevision: number,
+): SpacePageChangeEvent => ({
+  type: "changed",
+  pages: [{ id, spaceId: space, revision, bodyRevision: revision, commentRevision }],
+  spaces: [],
+});
+
 describe("spaces page atoms", () => {
   it.effect("moves only the changed page's signal, once per burst", () =>
     Effect.scoped(
@@ -130,6 +140,43 @@ describe("spaces page atoms", () => {
           bodyRevision: 4,
         });
         expect(registry.get(b)).toEqual({ changeSeq: 0, resyncSeq: 0 });
+      }),
+    ),
+  );
+
+  it.effect("moves commentLive for a comment-only event and both signals when the body moved", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { registry, capability, pages, events, scheduled } = yield* harness;
+        registry.mount(capability);
+        registry.set(capability, live);
+        const doc = pages.pageLive(env, pageA);
+        const comments = pages.commentLive(env, pageA);
+        registry.mount(doc);
+        registry.mount(comments);
+        const stream = pages.remoteChanges({ environmentId: env, input: { environmentId: env } });
+        yield* Queue.offer(events, edit(pageA, 2));
+        yield* untilRemote(registry, stream, (state) => state.pages.get(pageA)?.revision === 2);
+        scheduled.shift()!.run();
+        const settled = registry.get(doc).changeSeq;
+        yield* Queue.offer(events, comment(pageA, 2, 1));
+        yield* untilRemote(
+          registry,
+          stream,
+          (state) => state.pages.get(pageA)?.commentRevision === 1,
+        );
+        scheduled.shift()!.run();
+        expect(registry.get(doc).changeSeq).toBe(settled);
+        expect(registry.get(comments)).toEqual({ commentSeq: 1, resyncSeq: 0 });
+        yield* Queue.offer(events, comment(pageA, 3, 2));
+        yield* untilRemote(
+          registry,
+          stream,
+          (state) => state.pages.get(pageA)?.commentRevision === 2,
+        );
+        scheduled.shift()!.run();
+        expect(registry.get(doc).changeSeq).toBe(settled + 1);
+        expect(registry.get(comments).commentSeq).toBe(2);
       }),
     ),
   );

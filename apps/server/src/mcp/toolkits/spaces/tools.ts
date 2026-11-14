@@ -74,6 +74,30 @@ const tool = <const N extends string, P extends Schema.Top, A extends Schema.Top
     .annotate(Tool.Readonly, !writes)
     .annotate(Tool.Destructive, destructive);
 
+const CommentsToolInput = Schema.Union([
+  Schema.Struct({
+    action: Schema.Literal("list"),
+    environmentId: EnvironmentId,
+    pageId: C.SpacePageId,
+    status: Schema.optionalKey(Schema.Literals(["open", "resolved"])),
+    cursor: Schema.optionalKey(C.SpaceCursor),
+  }),
+  Schema.Struct({
+    action: Schema.Literal("thread"),
+    environmentId: EnvironmentId,
+    commentThreadId: C.SpaceCommentThreadId,
+  }),
+  Schema.Struct({
+    action: Schema.Literal("reply"),
+    ...C.mutationInput,
+    commentThreadId: C.SpaceCommentThreadId,
+    text: Schema.String.check(
+      Schema.isMinLength(1),
+      Schema.isMaxLength(C.SPACE_COMMENT_LIMITS.maxAgentReplyChars),
+    ),
+  }),
+]);
+
 export const SpacesToolkit = Toolkit.make(
   tool(
     "t2_spaces_assets_upload_create",
@@ -411,6 +435,15 @@ export const SpacesToolkit = Toolkit.make(
     "Change the manual order of rows inside their data source.",
     "moveRows",
     false,
+  ),
+  tool(
+    "t2_spaces_comments",
+    CommentsToolInput,
+    Schema.Union([C.SpaceCommentsListResult, C.SpaceCommentMutationResult]),
+    "Comments on Spaces pages. list: pageId (status open|resolved, cursor); thread: one commentThreadId. Both return threads with anchors, comments, authors and mutationAdmission. reply: commentThreadId and text, with a new mutationId and receiptEpoch from mutationAdmission.epoch; posts as you in that thread. You cannot resolve comments; the user does.",
+    undefined,
+    false,
+    true,
   ),
   tool(
     "t2_spaces_receipts_get",

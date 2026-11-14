@@ -17,6 +17,7 @@ import { spacesEnvironment } from "~/state/spaces";
 import { createAutosave } from "../draftStore";
 import { SpaceEditorBridge } from "../editorBridge";
 import { SpaceEditor } from "../SpaceEditor";
+import { useSpaceComments } from "../comments/useSpaceComments";
 import { SpaceDocumentSkeleton } from "../SpaceSkeletons";
 import type { SpaceDocumentController } from "../documentController";
 import { SyncedHostContext, SyncedPortsContext, SyncedStaticContext } from "./SyncedContext";
@@ -49,6 +50,7 @@ function EditorBody({
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const ports = useContext(SyncedPortsContext) ?? defaultSyncedPorts;
   const permission = ports.useWritable(environmentId);
+  const comments = useSpaceComments(environmentId, controller.session.key.pageId);
   const flush = useRef<() => void>(() => {});
   const [bridge] = useState(
     () =>
@@ -127,6 +129,7 @@ function EditorBody({
         <SyncedStaticContext.Provider value={null}>
           <SpaceEditor
             embedded
+            comments={comments.enabled ? comments.controller : undefined}
             adapter={bridge.adapter}
             bridge={bridge}
             editable={editable}
