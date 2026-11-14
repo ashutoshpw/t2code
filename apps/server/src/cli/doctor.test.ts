@@ -11,22 +11,7 @@ import * as TestClock from "effect/testing/TestClock";
 
 import * as BootService from "../cloud/bootService.ts";
 import { runDoctor } from "./doctor.ts";
-import { DatabaseMaintenance } from "../persistence/DatabaseMaintenance.ts";
-import * as ProcessRunner from "../processRunner.ts";
-import { acquireServerOwnership } from "../serverOwnership.ts";
-import { makePersistedServerRuntimeState } from "../serverRuntimeState.ts";
-
-// An empty home, so no boot service unit installed on this machine is read.
-const layerHost = Layer.mergeAll(
-  ProcessRunner.layer,
-  Layer.effect(
-    HostProcess.HomeDirectory,
-    Effect.gen(function* () {
-      return yield* (yield* FileSystem.FileSystem).makeTempDirectoryScoped();
-    }),
-  ),
-  Layer.succeed(HostProcess.Environment, {}),
-).pipe(Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)));
+import * as DatabaseMaintenance from "../persistence/DatabaseMaintenance.ts";
 import * as SpacesDatabaseTools from "../spaces/SpacesDatabaseTools.ts";
 import * as SpacesSql from "../spaces/SpacesSql.ts";
 import * as SpacesSqlite from "../spaces/Sqlite.ts";
@@ -66,7 +51,7 @@ it.effect(
                     Effect.ensuring(Effect.sync(() => calls.push("resume"))),
                   ),
               }),
-              Layer.succeed(DatabaseMaintenance, {
+              Layer.succeed(DatabaseMaintenance.DatabaseMaintenance, {
                 inspect: () =>
                   Effect.succeed({
                     databaseBytes: 2000,
@@ -150,6 +135,9 @@ it.effect("doctor reports Spaces without creating chat or missing Spaces databas
     yield* inspect;
     assert.include(messages, "Database: not found.");
     assert.isTrue(messages.some((line) => /^Spaces database: [1-9].*WAL.*reclaimable/.test(line)));
+    assert.isTrue(
+      messages.some((line) => /^Spaces media: .*inventory pending.*collection blocked/.test(line)),
+    );
     assert.equal(Buffer.compare(yield* fs.readFile(spacesPath), before), 0);
     assert.isFalse(yield* fs.exists(chatPath));
   }).pipe(
@@ -185,6 +173,8 @@ it.effect("warns how long reclaiming can take and reports each step with its ela
     ).pipe(
       Effect.provide(
         Layer.mergeAll(
+          NodeServices.layer,
+          SpacesDatabaseTools.layer.pipe(Layer.provide(NodeServices.layer)),
           Layer.mock(BootService.BootService)({
             withStopped: (operation) =>
               Effect.sync(() => output.push("<pause>")).pipe(
@@ -192,7 +182,7 @@ it.effect("warns how long reclaiming can take and reports each step with its ela
                 Effect.ensuring(Effect.sync(() => output.push("<resume>"))),
               ),
           }),
-          Layer.succeed(DatabaseMaintenance, {
+          Layer.succeed(DatabaseMaintenance.DatabaseMaintenance, {
             inspect: () =>
               Effect.succeed({
                 databaseBytes: 12.8 * 1024 ** 3,

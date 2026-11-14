@@ -5,6 +5,7 @@ import * as SqlError from "effect/sql/SqlError";
 import { byteLength, checkLimit, limits } from "./CorePolicy.ts";
 import * as PageStore from "./PageStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
+import * as Reconciliation from "./assets/Reconciliation.ts";
 
 interface Identity {
   readonly id: string;
@@ -123,12 +124,14 @@ export const release = Effect.fn("SpacesReferences.release")(function* (ids: rea
     yield* retire(id, row.merged_into);
     yield* sql`DELETE FROM spaces_block_asset_refs WHERE block_id=${id}`;
     yield* sql`DELETE FROM spaces_blocks WHERE block_id=${id} AND deleted=1`;
+    yield* Reconciliation.issue("block", id, null);
   }
 });
 
 export const maintain = Effect.fn("SpacesReferences.maintain")(function* () {
   const sql = yield* SpacesSql.SpacesSql;
   let bytes = 0;
+  let retiredRows = 0;
   const retired = yield* sql<{
     readonly block_id: string;
     readonly page_id: string;
@@ -141,6 +144,10 @@ export const maintain = Effect.fn("SpacesReferences.maintain")(function* () {
     const pins = yield* sql`SELECT 1 FROM spaces_block_asset_refs WHERE block_id=${row.block_id}
         UNION ALL SELECT 1 FROM spaces_page_owners WHERE owner_block_id=${row.block_id} LIMIT 1`;
     if (pins.length) continue;
+    const issues =
+      yield* sql`SELECT 1 FROM spaces_asset_reconciliation_issues WHERE kind='block' AND entity=${row.block_id}`;
+    if (retiredRows + 2 + issues.length > limits.cleanupBatchRows) break;
+    retiredRows += 2 + issues.length;
     yield* release([row.block_id]);
     yield* sql`UPDATE spaces_pages SET block_count=block_count-1,block_bytes=block_bytes-${row.logical_bytes} WHERE page_id=${row.page_id}`;
   }

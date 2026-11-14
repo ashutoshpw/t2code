@@ -1,3 +1,4 @@
+import { assetLimits } from "./assets/Policy.ts";
 import {
   SpaceLimitExceededError,
   SpaceValidationError,
@@ -32,9 +33,10 @@ export function checkSearchLimit(limit: keyof SpaceSearchLimits, actual: number)
   if (actual > maximum)
     throw new SpaceLimitExceededError({ limit: `search.${limit}`, actual, maximum });
 }
-type ScalarLimit = Exclude<keyof SpaceLimits, "history" | "search" | "maxReferenceHops">;
+type ScalarLimit = Exclude<keyof SpaceLimits, "history" | "search" | "assets" | "maxReferenceHops">;
 
 export const limits: SpaceLimits = Object.freeze({
+  assets: assetLimits,
   history: historyLimits,
   search: searchLimits,
   maxReferenceHops: 32,

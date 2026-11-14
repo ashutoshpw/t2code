@@ -12,6 +12,10 @@ import {
   WsSpacesBlocksReadRpc,
   WsSpacesBlocksApplyRpc,
   WsSpacesReceiptsGetRpc,
+  WsSpacesAssetsUploadCreateRpc,
+  WsSpacesAssetsUploadGetRpc,
+  WsSpacesAssetsUploadFinalizeRpc,
+  WsSpacesAssetsGetRpc,
   WsSpacesPagesCreateChildRpc,
   WsSpacesPagesMoveRpc,
   WsSpacesStructureInspectRpc,
@@ -59,6 +63,10 @@ const strictPayload = <S extends Schema.Top>(
 };
 
 export const group = RpcGroup.make(
+  WsSpacesAssetsUploadCreateRpc.setPayload(strictPayload(C.SpaceAssetUploadCreateInput)),
+  WsSpacesAssetsUploadGetRpc.setPayload(strictPayload(C.SpaceAssetUploadInput)),
+  WsSpacesAssetsUploadFinalizeRpc.setPayload(strictPayload(C.SpaceAssetUploadInput)),
+  WsSpacesAssetsGetRpc.setPayload(strictPayload(C.SpaceAssetGetInput)),
   WsSpacesListRpc.setPayload(strictPayload(C.SpaceListInput)),
   WsSpacesCreateRpc.setPayload(
     strictPayload(C.SpaceCreateInput, (input) => ({ operation: "createSpace", input })),
@@ -115,9 +123,14 @@ export const group = RpcGroup.make(
   WsSpacesTrashListRpc.setPayload(strictPayload(C.SpaceTrashListInput)),
 ).middleware(RpcScopeAuthorization);
 
-export const handlers = Effect.gen(function* () {
+export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: string) {
   const service = yield* SpacesService.SpacesService;
   return group.of({
+    [WS_METHODS.spacesAssetsUploadCreate]: (input) => service.createAssetUpload(input, callerId),
+    [WS_METHODS.spacesAssetsUploadGet]: (input) => service.getAssetUpload(input, callerId),
+    [WS_METHODS.spacesAssetsUploadFinalize]: (input) =>
+      service.finalizeAssetUpload(input, callerId),
+    [WS_METHODS.spacesAssetsGet]: (input) => service.getAssetMetadata(input),
     [WS_METHODS.spacesList]: (input) => service.listSpaces(input),
     [WS_METHODS.spacesCreate]: (input) => service.createSpace(input),
     [WS_METHODS.spacesRename]: (input) => service.renameSpace(input),

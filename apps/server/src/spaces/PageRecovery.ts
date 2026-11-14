@@ -9,6 +9,7 @@ import type { Plan } from "./PageStructure.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as RevisionStore from "./RevisionStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
+import * as Reconciliation from "./assets/Reconciliation.ts";
 
 export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan: Plan) {
   const sql = yield* SpacesSql.SpacesSql;
@@ -17,6 +18,7 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
     return yield* new C.SpaceValidationError({ reason: "invalid_recovery_state" });
   const pageIds = [...plan.recoveryPages];
   const bodies = new Map<string, BlockRow>();
+  const revisionKeys: { readonly pageId: string; readonly revision: number }[] = [];
   const budget = RevisionStore.createCaptureBudget();
   const cleanup = (rows: number) => {
     budget.rows += rows;
@@ -27,6 +29,18 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
         actual: budget.rows,
       });
   };
+  const reconciliationIssue = Effect.fn("SpacesRecovery.reconciliationIssue")(function* (
+    kind: string,
+    entity: string,
+  ) {
+    const rows = yield* sql<{
+      readonly reason: string;
+    }>`SELECT reason FROM spaces_asset_reconciliation_issues WHERE kind=${kind} AND entity=${entity}`;
+    for (const row of rows) {
+      cleanup(1);
+      plan.touch(`asset-issue:${kind}:${entity}`, { kind, entity, reason: row.reason });
+    }
+  });
   let retainedBytes = 0;
   for (const id of pageIds) {
     cleanup(1);
@@ -41,6 +55,7 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
       plan.touch(`block:${row.block_id}`, { ...row });
       plan.blocks.set(row.block_id, row);
       bodies.set(row.block_id, row);
+      yield* reconciliationIssue("block", row.block_id);
       cleanup(1);
       const pins = yield* sql<{
         readonly asset_id: string;
@@ -57,6 +72,8 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
     }>`SELECT to_revision,logical_bytes,asset_count FROM spaces_revisions WHERE page_id=${id} ORDER BY to_revision LIMIT ${limits.cleanupBatchRows + 1}`;
     let pageBytes = 0;
     for (const revision of revisions) {
+      revisionKeys.push({ pageId: id, revision: revision.to_revision });
+      yield* reconciliationIssue("history", canonical([id, revision.to_revision]));
       plan.touch(`revision:${id}:${revision.to_revision}`, { pageId: id, ...revision });
       cleanup(1);
       const pins = yield* sql<{
@@ -103,6 +120,7 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
   )
     return yield* new C.SpacesUnavailableError({ stage: "storage" });
   if (externalMarker) {
+    yield* reconciliationIssue("block", externalMarker.block_id);
     cleanup(1);
     plan.produced({ retireBlockId: externalMarker.block_id });
     const pins = yield* sql<{
@@ -121,7 +139,7 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
   }>`SELECT revision_bytes FROM spaces_core WHERE singleton=1`;
   if (!meta || meta.revision_bytes < retainedBytes)
     return yield* new C.SpacesUnavailableError({ stage: "storage" });
-  return { source, pageIds, bodies, budget, retainedBytes, externalMarker, parent };
+  return { source, pageIds, bodies, revisionKeys, budget, retainedBytes, externalMarker, parent };
 });
 
 export const purge = Effect.fn("SpacesRecovery.purge")(function* (
@@ -130,8 +148,11 @@ export const purge = Effect.fn("SpacesRecovery.purge")(function* (
   now: number,
 ) {
   const sql = yield* SpacesSql.SpacesSql;
-  const { source, pageIds, bodies, budget, retainedBytes, externalMarker, parent } =
+  const { source, pageIds, bodies, revisionKeys, budget, retainedBytes, externalMarker, parent } =
     yield* prepare(plan);
+  for (const key of revisionKeys)
+    yield* Reconciliation.issue("history", canonical([key.pageId, key.revision]), null);
+  for (const id of bodies.keys()) yield* Reconciliation.issue("block", id, null);
   for (const id of pageIds) {
     yield* sql`DELETE FROM spaces_page_owners WHERE child_page_id=${id}`;
   }
