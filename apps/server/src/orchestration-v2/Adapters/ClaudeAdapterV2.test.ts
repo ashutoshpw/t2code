@@ -1198,7 +1198,7 @@ describe("ClaudeAdapterV2 Auto-accept edits", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const idAllocator = yield* IdAllocator.IdAllocatorV2;
       const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-claude-accept-edits-",
+        prefix: "t2-claude-accept-edits-",
       });
       let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
       const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
@@ -1992,7 +1992,7 @@ describe("ClaudeAdapterV2 resume compaction", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const idAllocator = yield* IdAllocator.IdAllocatorV2;
       const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-claude-resume-",
+        prefix: "t2-claude-resume-",
       });
       let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
       const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
@@ -14119,7 +14119,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-sibling-replace-",
+          prefix: "t2-claude-v2-sibling-replace-",
         });
         const nativeIds = ["native-thread-roster-a", "native-thread-roster-b"] as const;
         let allocateIndex = 0;

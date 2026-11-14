@@ -95,7 +95,61 @@ it.effect.each([
           _tag: "PreviewAutomationUnavailableError",
           capability: "preview",
           threadId,
-        });
+          providerSessionId: "preview-controls-provider-session",
+          providerInstanceId: ProviderInstanceId.make("codex"),
+        },
+        client: undefined,
+        capabilities: new Set(effective.enableAgentBrowserAccess ? ["preview"] : []),
+        issuedAt: 0,
+      };
+      const manager = yield* Preview.make.pipe(
+        Effect.provide(
+          Layer.merge(
+            ServerConfig.layerTest(process.cwd(), { prefix: "t2-preview-controls-" }).pipe(
+              Layer.provide(NodeServices.layer),
+            ),
+            NodeCrypto.layer,
+          ),
+        ),
+      );
+      const tab = yield* manager.open({ threadId, url: "http://localhost:3000" });
+      const layerDependencies = Layer.mergeAll(
+        PreviewAutomationBroker.layer.pipe(
+          Layer.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
+        ),
+        Layer.succeed(Preview.PreviewManager, manager),
+        Layer.succeed(McpInvocationContext.McpInvocationContext, scope),
+        McpToolAccessTestkit.liveThreadsLayer,
+        Layer.mock(ServerSettings.ServerSettingsService)({
+          getSettings: Effect.succeed(settings),
+        }),
+      );
+      const toolkit = yield* PreviewControlsToolkit.pipe(
+        Effect.provide(
+          McpToolAccess.HandlersLayer.layer(PreviewControlsHandlers.layer).pipe(
+            Layer.provide(layerDependencies),
+          ),
+        ),
+      );
+      const listed = yield* toolkit
+        .handle("t2_preview_list", {})
+        .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(layerDependencies));
+      const closed = yield* toolkit
+        .handle("t2_preview_close", { tabId: tab.tabId })
+        .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(layerDependencies));
+      if (projectAccess) {
+        expect(listed.at(-1)?.result).toMatchObject({ sessions: [tab], nextCursor: null });
+        expect(closed.at(-1)?.result).toEqual({});
+        expect((yield* manager.list({ threadId })).sessions).toEqual([]);
+      } else {
+        for (const result of [listed, closed]) {
+          expect(result.at(-1)?.result).toMatchObject({
+            _tag: "PreviewAutomationUnavailableError",
+            capability: "preview",
+            threadId,
+          });
+        }
+        expect((yield* manager.list({ threadId })).sessions).toEqual([tab]);
       }
       expect((yield* manager.list({ threadId })).sessions).toEqual([tab]);
     }

@@ -104,7 +104,7 @@ const withScratch = <A, E>(
 ) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
-    const baseDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-managed-folders-" });
+    const baseDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-managed-folders-" });
     return yield* body({ baseDir }).pipe(Effect.provide(layer(baseDir, options)));
   }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)));
 
@@ -127,7 +127,7 @@ it.effect("offers nothing, and says why once, when the data dir sits inside a Gi
   return Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const checkout = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-scratch-repo-" });
+    const checkout = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-scratch-repo-" });
     yield* git(checkout, ["init", "--quiet"]);
     const baseDir = path.join(checkout, ".t2");
     yield* fileSystem.makeDirectory(baseDir);
@@ -401,7 +401,7 @@ const withGitEnv = <A, E, R>(
 ) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
-    const emptyConfig = yield* fileSystem.makeTempFileScoped({ prefix: "t3-gitconfig-" });
+    const emptyConfig = yield* fileSystem.makeTempFileScoped({ prefix: "t2-gitconfig-" });
     const hostEnv: NodeJS.ProcessEnv = { ...(yield* HostProcess.Environment) };
     for (const key of GIT_IDENTITY_KEYS) delete hostEnv[key];
     return yield* effect.pipe(
@@ -535,7 +535,7 @@ it.effect("says Git is not installed when a named project cannot start Git", () 
       Effect.gen(function* () {
         const folders = yield* ManagedProjectFolders.ManagedProjectFolders;
 
-        const failure = yield* Effect.flip(folders.createNamedProject({ name: "T3Code Test" }));
+        const failure = yield* Effect.flip(folders.createNamedProject({ name: "T2Code Test" }));
 
         assert.strictEqual(
           failure.message,

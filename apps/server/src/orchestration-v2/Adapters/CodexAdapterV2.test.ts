@@ -322,7 +322,7 @@ describe("CodexAdapterV2 runtime policy", () => {
   it.effect("omits default-mode collaboration settings without the T2 MCP server", () =>
     Effect.gen(function* () {
       const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
-        nativeThreadId: "native-default-without-t3-mcp",
+        nativeThreadId: "native-default-without-t2-mcp",
         codexInput: [{ type: "text", text: "implement this task" }],
         runtimePolicy: {
           runtimeMode: "full-access",
@@ -343,7 +343,7 @@ describe("CodexAdapterV2 runtime policy", () => {
   it.effect("adds T2 plan-mode developer instructions when the T2 MCP server is attached", () =>
     Effect.gen(function* () {
       const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
-        nativeThreadId: "native-plan-with-t3-mcp",
+        nativeThreadId: "native-plan-with-t2-mcp",
         codexInput: [{ type: "text", text: "plan this task" }],
         runtimePolicy: {
           runtimeMode: "full-access",
@@ -369,7 +369,7 @@ describe("CodexAdapterV2 runtime policy", () => {
   it.effect("keeps Codex in plan mode without referencing unavailable T2 MCP tools", () =>
     Effect.gen(function* () {
       const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
-        nativeThreadId: "native-plan-without-t3-mcp",
+        nativeThreadId: "native-plan-without-t2-mcp",
         codexInput: [{ type: "text", text: "plan this task" }],
         runtimePolicy: {
           runtimeMode: "full-access",
@@ -603,7 +603,7 @@ describe("CodexAdapterV2 process spawning", () => {
         Effect.provide(
           Layer.mergeAll(
             CodexAdapterV2.layerAppServerClientFactory,
-            ServerConfig.layerTest(process.cwd(), { prefix: "t3-codex-binary-home-" }),
+            ServerConfig.layerTest(process.cwd(), { prefix: "t2-codex-binary-home-" }),
           ),
         ),
         Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
@@ -6556,39 +6556,14 @@ describe("CodexAdapterV2 post-settle continuation", () => {
   );
   it.effect("stops a completed run's background command without a client-supplied run", () => {
     const transcript = makeBackgroundStopTranscript(true);
-    return Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-bg-stop-workspace-" });
-      const localTranscript = yield* decodeReplayTranscriptJson(
-        (yield* encodeReplayTranscriptJson(transcript)).replaceAll(
-          yield* encodeStringJson("/workspace"),
-          yield* encodeStringJson(cwd),
-        ),
-      );
-      const replayDriver = yield* CodexReplay.makeReplayDriver(withConfigReads(localTranscript));
-      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-      assert.equal(
-        Number(yield* spawner.exitCode(ChildProcess.make("git", ["init", "--quiet"], { cwd }))),
-        0,
-      );
-      assert.equal(
-        Number(
-          yield* spawner.exitCode(
-            ChildProcess.make(
-              "git",
-              [
-                "-c",
-                "user.name=Test",
-                "-c",
-                "user.email=test@example.com",
-                "commit",
-                "--allow-empty",
-                "--quiet",
-                "-m",
-                "Initial commit",
-              ],
-              { cwd },
-            ),
+    return Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t2-bg-stop-workspace-" });
+        const localTranscript = yield* decodeReplayTranscriptJson(
+          (yield* encodeReplayTranscriptJson(transcript)).replaceAll(
+            yield* encodeStringJson("/workspace"),
+            yield* encodeStringJson(cwd),
           ),
         ),
         0,
@@ -6681,56 +6656,16 @@ describe("CodexAdapterV2 post-settle continuation", () => {
   });
 
   it.effect("Stop ends a background command no Codex process tracks any more", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-bg-stale-workspace-" });
-      const staleTranscript = makeCodexReplayTranscript({
-        scenario: "codex-bg-stop-untracked",
-        entries: [
-          ...backgroundExecTranscript.entries.slice(0, -1),
-          { type: "runtime_exit", status: "success" },
-        ],
-      });
-      const localTranscript = yield* decodeReplayTranscriptJson(
-        (yield* encodeReplayTranscriptJson(staleTranscript)).replaceAll(
-          yield* encodeStringJson("/workspace"),
-          yield* encodeStringJson(cwd),
-        ),
-      );
-      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-      for (const args of [
-        ["init", "--quiet"],
-        [
-          "-c",
-          "user.name=Test",
-          "-c",
-          "user.email=test@example.com",
-          "commit",
-          "--allow-empty",
-          "--quiet",
-          "-m",
-          "Initial commit",
-        ],
-      ]) {
-        assert.equal(Number(yield* spawner.exitCode(ChildProcess.make("git", args, { cwd }))), 0);
-      }
-      yield* Effect.gen(function* () {
-        const orchestrator = yield* Orchestrator.OrchestratorV2;
-        const worker = yield* EffectWorker.OrchestrationEffectWorkerV2;
-        const threadId = ThreadId.make("thread:background-stop-untracked");
-        yield* orchestrator.dispatch({
-          type: "thread.create",
-          commandId: CommandId.make("create-background-stop-untracked"),
-          threadId,
-          projectId: ProjectId.make("project:background-stop-untracked"),
-          title: "Background stop untracked",
-          modelSelection: CODEX_TEST_MODEL_SELECTION,
-          runtimeMode: "full-access",
-          interactionMode: "default",
-          branch: null,
-          worktreePath: cwd,
-          createdBy: "user",
-          creationSource: "web",
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t2-bg-stale-workspace-" });
+        const staleTranscript = makeCodexReplayTranscript({
+          scenario: "codex-bg-stop-untracked",
+          entries: [
+            ...backgroundExecTranscript.entries.slice(0, -1),
+            { type: "runtime_exit", status: "success" },
+          ],
         });
         const settled = yield* orchestrator.streamDomainEvents.pipe(
           Stream.filter(

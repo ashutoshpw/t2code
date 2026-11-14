@@ -1492,9 +1492,9 @@ export const CODEX_THREAD_CONFIG = {
 
 // request_secret can wait an hour; keep Codex's MCP timeout above that.
 const CODEX_T2_MCP_TOOL_TIMEOUT_SEC = 65 * 60;
-// Holds T3 tools Codex must call directly, never from Code Mode. Calls arrive as
-// `t3-code-direct.<tool>`; t2McpToolPresentation.ts must keep resolving that form.
-const CODEX_T2_DIRECT_MCP_SERVER = "t3-code-direct";
+// Holds T2 tools Codex must call directly, never from Code Mode. Calls arrive as
+// `t2-code-direct.<tool>`; t2McpToolPresentation.ts must keep resolving that form.
+const CODEX_T2_DIRECT_MCP_SERVER = "t2-code-direct";
 const CODEX_DIRECT_ONLY_T2_TOOLS = ["t2_thread_wait", "delegate_task"];
 
 function codexThreadRuntimeParams(input: {

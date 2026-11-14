@@ -121,7 +121,7 @@ const layerTest = ProviderHostLive.layer.pipe(
   Layer.provideMerge(ServerSettings.layerTest()),
   Layer.provideMerge(ServerSecretStore.layer),
   Layer.provide(
-    ServerConfig.layerTest(process.cwd(), { prefix: "t3-antigravity-provider-test-" }).pipe(
+    ServerConfig.layerTest(process.cwd(), { prefix: "t2-antigravity-provider-test-" }).pipe(
       Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
     ),
   ),

@@ -3332,7 +3332,7 @@ describe("OrchestratorMcpService provider resolution", () => {
       runCount: 0,
       webhook: {
         path: "/hooks/scheduled-task/secret",
-        url: "https://t3.example/hooks/secret",
+        url: "https://t2.example/hooks/secret",
         hasSecret: false,
       },
       ...overrides,
@@ -3449,7 +3449,7 @@ describe("OrchestratorMcpService provider resolution", () => {
           ),
           Effect.provide(service([hook], null, upserted)),
         );
-        assert.equal(created.webhookUrl, "https://t3.example/hooks/secret");
+        assert.equal(created.webhookUrl, "https://t2.example/hooks/secret");
         const converted = yield* OrchestratorMcpService.OrchestratorMcpService.pipe(
           Effect.flatMap((mcp) =>
             mcp.updateScheduledTask(supervisedClient, {

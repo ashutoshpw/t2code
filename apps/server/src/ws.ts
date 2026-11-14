@@ -1639,8 +1639,6 @@ export const layerWsRpc = (
         return { ...listed, sessions };
       });
 
-<<<<<<< HEAD
-=======
       const importAcpRegistrySession = Effect.fn("ws.acpRegistry.importSession")(function* (
         input: AcpRegistryImportSessionInput,
       ) {
@@ -1734,7 +1732,6 @@ export const layerWsRpc = (
         );
       });
 
->>>>>>> 058f1787f8 (rebase: restore the fork's own seams the upstream merge dropped)
       const deleteAcpRegistrySession = Effect.fn("ws.acpRegistry.deleteSession")(function* (
         input: AcpRegistryDeleteSessionInput,
       ) {

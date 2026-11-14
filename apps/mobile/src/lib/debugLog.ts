@@ -11,6 +11,12 @@ function globalValue(name: string): unknown {
 
 export function createDebugLogger(namespace: string): DebugLogger {
   const isEnabled = () => {
+    if (options.enabledInDev === true && typeof __DEV__ !== "undefined" && __DEV__) {
+      return true;
+    }
+    if (options.legacyGlobalFlag !== undefined && globalValue(options.legacyGlobalFlag) === true) {
+      return true;
+    }
     const filter = globalValue("__T2_DEBUG__");
     return filter === true || (Array.isArray(filter) && filter.includes(namespace));
   };
@@ -19,9 +25,9 @@ export function createDebugLogger(namespace: string): DebugLogger {
       return;
     }
     if (data === undefined) {
-      console.log(`[t3-${namespace}] ${event}`);
+      console.log(`[t2-${namespace}] ${event}`);
     } else {
-      console.log(`[t3-${namespace}] ${event}`, data);
+      console.log(`[t2-${namespace}] ${event}`, data);
     }
   };
   return { isEnabled, log };

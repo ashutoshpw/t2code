@@ -3,6 +3,33 @@ import { describe, expect, it } from "vite-plus/test";
 import { cliArchiveTarCommand, newestCliReleaseVersion, parseChecksums } from "./cliRelease.ts";
 
 describe("cliRelease", () => {
+  it("names archives by version and platform, zip only on Windows", () => {
+    expect(cliArchiveFileName("1.2.3-preview.20260911.4", "linux-x64")).toBe(
+      "t2-1.2.3-preview.20260911.4-linux-x64.tar.gz",
+    );
+    expect(cliArchiveFileName("1.2.3", "win32-x64")).toBe("t2-1.2.3-win32-x64.zip");
+  });
+
+  it("only maps platforms and architectures that have a release archive", () => {
+    expect(cliArchivePlatformKey("darwin", "arm64")).toBe("darwin-arm64");
+    expect(cliArchivePlatformKey("linux", "x64")).toBe("linux-x64");
+    expect(cliArchivePlatformKey("win32", "x64")).toBe("win32-x64");
+    expect(cliArchivePlatformKey("darwin", "x64")).toBeUndefined();
+    expect(cliArchivePlatformKey("linux", "arm64")).toBe("linux-arm64");
+    expect(cliArchivePlatformKey("win32", "arm64")).toBe("win32-arm64");
+    expect(cliArchivePlatformKey("freebsd", "x64")).toBeUndefined();
+    expect(cliArchivePlatformKey("linux", "ia32")).toBeUndefined();
+  });
+
+  it("resolves download URLs under the tagged release, honoring a mirror", () => {
+    expect(cliReleaseDownloadBaseUrl("1.2.3")).toBe(
+      "https://github.com/ashutoshpw/t2code/releases/download/v1.2.3",
+    );
+    expect(cliReleaseDownloadBaseUrl("1.2.3", "https://mirror.example/t2/")).toBe(
+      "https://mirror.example/t2/v1.2.3",
+    );
+  });
+
   it("parses sha256sum output including binary-mode markers", () => {
     const checksums = parseChecksums(
       [

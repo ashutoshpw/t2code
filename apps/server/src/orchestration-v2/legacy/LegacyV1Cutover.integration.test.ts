@@ -734,14 +734,15 @@ describe("orchestration v2 legacy v1 cutover", () => {
   it.live(
     "migrates an untouched v1 database copy through shell import, lazy transcripts, continuation and restart",
     () =>
-      Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const workspace = yield* checkpointWorkspace("legacy-v1-cutover");
-        const stateDir = yield* fs.makeTempDirectory({ prefix: "t3-v1-cutover-state-" });
-        const fixturePath = path.join(stateDir, "v1-source.sqlite");
-        const copyPath = path.join(stateDir, "userdata", "state.sqlite");
-        yield* fs.makeDirectory(path.join(stateDir, "userdata"), { recursive: true });
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          const path = yield* Path.Path;
+          const workspace = yield* checkpointWorkspace("legacy-v1-cutover");
+          const stateDir = yield* fs.makeTempDirectory({ prefix: "t2-v1-cutover-state-" });
+          const fixturePath = path.join(stateDir, "v1-source.sqlite");
+          const copyPath = path.join(stateDir, "userdata", "state.sqlite");
+          yield* fs.makeDirectory(path.join(stateDir, "userdata"), { recursive: true });
 
         const v1Snapshot = yield* seedV1Database(fixturePath, workspace);
         const fixtureHashBefore = yield* sha256File(fixturePath);

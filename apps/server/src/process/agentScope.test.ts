@@ -75,7 +75,7 @@ const withFakeSystemd = <A, E>(
   } = {},
 ) =>
   Effect.gen(function* () {
-    const bin = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-agent-scope-"));
+    const bin = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-agent-scope-"));
     for (const name of ["systemd-run", "systemctl", "agent"]) {
       NodeFS.writeFileSync(NodePath.join(bin, name), "", { mode: 0o755 });
     }
@@ -144,7 +144,7 @@ const withFakeSystemd = <A, E>(
   }).pipe(
     Effect.scoped,
     Effect.provide(
-      ServerConfig.layerTest(process.cwd(), { prefix: "t3-agent-scope-" }).pipe(
+      ServerConfig.layerTest(process.cwd(), { prefix: "t2-agent-scope-" }).pipe(
         Layer.provideMerge(NodeServices.layer),
       ),
     ),
@@ -339,7 +339,7 @@ describe("AgentScope service", () => {
         const memoryLimits = () =>
           calls
             .filter(
-              ([, verb, , slice]) => verb === "set-property" && slice === "app-t3code-agents.slice",
+              ([, verb, , slice]) => verb === "set-property" && slice === "app-t2code-agents.slice",
             )
             .map((args) => args.slice(4));
         yield* launch;
@@ -379,7 +379,7 @@ describe("AgentScope service", () => {
             name: "terminal",
             survivesRestart: true,
           });
-          expect(sliceOf(terminal)).toBe("app-t3code-agents.slice");
+          expect(sliceOf(terminal)).toBe("app-t2code-agents.slice");
           expect(stopsOf(calls)).toHaveLength(1);
         }),
       { leftovers: true },
