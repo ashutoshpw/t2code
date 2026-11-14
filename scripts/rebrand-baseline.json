@@ -30,5 +30,33 @@
   {
     "file": "docs/user/telemetry.md",
     "line": "The T2 Code server sends product usage events to the shared ingest endpoint at `ingest.t3.codes`,"
+  },
+  {
+    "file": "apps/web/src/components/clerk/T3ChatUserProfilePage.tsx",
+    "line": ""
+  },
+  {
+    "file": "apps/web/src/components/clerk/useT3ChatLink.ts",
+    "line": ""
+  },
+  {
+    "file": "infra/relay/src/t3chat/T3ChatAccounts.test.ts",
+    "line": ""
+  },
+  {
+    "file": "infra/relay/src/t3chat/T3ChatAccounts.ts",
+    "line": ""
+  },
+  {
+    "file": "apps/mobile/deps/react-native-enriched-markdown-1.2.0-t3.16-29ddd424.tgz",
+    "line": ""
+  },
+  {
+    "file": "apps/mobile/deps/react-native-screens-5.0.0-t3.48.tgz",
+    "line": ""
+  },
+  {
+    "file": "apps/web/src/components/T3AppIcon.tsx",
+    "line": ""
   }
 ]

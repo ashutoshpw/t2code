@@ -50,6 +50,7 @@ export const RPC_REQUIRED_SCOPES = {
   [WS_METHODS.spacesReferencesResolve]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesTrashList]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesSearch]: AuthOrchestrationReadScope,
+  [WS_METHODS.spacesContextCapture]: AuthOrchestrationReadScope,
 
   [ORCHESTRATION_V2_WS_METHODS.dispatchCommand]: AuthOrchestrationOperateScope,
   [ORCHESTRATION_V2_WS_METHODS.getWorkflowScript]: AuthOrchestrationReadScope,

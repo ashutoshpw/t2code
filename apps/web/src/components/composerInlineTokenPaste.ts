@@ -61,6 +61,11 @@ export function readPastedComposerContext(
     version: 1,
     source,
     records: [...records.values()].filter((record) => pastedIds.has(record.contextId)),
+    ...(decodedFragment?.selectors
+      ? {
+          selectors: decodedFragment.selectors.filter((record) => pastedIds.has(record.contextId)),
+        }
+      : {}),
   };
 }
 
@@ -73,7 +78,9 @@ export function importPastedComposerText(
   const pastedText = readPastedPlainText(clipboardData);
   const fragment = importContextFragment ? readPastedComposerContext(clipboardData) : null;
   const rewrittenIds =
-    fragment && fragment.records.length > 0 ? importContextFragment!(fragment) : null;
+    fragment && (fragment.records.length > 0 || (fragment.selectors?.length ?? 0) > 0)
+      ? importContextFragment!(fragment)
+      : null;
   if (!rewrittenIds || rewrittenIds.size === 0) return pastedText;
   const nextId = (contextId: string) => {
     const id = rewrittenIds.get(contextId);

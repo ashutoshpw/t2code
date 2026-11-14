@@ -1,3 +1,10 @@
+import * as Schema from "effect/Schema";
+import * as NodeHttpClient from "@effect/platform-node/NodeHttpClient";
+import * as Console from "effect/Console";
+import * as Tracer from "effect/Tracer";
+import * as NodeUtil from "node:util";
+import { makeLocalFileTracer, makeTraceSink } from "@t2code/shared/observability";
+import * as ServerLogger from "../../serverLogger.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeHttpPlatform from "@effect/platform-node/NodeHttpPlatform";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
@@ -14,7 +21,13 @@ import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 import * as SqlClient from "effect/sql/SqlClient";
-import { HttpRouter } from "effect/http";
+import {
+  HttpRouter,
+  HttpServerRequest,
+  HttpServerResponse,
+  HttpServerError,
+  HttpMiddleware,
+} from "effect/http";
 
 import * as Config from "../../config.ts";
 import * as Settings from "../../serverSettings.ts";
@@ -34,6 +47,16 @@ import * as Sqlite from "../Sqlite.ts";
 import * as Catalog from "./Catalog.ts";
 import * as Upload from "./Upload.ts";
 import * as GC from "./GC.ts";
+
+const isControlHttpTrace = Schema.is(
+  Schema.Struct({
+    type: Schema.Literal("effect-span"),
+    attributes: Schema.Struct({
+      "url.path": Schema.String,
+      "http.response.status_code": Schema.Number,
+    }),
+  }),
+);
 
 const environmentId = EnvironmentId.make("public-assets");
 const pdf = new TextEncoder().encode("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n");
@@ -68,6 +91,7 @@ const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(function* <A, E, R>(
     readonly request: (relative: string, init?: RequestInit) => Effect.Effect<Response>;
   }) => Effect.Effect<A, E, R>,
   enabled = true,
+  logRequests = false,
 ) {
   const scope = yield* Effect.scope;
   const clock = yield* Clock.Clock;
@@ -103,6 +127,9 @@ const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(function* <A, E, R>(
       Layer.mock(Orchestrator.OrchestratorV2)({}),
       Layer.succeed(BuiltInDrivers.SourceControlDrivers, []),
       Layer.succeed(Clock.Clock, clock),
+      Layer.effect(HttpMiddleware.TracerDisabledWhen, HttpMiddleware.TracerDisabledWhen).pipe(
+        ServerHttp.withUntracedRequests,
+      ),
     ).pipe(Layer.provideMerge(NodeServices.layer)),
     scope,
   );
@@ -110,13 +137,34 @@ const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(function* <A, E, R>(
     Layer.mergeAll(
       ServerHttp.layerSpacesUploadRoute,
       ServerHttp.layerAssetRoute,
-      ServerHttp.layerHttpCompression,
-    ).pipe(Layer.provideMerge(Layer.succeedContext(context))),
-    { disableLogger: true },
+      HttpRouter.add("GET", "/api/assets-info", HttpServerResponse.text("public control")),
+      HttpRouter.add(
+        "GET",
+        "/api/assets/:token/trace-error",
+        Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
+          Effect.fail(
+            new HttpServerError.HttpServerError({
+              reason: new HttpServerError.InternalError({
+                request,
+                description: "Synthetic response failure",
+              }),
+            }),
+          ),
+        ),
+      ),
+    ).pipe(
+      Layer.provide(ServerHttp.layerBrowserApiCors),
+      Layer.provide(ServerHttp.layerHttpCompression),
+      ServerHttp.withUntracedRequests,
+      Layer.provideMerge(Layer.succeedContext(context)),
+    ),
+    { disableLogger: !logRequests, middleware: ServerHttp.assetRequestPrivacy },
   );
   yield* Effect.addFinalizer(() => Effect.promise(dispose));
   const request = (relative: string, init?: RequestInit) =>
-    Effect.promise(() => handler(new Request(`http://assets.test${relative}`, init)));
+    Effect.contextWith((current: Context.Context<never>) =>
+      Effect.promise(() => handler(new Request(`http://assets.test${relative}`, init), current)),
+    );
   return yield* use({ config, request }).pipe(Effect.provide(context));
 }, Effect.provide(NodeServices.layer));
 const usage = Effect.fn("SpacesAssetsPublicTest.usage")(function* (
@@ -136,6 +184,214 @@ const usage = Effect.fn("SpacesAssetsPublicTest.usage")(function* (
 });
 
 describe("Spaces public asset wiring", () => {
+  it.effect(
+    "keeps bearer paths and queries out of real HTTP traces and access logs without suppressing unrelated requests",
+    () =>
+      fixture(
+        ({ config, request }) =>
+          Effect.gen(function* () {
+            const fs = yield* FileSystem.FileSystem;
+            const filePath = config.serverTracePath;
+            const options = { filePath, maxBytes: 1_048_576, maxFiles: 1, batchWindowMs: 10_000 };
+            const sink = yield* makeTraceSink(options);
+            const tracer = yield* makeLocalFileTracer({ ...options, sink });
+            const printed: string[] = [];
+            const testConsole = {
+              ...globalThis.console,
+              log: (...args: ReadonlyArray<unknown>) => {
+                printed.push(NodeUtil.format(...args));
+              },
+            } satisfies Console.Console;
+            const secrets = ["SYNTHETIC_ASSET_QUERY", "SYNTHETIC_ASSET_BEARER"];
+            yield* Effect.gen(function* () {
+              const service = yield* Service.SpacesService;
+              const grant = yield* service.createAssetUpload(
+                common("trace-policy"),
+                "trace-fixture",
+              );
+              secrets.push(grant.relativeUrl.split("/").at(-1)!);
+              for (const path of [
+                grant.relativeUrl,
+                grant.relativeUrl.replace(
+                  "/api/spaces/assets/upload",
+                  "/api/spaces//assets/upload",
+                ),
+              ]) {
+                const preflight = yield* request(`${path}?query=${secrets[0]}`, {
+                  method: "OPTIONS",
+                  headers: {
+                    origin: "https://app.t2.codes",
+                    "access-control-request-method": "POST",
+                    "access-control-request-headers": "content-type",
+                  },
+                });
+                expect(preflight.status).toBe(204);
+                expect(preflight.headers.get("access-control-allow-origin")).toBe("*");
+                expect(preflight.headers.get("access-control-allow-methods")).toContain("POST");
+                expect(preflight.headers.get("access-control-allow-headers")).toContain(
+                  "content-type",
+                );
+                expect(preflight.headers.get("access-control-max-age")).toBe("600");
+              }
+              expect(
+                (yield* request(grant.relativeUrl, {
+                  method: "POST",
+                  headers: { "content-length": String(pdf.length) },
+                  body: new Uint8Array(pdf),
+                })).status,
+              ).toBe(204);
+              const signed = yield* issueAssetUrl({
+                resource: { _tag: "spaces-asset", environmentId, assetId: grant.assetId },
+              });
+              secrets.push(signed.relativeUrl.split("/")[3]!);
+              const target = `${signed.relativeUrl}?query=${secrets[0]}`;
+              for (const path of [target, target.replace("/api/assets", "/api//assets")]) {
+                const preflight = yield* request(path, {
+                  method: "OPTIONS",
+                  headers: {
+                    origin: "https://app.t2.codes",
+                    "access-control-request-method": "GET",
+                    "access-control-request-headers": "range",
+                  },
+                });
+                expect(preflight.status).toBe(204);
+                expect(preflight.headers.get("access-control-allow-origin")).toBe("*");
+                expect(preflight.headers.get("access-control-allow-methods")).toContain("GET");
+              }
+              const full = yield* request(target);
+              expect(full.status).toBe(200);
+              expect(new Uint8Array(yield* Effect.promise(() => full.arrayBuffer()))).toEqual(pdf);
+              expect(full.headers.get("cache-control")).toContain("private");
+              const exposed = full.headers.get("access-control-expose-headers")?.split(",");
+              expect(exposed).toEqual([
+                "accept-ranges",
+                "content-range",
+                "content-length",
+                "content-encoding",
+                "etag",
+              ]);
+              const head = yield* request(target, { method: "HEAD" });
+              expect(head.status).toBe(200);
+              expect(yield* Effect.promise(() => head.text())).toBe("");
+              const range = yield* request(target, { headers: { range: "bytes=0-4" } });
+              expect(range.status).toBe(206);
+              expect(new Uint8Array(yield* Effect.promise(() => range.arrayBuffer()))).toEqual(
+                pdf.subarray(0, 5),
+              );
+              expect((yield* request(target, { headers: { range: "bytes=999999-" } })).status).toBe(
+                416,
+              );
+              expect((yield* request(target, { method: "POST" })).status).toBe(404);
+              for (const [path, status] of [
+                [`/api/assets/${secrets[1]}/missing.pdf?query=${secrets[0]}`, 404],
+                [`/api/assets/${secrets[1]}/trace-error?query=${secrets[0]}`, 500],
+                [`/api/assets?query=${secrets[0]}`, 404],
+              ] as const)
+                expect((yield* request(path)).status).toBe(status);
+              for (const [prefix, status] of [
+                ["/api//assets", 404],
+                ["//api///assets", 404],
+                ["/API/ASSETS", 200],
+                ["/%61pi/ass%65ts", 404],
+              ] as const) {
+                const alias = target.replace("/api/assets", prefix);
+                for (const method of ["GET", "HEAD", "POST"] as const) {
+                  const response = yield* request(alias, { method });
+                  expect(response.status).toBe(method === "POST" ? 404 : status);
+                  yield* Effect.promise(() => response.arrayBuffer());
+                }
+                const ranged = yield* request(alias, { headers: { range: "bytes=0-4" } });
+                expect(ranged.status).toBe(status === 200 ? 206 : status);
+                yield* Effect.promise(() => ranged.arrayBuffer());
+              }
+              for (const prefix of [
+                "/api/spaces//assets/upload",
+                "//api///spaces/assets//upload",
+                "/%61pi/spaces/ass%65ts/upload",
+              ]) {
+                const alias = `${grant.relativeUrl.replace("/api/spaces/assets/upload", prefix)}?query=${secrets[0]}`;
+                expect(
+                  (yield* request(alias, {
+                    method: "POST",
+                    headers: { "content-length": String(pdf.length) },
+                    body: new Uint8Array(pdf),
+                  })).status,
+                ).toBe(404);
+              }
+              expect(
+                (yield* request(`/API/SPACES/ASSETS/UPLOAD/${secrets[1]}?query=${secrets[0]}`, {
+                  method: "POST",
+                })).status,
+              ).toBe(404);
+              expect((yield* request(`/api/assets;query=${secrets[0]}`)).status).toBe(404);
+              for (const path of ["/api/assets%2Finfo", "/api/spaces//assets/upload-info"]) {
+                expect((yield* request(`${path}?query=public`)).status).toBe(404);
+              }
+              const aliasControl = yield* request("/api//assets-info?query=public");
+              expect(aliasControl.status).toBe(200);
+              expect(yield* Effect.promise(() => aliasControl.text())).toBe("public control");
+              const control = yield* request("/api/assets-info?query=public");
+              expect(control.status).toBe(200);
+              expect(yield* Effect.promise(() => control.text())).toBe("public control");
+              const controlPreflight = yield* request("/api/assets-info/preflight?query=public", {
+                method: "OPTIONS",
+                headers: {
+                  origin: "https://app.t2.codes",
+                  "access-control-request-method": "GET",
+                  "access-control-request-headers": "range",
+                },
+              });
+              expect(controlPreflight.status).toBe(204);
+              expect(controlPreflight.headers.get("access-control-allow-origin")).toBe("*");
+            }).pipe(
+              Effect.provide(
+                ServerLogger.layer.pipe(
+                  Layer.provide(Config.layer({ ...config, logLevel: "Info" })),
+                  Layer.provide(NodeHttpClient.layerUndici),
+                ),
+              ),
+              Effect.provideService(Tracer.Tracer, tracer),
+              Effect.provideService(Console.Console, testConsole),
+            );
+            yield* sink.flush;
+            const text = yield* fs.readFileString(filePath);
+            const logs = printed.join("\n");
+            for (const secret of secrets) {
+              expect(text.includes(secret), "bearer material persisted in HTTP trace records").toBe(
+                false,
+              );
+              expect(logs.includes(secret), "bearer material entered HTTP access/error logs").toBe(
+                false,
+              );
+            }
+            const records = text
+              .trim()
+              .split("\n")
+              .filter(Boolean)
+              .map((line): unknown => JSON.parse(line));
+            const httpRecords = records.filter(isControlHttpTrace);
+            for (const [path, status] of [
+              ["/api/assets-info", 200],
+              ["/api/assets-info/preflight", 204],
+              ["/api//assets-info", 200],
+              ["/api/assets%2Finfo", 404],
+              ["/api/spaces//assets/upload-info", 404],
+            ] as const) {
+              expect(
+                httpRecords.some(
+                  (record) =>
+                    record.attributes["url.path"] === path &&
+                    record.attributes["http.response.status_code"] === status,
+                ),
+              ).toBe(true);
+              expect(logs.includes(path)).toBe(true);
+            }
+          }),
+        true,
+        true,
+      ),
+  );
+
   it.effect("keeps healthy uploads readable through repeated complete sanity audits", () =>
     fixture(({ request }) =>
       Effect.gen(function* () {
@@ -352,7 +608,7 @@ describe("Spaces public asset wiring", () => {
           const service = yield* Service.SpacesService;
           const capability = yield* service.getCapability(environmentId);
           expect(capability?.features?.assets).toBe(true);
-          expect(capability?.features?.contextCapture).toBeUndefined();
+          expect(capability?.features?.contextCapture).toBe(true);
           const data =
             kind === "pdf"
               ? pdf
@@ -437,6 +693,22 @@ describe("Spaces public asset wiring", () => {
               })).status,
             ).toBe("saved");
           }
+          const captured = yield* service.captureContextSnapshot({
+            environmentId,
+            contextId: `media-${kind}`,
+            target: { kind: "block", blockId: block.id },
+          });
+          if (captured.status !== "captured") return yield* Effect.die("Expected media capture");
+          expect(captured.record.snapshot.text).toBe(`[${kind} ${saved.assetId}] after`);
+          expect(captured.record.snapshot.sources).toEqual([
+            {
+              environmentId,
+              spaceId: page.page.spaceId,
+              pageId: page.page.id,
+              revision: 2,
+              blockIds: [block.id],
+            },
+          ]);
           expect(
             (yield* service.readBlocks({ environmentId, pageId: page.page.id, revision: 2 }))
               .blocks,

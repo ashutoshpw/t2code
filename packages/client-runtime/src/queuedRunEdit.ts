@@ -75,6 +75,8 @@ export function queuedRunEditBlockedReason(input: {
 interface ExitWatch<E> {
   readonly runs: QueuedRunsAtom;
   readonly runId: RunId;
+  readonly retainOnExit?: boolean;
+  leftQueue?: boolean;
   readonly onRunLeftQueue: (threadKey: string, edit: E) => void;
   cancel: (() => void) | null;
 }
@@ -99,6 +101,16 @@ export function makeQueuedRunEditStore<E extends { readonly runId: RunId }>(opti
     Atom.keepAlive,
     Atom.withLabel(`${options.label}-saving`),
   );
+  const exitedAtom = Atom.make<Readonly<Record<string, true>>>({}).pipe(
+    Atom.keepAlive,
+    Atom.withLabel(`${options.label}-exited`),
+  );
+  const setExited = (threadKey: string, exited: boolean) => {
+    const next = { ...registry.get(exitedAtom) };
+    if (exited) next[threadKey] = true;
+    else delete next[threadKey];
+    registry.set(exitedAtom, next);
+  };
   // Each begin creates a new watch, so the watch is the edit's identity.
   const watches = new Map<string, ExitWatch<E>>();
 
@@ -136,10 +148,14 @@ export function makeQueuedRunEditStore<E extends { readonly runId: RunId }>(opti
       if (watches.get(threadKey) !== watch || watch.cancel === null) return;
       if (!runLeftQueue(runs, watch.runId)) return;
       unsubscribe(watch);
-      watches.delete(threadKey);
+      if (!watch.retainOnExit) watches.delete(threadKey);
+      else {
+        watch.leftQueue = true;
+        setExited(threadKey, true);
+      }
       const edit = get(threadKey);
       if (edit === null || edit.runId !== watch.runId) return;
-      write(threadKey, null);
+      if (!watch.retainOnExit) write(threadKey, null);
       watch.onRunLeftQueue(threadKey, edit);
     };
     watch.cancel = registry.subscribe(watch.runs, check);
@@ -151,23 +167,56 @@ export function makeQueuedRunEditStore<E extends { readonly runId: RunId }>(opti
     if (watch === undefined) return;
     unsubscribe(watch);
     watches.delete(threadKey);
+    setExited(threadKey, false);
   };
 
   return {
     atom,
     /** Thread keys whose edit has a save in flight. */
     savingAtom,
+    exitedAtom,
     get,
+    isQueued(threadKey: string) {
+      const watch = watches.get(threadKey);
+      return (
+        watch !== undefined &&
+        !watch.leftQueue &&
+        !runLeftQueue(registry.get(watch.runs), watch.runId)
+      );
+    },
+    startRecovery(threadKey: string) {
+      const watch = watches.get(threadKey);
+      const edit = get(threadKey);
+      if (!watch?.leftQueue || edit === null || threadKey in registry.get(savingAtom)) return null;
+      setSaving(threadKey, true);
+      let settled = false;
+      return {
+        edit,
+        isCurrent: () => watches.get(threadKey) === watch && get(threadKey) === edit,
+        finish: (recovered: boolean) => {
+          if (settled) return false;
+          settled = true;
+          setSaving(threadKey, false);
+          if (watches.get(threadKey) !== watch || get(threadKey) !== edit) return false;
+          if (recovered) {
+            stopWatch(threadKey);
+            write(threadKey, null);
+          }
+          return true;
+        },
+      };
+    },
     /**
      * Starts an edit, replacing any edit already open on the thread. When the
-     * run leaves the queue the edit is removed and `onRunLeftQueue` receives
-     * it; if the run already left, that happens immediately.
+     * run leaves the queue `onRunLeftQueue` receives it immediately. With
+     * retainOnExit it stays owned until startRecovery completes successfully.
      */
     begin(
       threadKey: string,
       edit: E,
       watch: {
         readonly runs: QueuedRunsAtom;
+        readonly retainOnExit?: boolean;
         readonly onRunLeftQueue: (threadKey: string, edit: E) => void;
       },
     ) {
@@ -193,7 +242,8 @@ export function makeQueuedRunEditStore<E extends { readonly runId: RunId }>(opti
      */
     startSave(threadKey: string): FinishQueuedRunEditSave | null {
       const watch = watches.get(threadKey);
-      if (watch === undefined || threadKey in registry.get(savingAtom)) return null;
+      if (watch === undefined || watch.leftQueue || threadKey in registry.get(savingAtom))
+        return null;
       setSaving(threadKey, true);
       unsubscribe(watch);
       let settled = false;
