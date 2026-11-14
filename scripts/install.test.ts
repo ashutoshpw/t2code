@@ -19,18 +19,18 @@ const nightlies = Array.from({ length: 100 }, (_, index) => ({
 describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("installer home", () => {
   it("installs a relative home from a directory ending in a newline", async () => {
     const temporaryRoot = await NodeFSP.realpath(
-      await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t3-install-home-")),
+      await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t2-install-home-")),
     );
     const root = NodePath.join(temporaryRoot, "cwd\n");
     const homeName = "-custom home\\home\n";
     const home = NodePath.join(root, homeName);
     const version = "1.2.3";
     const target = NodePath.join(home, "runtime/versions", version);
-    const launcher = NodePath.join(root, "bin/t3");
+    const launcher = NodePath.join(root, "bin/t2");
     try {
       await NodeFSP.mkdir(target, { recursive: true });
       await NodeFSP.writeFile(NodePath.join(target, ".install-complete"), `${version}\n`);
-      await NodeFSP.writeFile(NodePath.join(target, "t3"), "#!/bin/sh\necho 't3 v1.2.3'\n", {
+      await NodeFSP.writeFile(NodePath.join(target, "t2"), "#!/bin/sh\necho 't2 v1.2.3'\n", {
         mode: 0o755,
       });
       const install = () =>
@@ -39,10 +39,10 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("installer home
           env: {
             ...process.env,
             HOME: root,
-            T3CODE_HOME: homeName,
-            T3CODE_VERSION: version,
-            T3CODE_INSTALL_BIN_DIR: NodePath.dirname(launcher),
-            T3CODE_RELEASE_BASE_URL: "http://127.0.0.1:1",
+            T2CODE_HOME: homeName,
+            T2CODE_VERSION: version,
+            T2CODE_INSTALL_BIN_DIR: NodePath.dirname(launcher),
+            T2CODE_RELEASE_BASE_URL: "http://127.0.0.1:1",
           },
           encoding: "utf8",
         });
@@ -51,16 +51,16 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("installer home
       expect(first.status, first.stdout + first.stderr).toBe(0);
       const { status, stdout, stderr } = install();
       expect(status, stdout + stderr).toBe(0);
-      expect(stderr).toContain(`Installed T3 Code ${version}`);
+      expect(stderr).toContain(`Installed T2 Code ${version}`);
       expect(await NodeFSP.readFile(launcher, "utf8")).toBe(
-        launcherScript(NodePath.join(target, "t3")),
+        launcherScript(NodePath.join(target, "t2")),
       );
       expect(
         NodeChildProcess.execFileSync(launcher, ["--version"], {
           cwd: NodeOS.tmpdir(),
           encoding: "utf8",
         }).trim(),
-      ).toBe("t3 v1.2.3");
+      ).toBe("t2 v1.2.3");
     } finally {
       await NodeFSP.rm(temporaryRoot, { recursive: true, force: true });
     }

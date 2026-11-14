@@ -36,7 +36,7 @@ const BATCH_TRANSCRIPT_BYTES = 512 * 1024;
 const STEP_TEXT_CAP = 4_000;
 const TOOL_INPUT_CAP = 1_000;
 
-/** T3's title for a batch whose launch text it never saw. */
+/** T2's title for a batch whose launch text it never saw. */
 export const ANTIGRAVITY_SUBAGENT_BATCH_TITLE = "Antigravity subagent batch";
 
 interface AntigravityChildLaunch {

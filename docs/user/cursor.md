@@ -15,7 +15,7 @@ The adapter currently uses the SDK's local-agent runtime so runs operate in the 
 workspace. Cursor cloud agents need repository and cloud-environment configuration that T2 Code does
 not expose yet.
 
-Custom Cursor MCP servers and plugins are not configured in T3 Code. They load from the environment
+Custom Cursor MCP servers and plugins are not configured in T2 Code. They load from the environment
 machine's Cursor config when the agent opens: project `.cursor/mcp.json`, user `~/.cursor/mcp.json`,
 and installed plugins under `~/.cursor/plugins`. Plugin tools
 can appear without a login; OAuth MCP servers still need credentials. Run `agent mcp login <server>`

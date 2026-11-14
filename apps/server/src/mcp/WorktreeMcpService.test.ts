@@ -701,7 +701,7 @@ describe("t3_worktree_status", () => {
   });
 });
 
-describe("t3_worktree_list", () => {
+describe("t2_worktree_list", () => {
   const listRefs = (harness: ReturnType<typeof makeHarness>, worktreePath: string | null) =>
     Effect.gen(function* () {
       const service = yield* WorktreeMcpService.WorktreeMcpService;

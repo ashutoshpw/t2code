@@ -318,7 +318,6 @@ const UNSUCCESSFUL_RUN_ERRORS = {
   rolled_back: "The run was rolled back.",
 } as const;
 /** Absorbs client/server clock skew and request latency for a just-picked time. */
-const ONCE_PAST_TOLERANCE_MS = 30_000;
 
 const localNow = DateTime.withCurrentZoneLocal(DateTime.nowInCurrentZone);
 

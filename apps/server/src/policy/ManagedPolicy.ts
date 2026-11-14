@@ -41,7 +41,7 @@ export class ManagedPolicy extends Context.Service<
     /** What clients are told; absent when no policy applies. */
     readonly summary: ManagedPolicySummary | undefined;
   }
->()("t3/policy/ManagedPolicy") {}
+>()("@t2code/cli/policy/ManagedPolicy") {}
 
 type LimitsSummary = NonNullable<ManagedPolicySummary["limits"]>;
 
@@ -177,7 +177,7 @@ const make = Effect.gen(function* () {
   // builds never do: any override a user can set is a way around the policy.
   const devPath =
     telemetryChannel === "dev"
-      ? yield* Config.option(Config.String("T3CODE_DEV_MANAGED_POLICY_PATH")).pipe(
+      ? yield* Config.option(Config.String("T2CODE_DEV_MANAGED_POLICY_PATH")).pipe(
           Effect.orElseSucceed(() => Option.none<string>()),
         )
       : Option.none<string>();

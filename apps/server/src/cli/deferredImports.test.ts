@@ -82,7 +82,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("CLI deferred imp
         path: runtimeStatePath,
         state: yield* makePersistedServerRuntimeState({
           config: { host: "127.0.0.1", devUrl: undefined },
-          port: 3_773,
+          port: 3_772,
         }),
       });
       const unreachable: typeof globalThis.fetch = () =>
@@ -109,7 +109,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("CLI deferred imp
         path: NodePath.join(baseDir, "userdata", "server-runtime.json"),
         state: yield* makePersistedServerRuntimeState({
           config: { host: "127.0.0.1", devUrl: undefined },
-          port: 3_773,
+          port: 3_772,
         }),
       });
 

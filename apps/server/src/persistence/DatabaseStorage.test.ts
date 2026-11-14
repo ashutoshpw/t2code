@@ -18,8 +18,10 @@ import * as Settings from "../serverSettings.ts";
 import * as Identity from "../environment/ServerEnvironment.ts";
 
 import * as ServerConfig from "../config.ts";
+import * as EventStore from "../orchestration-v2/EventStore.ts";
 import * as ProjectionMaintenance from "../orchestration-v2/ProjectionMaintenance.ts";
 import * as DatabaseMaintenance from "./DatabaseMaintenance.ts";
+import * as ProjectionStore from "../orchestration-v2/ProjectionStore.ts";
 import * as DatabaseStorage from "./DatabaseStorage.ts";
 import * as Sqlite from "./Sqlite.ts";
 

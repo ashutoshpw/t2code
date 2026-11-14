@@ -5,6 +5,7 @@ import * as Tracer from "effect/Tracer";
 import * as NodeUtil from "node:util";
 import { makeLocalFileTracer, makeTraceSink } from "@t2code/shared/observability";
 import * as ServerLogger from "../../serverLogger.ts";
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeHttpPlatform from "@effect/platform-node/NodeHttpPlatform";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
@@ -85,88 +86,91 @@ const common = (requestId: string, data = pdf) => ({
   mimeType: "application/pdf" as const,
   name: "report.pdf",
 });
-const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(function* <A, E, R>(
-  use: (input: {
-    readonly config: Config.ServerConfig["Service"];
-    readonly request: (relative: string, init?: RequestInit) => Effect.Effect<Response>;
-  }) => Effect.Effect<A, E, R>,
-  enabled = true,
-  logRequests = false,
-) {
-  const scope = yield* Effect.scope;
-  const clock = yield* Clock.Clock;
-  const configContext = yield* Layer.buildWithScope(
-    Config.ServerConfig.layerTest(process.cwd(), { prefix: "spaces-public-" }),
-    scope,
-  );
-  const config = Context.get(configContext, Config.ServerConfig);
-  const configLayer = Layer.succeedContext(configContext);
-  const settings = Settings.layerTest({ spacesEnabled: enabled });
-  const spaces = Service.layerFromPath(config.spacesDbPath, {
-    stagingDir: config.spacesStagingDir,
-    assetsDir: config.spacesAssetsDir,
-  }).pipe(
-    Layer.provide(settings),
-    Layer.provide(
-      Layer.succeed(Identity.ServerEnvironmentIdentity, {
-        getEnvironmentId: Effect.succeed(environmentId),
-      }),
-    ),
-  );
-  const context = yield* Layer.buildWithScope(
-    Layer.mergeAll(
-      configLayer,
-      settings,
-      spaces,
-      Secrets.layer.pipe(Layer.provide(configLayer)),
-      WorkspacePaths.layer,
-      Favicon.layer.pipe(Layer.provide(WorkspacePaths.layer), Layer.provide(ProjectLoader.layer)),
-      NativeIcons.layer.pipe(Layer.provide(configLayer)),
-      NodeHttpPlatform.layer,
-      // Legacy non-Spaces branches are outside this fixture; the actual Spaces service/files/SQL are used.
-      Layer.mock(Orchestrator.OrchestratorV2)({}),
-      Layer.succeed(BuiltInDrivers.SourceControlDrivers, []),
-      Layer.succeed(Clock.Clock, clock),
-      Layer.effect(HttpMiddleware.TracerDisabledWhen, HttpMiddleware.TracerDisabledWhen).pipe(
-        ServerHttp.withUntracedRequests,
+const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(
+  function* <A, E, R>(
+    use: (input: {
+      readonly config: Config.ServerConfig["Service"];
+      readonly request: (relative: string, init?: RequestInit) => Effect.Effect<Response>;
+    }) => Effect.Effect<A, E, R>,
+    enabled = true,
+    logRequests = false,
+  ) {
+    const scope = yield* Effect.scope;
+    const clock = yield* Clock.Clock;
+    const configContext = yield* Layer.buildWithScope(
+      Config.ServerConfig.layerTest(process.cwd(), { prefix: "spaces-public-" }),
+      scope,
+    );
+    const config = Context.get(configContext, Config.ServerConfig);
+    const configLayer = Layer.succeedContext(configContext);
+    const settings = Settings.layerTest({ spacesEnabled: enabled });
+    const spaces = Service.layerFromPath(config.spacesDbPath, {
+      stagingDir: config.spacesStagingDir,
+      assetsDir: config.spacesAssetsDir,
+    }).pipe(
+      Layer.provide(settings),
+      Layer.provide(
+        Layer.succeed(Identity.ServerEnvironmentIdentity, {
+          getEnvironmentId: Effect.succeed(environmentId),
+        }),
       ),
-    ).pipe(Layer.provideMerge(NodeServices.layer)),
-    scope,
-  );
-  const { handler, dispose } = HttpRouter.toWebHandler(
-    Layer.mergeAll(
-      ServerHttp.layerSpacesUploadRoute,
-      ServerHttp.layerAssetRoute,
-      HttpRouter.add("GET", "/api/assets-info", HttpServerResponse.text("public control")),
-      HttpRouter.add(
-        "GET",
-        "/api/assets/:token/trace-error",
-        Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
-          Effect.fail(
-            new HttpServerError.HttpServerError({
-              reason: new HttpServerError.InternalError({
-                request,
-                description: "Synthetic response failure",
+    );
+    const context = yield* Layer.buildWithScope(
+      Layer.mergeAll(
+        configLayer,
+        settings,
+        spaces,
+        Secrets.layer.pipe(Layer.provide(configLayer)),
+        WorkspacePaths.layer,
+        Favicon.layer.pipe(Layer.provide(WorkspacePaths.layer), Layer.provide(ProjectLoader.layer)),
+        NativeIcons.layer.pipe(Layer.provide(configLayer)),
+        NodeHttpPlatform.layer,
+        // Legacy non-Spaces branches are outside this fixture; the actual Spaces service/files/SQL are used.
+        Layer.mock(Orchestrator.OrchestratorV2)({}),
+        Layer.succeed(BuiltInDrivers.SourceControlDrivers, []),
+        Layer.succeed(Clock.Clock, clock),
+        Layer.effect(HttpMiddleware.TracerDisabledWhen, HttpMiddleware.TracerDisabledWhen).pipe(
+          ServerHttp.withUntracedRequests,
+        ),
+      ).pipe(Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
+      scope,
+    );
+    const { handler, dispose } = HttpRouter.toWebHandler(
+      Layer.mergeAll(
+        ServerHttp.layerSpacesUploadRoute,
+        ServerHttp.layerAssetRoute,
+        HttpRouter.add("GET", "/api/assets-info", HttpServerResponse.text("public control")),
+        HttpRouter.add(
+          "GET",
+          "/api/assets/:token/trace-error",
+          Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
+            Effect.fail(
+              new HttpServerError.HttpServerError({
+                reason: new HttpServerError.InternalError({
+                  request,
+                  description: "Synthetic response failure",
+                }),
               }),
-            }),
+            ),
           ),
         ),
+      ).pipe(
+        Layer.provide(ServerHttp.layerBrowserApiCors),
+        Layer.provide(ServerHttp.layerHttpCompression),
+        ServerHttp.withUntracedRequests,
+        Layer.provideMerge(Layer.succeedContext(context)),
       ),
-    ).pipe(
-      Layer.provide(ServerHttp.layerBrowserApiCors),
-      Layer.provide(ServerHttp.layerHttpCompression),
-      ServerHttp.withUntracedRequests,
-      Layer.provideMerge(Layer.succeedContext(context)),
-    ),
-    { disableLogger: !logRequests, middleware: ServerHttp.assetRequestPrivacy },
-  );
-  yield* Effect.addFinalizer(() => Effect.promise(dispose));
-  const request = (relative: string, init?: RequestInit) =>
-    Effect.contextWith((current: Context.Context<never>) =>
-      Effect.promise(() => handler(new Request(`http://assets.test${relative}`, init), current)),
+      { disableLogger: !logRequests, middleware: ServerHttp.assetRequestPrivacy },
     );
-  return yield* use({ config, request }).pipe(Effect.provide(context));
-}, Effect.provide(NodeServices.layer));
+    yield* Effect.addFinalizer(() => Effect.promise(dispose));
+    const request = (relative: string, init?: RequestInit) =>
+      Effect.contextWith((current: Context.Context<never>) =>
+        Effect.promise(() => handler(new Request(`http://assets.test${relative}`, init), current)),
+      );
+    return yield* use({ config, request }).pipe(Effect.provide(context));
+  },
+  Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
+);
 const usage = Effect.fn("SpacesAssetsPublicTest.usage")(function* (
   config: Config.ServerConfig["Service"],
 ) {

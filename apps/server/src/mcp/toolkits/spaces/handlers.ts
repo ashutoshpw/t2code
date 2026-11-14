@@ -1,6 +1,6 @@
 import { type EnvironmentId } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
-import * as Crypto from "effect/Crypto";
+import * as Digest from "effect/crypto/Digest";
 import * as Hex from "effect/encoding/Hex";
 import * as Schema from "effect/Schema";
 import { issueAssetUrl } from "../../../assets/AssetAccess.ts";
@@ -43,11 +43,11 @@ const invokeAsset = Effect.fnUntraced(function* <A, R>(
   );
 });
 const assetCaller = Effect.fnUntraced(function* (scope: Invocation.McpInvocationScope) {
-  const crypto = yield* Crypto.Crypto;
-  const digest = yield* crypto
-    .digest("SHA-256", new TextEncoder().encode(scope.requestNamespace))
+  const digester = yield* Digest.Digest;
+  const caller = yield* digester
+    .digest(Digest.sha256, new TextEncoder().encode(scope.requestNamespace))
     .pipe(Effect.mapError(() => new C.SpaceAssetError({ reason: "io_failed" })));
-  return `mcp:${Hex.encode(digest)}`;
+  return `mcp:${Hex.encode(caller)}`;
 });
 const isServiceError = Schema.is(C.SpaceServiceError);
 export const layer = McpToolAccess.toLayer(SpacesToolkit, {

@@ -1,4 +1,5 @@
 import * as NodeSqlite from "node:sqlite";
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it, assert, expect } from "@effect/vitest";
 import {
@@ -397,188 +398,154 @@ function savedView(controller: SpaceDocumentController) {
   };
 }
 
-it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => {
-  it.effect.each([false, true])(
-    "retries only the saved compensation prefix after unsent persistence failure and retains newer edits (reload: %s)",
-    (reload) =>
-      fixture((service) =>
-        Effect.gen(function* () {
-          const h = yield* savedUndoFixture(service);
-          yield* Effect.promise(async () => {
-            const controller = h.createController();
-            await controller.open();
-            const view = savedView(controller);
-            try {
-              view.edit("saved-");
-              await controller.save();
-              h.persistence.hold = true;
-              const undoing = view.bridge.compensate("undo");
-              const rejected = expect(undoing).rejects.toThrow("draft storage blocked");
-              await h.persistence.started.promise;
-              h.persistence.fail = true;
-              const prefix = controller.session.getSnapshot().pending!;
-              assert.isNotNull(prefix);
-              view.edit("newer-");
-              view.edit("again-");
-              assert.include(view.state.doc.textContent, "newer-");
-              const newer = controller.session.getSnapshot().blocks;
-              assert.equal(h.requests.length, 1);
-              h.persistence.release.resolve();
-              await rejected;
-              assert.equal(h.requests.length, 1);
-              assert.equal(controller.session.getSnapshot().status, "draft");
-              assert.isNotNull(controller.session.getSnapshot().persistenceError);
-              h.persistence.fail = false;
-              await controller.session.persistDraft();
-              const retrying = reload ? h.createController() : controller;
-              if (reload) await retrying.open();
-              const admissions = h.admissions();
-              await retrying.save();
-              assert.equal(h.admissions(), admissions);
-              assert.equal(h.requests.length, 2);
-              assert.deepEqual(h.requests[1], {
-                environmentId,
-                pageId: h.key.pageId,
-                mutationId: C.SpaceMutationId.make(prefix.mutationId),
-                receiptEpoch: prefix.receiptEpoch!,
-                baseRevision: prefix.baseRevision,
-                generation: prefix.generation,
-                mutations: prefix.mutations,
-              });
-              assert.equal(h.lookups.length, reload ? 1 : 0);
-              if (reload) assert.deepEqual(h.lookups[0]?.request.input, h.requests[1]);
-              assert.isNull(retrying.session.getSnapshot().pending);
-              assert.isTrue(retrying.session.getSnapshot().dirty);
-              assert.deepEqual(retrying.session.getSnapshot().blocks, newer);
-              assert.equal(retrying.session.getSnapshot().baseRevision, 3);
-              assert.deepEqual(
-                (await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks,
-                [savedParagraph("a", "original")],
-              );
-              await retrying.save();
-              assert.equal(h.requests.length, 3);
-              assert.equal(h.requests[2]!.baseRevision, 3);
-              assert.notEqual(h.requests[2]!.mutationId, prefix.mutationId);
-              assert.deepEqual(
-                (await h.run(service.readBlocks({ ...h.key, revision: 4 }))).blocks,
-                newer,
-              );
-            } finally {
-              h.persistence.release.resolve();
-              view.stop();
-            }
-          });
-        }),
-      ),
-  );
-  it.effect.each(["delete", "join", "insert"] as const)(
-    "refuses saved %s compensation rather than resurrecting retired identities",
-    (operation) =>
-      fixture((service) =>
-        Effect.gen(function* () {
-          const a = savedParagraph("a", "left"),
-            b = {
-              ...savedParagraph("b", "right", "c0000000000000000000000000000000"),
-              content: {
-                runs: [
-                  {
-                    text: "right",
-                    marks: [
-                      {
-                        type: "block_mention",
-                        version: 1,
-                        target: {
-                          environmentId,
-                          pageId: C.SpacePageId.make("self"),
-                          blockId: C.SpaceBlockId.make("b"),
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
-            };
-          const h = yield* savedUndoFixture(service, [a, b]);
-          yield* Effect.promise(async () => {
-            const controller = h.createController();
-            await controller.open();
-            const view = savedView(controller);
-            try {
-              if (operation === "delete")
-                assert.isTrue(view.bridge.adapter.remove(b.id)(view.state, view.dispatch));
-              else if (operation === "insert")
-                assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
-              else {
-                let position = -1;
-                view.state.doc.descendants((node, pos) => {
-                  if (node.attrs.block?.id === b.id) position = pos + 1;
+it.layer(Layer.merge(NodeServices.layer, NodeCrypto.layer))(
+  "Spaces editor commands with real SQLite",
+  (it) => {
+    it.effect.each([false, true])(
+      "retries only the saved compensation prefix after unsent persistence failure and retains newer edits (reload: %s)",
+      (reload) =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const h = yield* savedUndoFixture(service);
+            yield* Effect.promise(async () => {
+              const controller = h.createController();
+              await controller.open();
+              const view = savedView(controller);
+              try {
+                view.edit("saved-");
+                await controller.save();
+                h.persistence.hold = true;
+                const undoing = view.bridge.compensate("undo");
+                const rejected = expect(undoing).rejects.toThrow("draft storage blocked");
+                await h.persistence.started.promise;
+                h.persistence.fail = true;
+                const prefix = controller.session.getSnapshot().pending!;
+                assert.isNotNull(prefix);
+                view.edit("newer-");
+                view.edit("again-");
+                assert.include(view.state.doc.textContent, "newer-");
+                const newer = controller.session.getSnapshot().blocks;
+                assert.equal(h.requests.length, 1);
+                h.persistence.release.resolve();
+                await rejected;
+                assert.equal(h.requests.length, 1);
+                assert.equal(controller.session.getSnapshot().status, "draft");
+                assert.isNotNull(controller.session.getSnapshot().persistenceError);
+                h.persistence.fail = false;
+                await controller.session.persistDraft();
+                const retrying = reload ? h.createController() : controller;
+                if (reload) await retrying.open();
+                const admissions = h.admissions();
+                await retrying.save();
+                assert.equal(h.admissions(), admissions);
+                assert.equal(h.requests.length, 2);
+                assert.deepEqual(h.requests[1], {
+                  environmentId,
+                  pageId: h.key.pageId,
+                  mutationId: C.SpaceMutationId.make(prefix.mutationId),
+                  receiptEpoch: prefix.receiptEpoch!,
+                  baseRevision: prefix.baseRevision,
+                  generation: prefix.generation,
+                  mutations: prefix.mutations,
                 });
-                view.dispatch(
-                  view.state.tr.setSelection(TextSelection.create(view.state.doc, position)),
-                );
-                assert.isTrue(view.bridge.adapter.joinBackward()(view.state, view.dispatch));
-              }
-              await controller.save();
-              const before = controller.session.getSnapshot();
-              assert.isFalse(await view.bridge.compensate("undo"));
-              assert.equal(controller.session.getSnapshot(), before);
-              assert.include(controller.session.compensationAvailability("undo")!, "undone");
-              assert.equal(h.requests.length, 1);
-              if (operation !== "insert") {
-                const admission = await h.ports.getPage(h.key);
-                const rejected = await h.run(
-                  service
-                    .applyBlockBatch({
-                      ...h.key,
-                      mutationId: "retired-undo",
-                      receiptEpoch: admission.mutationAdmission.epoch,
-                      baseRevision: 2,
-                      generation: 1,
-                      mutations: [{ kind: "insert", block: b }],
-                    })
-                    .pipe(Effect.flip),
-                );
-                assert.equal(rejected._tag, "SpaceValidationError");
-                if (rejected._tag === "SpaceValidationError")
-                  assert.equal(rejected.reason, "duplicate_id");
-                const self = {
-                  ...b,
-                  content: {
-                    runs: [
-                      {
-                        text: "copy",
-                        marks: [
-                          {
-                            type: "block_mention",
-                            version: 1,
-                            target: { ...h.key, blockId: b.id },
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                };
-                const copied = copySpaceBlocks([self], h.key, () =>
-                  C.SpaceBlockId.make("restored-copy"),
-                );
-                const copy = await h.run(
-                  service.applyBlockBatch({
-                    ...h.key,
-                    mutationId: "fresh-copy",
-                    receiptEpoch: admission.mutationAdmission.epoch,
-                    baseRevision: 2,
-                    generation: 1,
-                    mutations: copied.map((block) => ({ kind: "insert", block })),
-                  }),
-                );
-                assert.equal(copy.status, "saved");
+                assert.equal(h.lookups.length, reload ? 1 : 0);
+                if (reload) assert.deepEqual(h.lookups[0]?.request.input, h.requests[1]);
+                assert.isNull(retrying.session.getSnapshot().pending);
+                assert.isTrue(retrying.session.getSnapshot().dirty);
+                assert.deepEqual(retrying.session.getSnapshot().blocks, newer);
+                assert.equal(retrying.session.getSnapshot().baseRevision, 3);
                 assert.deepEqual(
-                  (await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks.find(
-                    (block) => block.id === "restored-copy",
-                  ),
-                  {
-                    ...self,
-                    id: C.SpaceBlockId.make("restored-copy"),
+                  (await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks,
+                  [savedParagraph("a", "original")],
+                );
+                await retrying.save();
+                assert.equal(h.requests.length, 3);
+                assert.equal(h.requests[2]!.baseRevision, 3);
+                assert.notEqual(h.requests[2]!.mutationId, prefix.mutationId);
+                assert.deepEqual(
+                  (await h.run(service.readBlocks({ ...h.key, revision: 4 }))).blocks,
+                  newer,
+                );
+              } finally {
+                h.persistence.release.resolve();
+                view.stop();
+              }
+            });
+          }),
+        ),
+    );
+    it.effect.each(["delete", "join", "insert"] as const)(
+      "refuses saved %s compensation rather than resurrecting retired identities",
+      (operation) =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const a = savedParagraph("a", "left"),
+              b = {
+                ...savedParagraph("b", "right", "c0000000000000000000000000000000"),
+                content: {
+                  runs: [
+                    {
+                      text: "right",
+                      marks: [
+                        {
+                          type: "block_mention",
+                          version: 1,
+                          target: {
+                            environmentId,
+                            pageId: C.SpacePageId.make("self"),
+                            blockId: C.SpaceBlockId.make("b"),
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              };
+            const h = yield* savedUndoFixture(service, [a, b]);
+            yield* Effect.promise(async () => {
+              const controller = h.createController();
+              await controller.open();
+              const view = savedView(controller);
+              try {
+                if (operation === "delete")
+                  assert.isTrue(view.bridge.adapter.remove(b.id)(view.state, view.dispatch));
+                else if (operation === "insert")
+                  assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+                else {
+                  let position = -1;
+                  view.state.doc.descendants((node, pos) => {
+                    if (node.attrs.block?.id === b.id) position = pos + 1;
+                  });
+                  view.dispatch(
+                    view.state.tr.setSelection(TextSelection.create(view.state.doc, position)),
+                  );
+                  assert.isTrue(view.bridge.adapter.joinBackward()(view.state, view.dispatch));
+                }
+                await controller.save();
+                const before = controller.session.getSnapshot();
+                assert.isFalse(await view.bridge.compensate("undo"));
+                assert.equal(controller.session.getSnapshot(), before);
+                assert.include(controller.session.compensationAvailability("undo")!, "undone");
+                assert.equal(h.requests.length, 1);
+                if (operation !== "insert") {
+                  const admission = await h.ports.getPage(h.key);
+                  const rejected = await h.run(
+                    service
+                      .applyBlockBatch({
+                        ...h.key,
+                        mutationId: "retired-undo",
+                        receiptEpoch: admission.mutationAdmission.epoch,
+                        baseRevision: 2,
+                        generation: 1,
+                        mutations: [{ kind: "insert", block: b }],
+                      })
+                      .pipe(Effect.flip),
+                  );
+                  assert.equal(rejected._tag, "SpaceValidationError");
+                  if (rejected._tag === "SpaceValidationError")
+                    assert.equal(rejected.reason, "duplicate_id");
+                  const self = {
+                    ...b,
                     content: {
                       runs: [
                         {
@@ -587,733 +554,780 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
                             {
                               type: "block_mention",
                               version: 1,
-                              target: { ...h.key, blockId: "restored-copy" },
+                              target: { ...h.key, blockId: b.id },
                             },
                           ],
                         },
                       ],
                     },
-                  },
-                );
-              }
-            } finally {
-              view.stop();
-            }
-          });
-        }),
-      ),
-  );
-  it.effect.each([65536, 65537])(
-    "admits saved history through the exact %i-byte window and retains only the last save",
-    (bytes) =>
-      fixture((service) =>
-        Effect.gen(function* () {
-          const ranks = [
-            "40000000000000000000000000000000",
-            "80000000000000000000000000000000",
-            "c0000000000000000000000000000000",
-          ];
-          const empty = ranks.map((rank, i) => savedParagraph(`byte-${i}`, "", rank));
-          const padding = bytes - new TextEncoder().encode(JSON.stringify(empty)).length;
-          const blocks = ranks.map((rank, i) =>
-            savedParagraph(
-              `byte-${i}`,
-              "x".repeat(Math.floor(padding / 3) + (i < padding % 3 ? 1 : 0)),
-              rank,
-            ),
-          );
-          assert.equal(new TextEncoder().encode(JSON.stringify(blocks)).length, bytes);
-          const h = yield* savedUndoFixture(service, blocks);
-          yield* Effect.promise(async () => {
-            const controller = h.createController();
-            await controller.open();
-            const view = savedView(controller);
-            try {
-              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 2)));
-              view.edit("y");
-              await controller.save();
-              assert.isFalse(controller.session.getSnapshot().dirty);
-              if (bytes === 65537) {
-                assert.isFalse(await view.bridge.compensate("undo"));
-                assert.include(controller.session.compensationAvailability("undo")!, "too large");
-                return;
-              }
-              const first = view.state.doc.textContent;
-              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 2)));
-              view.edit("z");
-              await controller.save();
-              const second = view.state.doc.textContent;
-              assert.isTrue(await view.bridge.compensate("undo"));
-              assert.equal(view.state.doc.textContent, first);
-              assert.isFalse(await view.bridge.compensate("undo"));
-              assert.isTrue(await view.bridge.compensate("redo"));
-              assert.equal(view.state.doc.textContent, second);
-            } finally {
-              view.stop();
-            }
-          });
-        }),
-      ),
-  );
-  it.effect(
-    "submits saved content undo and redo as distinct guarded saves shared across views and reload",
-    () =>
-      fixture((service) =>
-        Effect.gen(function* () {
-          const h = yield* savedUndoFixture(service);
-          yield* Effect.promise(async () => {
-            const controller = h.createController();
-            await controller.open();
-            const view = savedView(controller),
-              peer = savedView(controller);
-            try {
-              view.edit("first-");
-              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
-              assert.equal(view.state.doc.textContent, "original");
-              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
-              await controller.save();
-              assert.equal(controller.session.getSnapshot().baseRevision, 2);
-              assert.isTrue(await peer.bridge.compensate("undo"));
-              assert.equal(view.state.doc.textContent, "original");
-              assert.equal(peer.state.doc.textContent, "original");
-              assert.equal(controller.session.getSnapshot().baseRevision, 3);
-              assert.isFalse(await view.bridge.compensate("undo"));
-              assert.isTrue(await view.bridge.compensate("redo"));
-              assert.equal(peer.state.doc.textContent, "first-original");
-              assert.deepEqual(
-                h.requests.map((request) => request.baseRevision),
-                [1, 2, 3],
-              );
-              assert.equal(new Set(h.requests.map((request) => request.mutationId)).size, 3);
-              assert.equal(h.admissions(), 3);
-              assert.isTrue(
-                h.requests.every((request) =>
-                  request.mutations.every((mutation) => mutation.kind === "replace"),
-                ),
-              );
-              peer.bridge.setWritable(false);
-              assert.isFalse(await peer.bridge.compensate("undo"));
-              assert.equal(h.requests.length, 3);
-              const restored = h.createController();
-              await restored.open();
-              const reopened = savedView(restored);
-              try {
-                assert.isTrue(await reopened.bridge.compensate("undo"));
-                assert.equal(reopened.state.doc.textContent, "original");
+                  };
+                  const copied = copySpaceBlocks([self], h.key, () =>
+                    C.SpaceBlockId.make("restored-copy"),
+                  );
+                  const copy = await h.run(
+                    service.applyBlockBatch({
+                      ...h.key,
+                      mutationId: "fresh-copy",
+                      receiptEpoch: admission.mutationAdmission.epoch,
+                      baseRevision: 2,
+                      generation: 1,
+                      mutations: copied.map((block) => ({ kind: "insert", block })),
+                    }),
+                  );
+                  assert.equal(copy.status, "saved");
+                  assert.deepEqual(
+                    (await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks.find(
+                      (block) => block.id === "restored-copy",
+                    ),
+                    {
+                      ...self,
+                      id: C.SpaceBlockId.make("restored-copy"),
+                      content: {
+                        runs: [
+                          {
+                            text: "copy",
+                            marks: [
+                              {
+                                type: "block_mention",
+                                version: 1,
+                                target: { ...h.key, blockId: "restored-copy" },
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  );
+                }
               } finally {
-                reopened.stop();
+                view.stop();
               }
-            } finally {
-              view.stop();
-              peer.stop();
-            }
-          });
-        }),
-      ),
-  );
-  it.effect("keeps the attempted saved undo draft on a real revision conflict without rebase", () =>
-    fixture((service) =>
-      Effect.gen(function* () {
-        const h = yield* savedUndoFixture(service);
-        yield* Effect.promise(async () => {
-          const controller = h.createController();
-          await controller.open();
-          const view = savedView(controller);
-          try {
-            view.edit("saved-");
-            await controller.save();
-            const current = await h.ports.getPage(h.key);
-            const external = savedParagraph("a", "external");
-            await h.run(
-              service.applyBlockBatch({
-                ...h.key,
-                mutationId: "external",
-                receiptEpoch: current.mutationAdmission.epoch,
-                baseRevision: 2,
-                generation: 1,
-                mutations: [{ kind: "replace", block: external }],
-              }),
+            });
+          }),
+        ),
+    );
+    it.effect.each([65536, 65537])(
+      "admits saved history through the exact %i-byte window and retains only the last save",
+      (bytes) =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const ranks = [
+              "40000000000000000000000000000000",
+              "80000000000000000000000000000000",
+              "c0000000000000000000000000000000",
+            ];
+            const empty = ranks.map((rank, i) => savedParagraph(`byte-${i}`, "", rank));
+            const padding = bytes - new TextEncoder().encode(JSON.stringify(empty)).length;
+            const blocks = ranks.map((rank, i) =>
+              savedParagraph(
+                `byte-${i}`,
+                "x".repeat(Math.floor(padding / 3) + (i < padding % 3 ? 1 : 0)),
+                rank,
+              ),
             );
-            assert.isFalse(await view.bridge.compensate("undo"));
-            assert.equal(controller.session.getSnapshot().status, "conflict");
-            assert.equal(controller.session.getSnapshot().baseRevision, 2);
-            assert.equal(controller.session.getSnapshot().history.action, "undo");
-            assert.equal(view.state.doc.textContent, "original");
-            assert.deepEqual(h.stored()?.blocks, [savedParagraph("a", "original")]);
-            assert.deepEqual((await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks, [
-              external,
-            ]);
-            const admissions = h.admissions();
-            await expect(controller.save()).rejects.toThrow("conflict");
-            assert.equal(h.admissions(), admissions);
-            assert.equal(h.requests.length, 2);
-            await controller.discard();
-            assert.equal(view.state.doc.textContent, "external");
-            assert.isFalse(await view.bridge.compensate("undo"));
-          } finally {
-            view.stop();
-          }
-        });
-      }),
-    ),
-  );
-  it.effect.each(["before", "after"] as const)(
-    "recovers saved undo after %s interruption using the exact persisted receipt intent",
-    (lose) =>
-      fixture((service) =>
-        Effect.gen(function* () {
-          const h = yield* savedUndoFixture(service);
-          yield* Effect.promise(async () => {
-            const controller = h.createController();
-            await controller.open();
-            const view = savedView(controller);
-            try {
-              view.edit("saved-");
-              await controller.save();
-              h.transport.lose = lose;
-              await expect(view.bridge.compensate("undo")).rejects.toThrow("interrupted");
-              const pending = controller.session.getSnapshot().pending!;
-              const wire = JSON.stringify(h.requests[1]);
-              assert.equal(h.stored()?.history?.action, "undo");
-              assert.isFalse(await view.bridge.compensate("redo"));
-              const restored = h.createController();
-              await restored.open();
-              assert.equal(restored.session.getSnapshot().status, "uncertain");
-              const admissionCount = h.admissions();
-              await restored.save();
-              assert.equal(h.admissions(), admissionCount);
-              assert.equal(JSON.stringify(h.lookups[0]?.request.input), wire);
-              assert.equal(restored.session.getSnapshot().baseRevision, 3);
-              assert.isNull(restored.session.getSnapshot().pending);
-              assert.isNull(restored.session.compensationAvailability("redo"));
-              if (lose === "before") {
+            assert.equal(new TextEncoder().encode(JSON.stringify(blocks)).length, bytes);
+            const h = yield* savedUndoFixture(service, blocks);
+            yield* Effect.promise(async () => {
+              const controller = h.createController();
+              await controller.open();
+              const view = savedView(controller);
+              try {
+                view.dispatch(
+                  view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 2)),
+                );
+                view.edit("y");
+                await controller.save();
+                assert.isFalse(controller.session.getSnapshot().dirty);
+                if (bytes === 65537) {
+                  assert.isFalse(await view.bridge.compensate("undo"));
+                  assert.include(controller.session.compensationAvailability("undo")!, "too large");
+                  return;
+                }
+                const first = view.state.doc.textContent;
+                view.dispatch(
+                  view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 2)),
+                );
+                view.edit("z");
+                await controller.save();
+                const second = view.state.doc.textContent;
+                assert.isTrue(await view.bridge.compensate("undo"));
+                assert.equal(view.state.doc.textContent, first);
+                assert.isFalse(await view.bridge.compensate("undo"));
+                assert.isTrue(await view.bridge.compensate("redo"));
+                assert.equal(view.state.doc.textContent, second);
+              } finally {
+                view.stop();
+              }
+            });
+          }),
+        ),
+    );
+    it.effect(
+      "submits saved content undo and redo as distinct guarded saves shared across views and reload",
+      () =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const h = yield* savedUndoFixture(service);
+            yield* Effect.promise(async () => {
+              const controller = h.createController();
+              await controller.open();
+              const view = savedView(controller),
+                peer = savedView(controller);
+              try {
+                view.edit("first-");
+                assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+                assert.equal(view.state.doc.textContent, "original");
+                assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+                await controller.save();
+                assert.equal(controller.session.getSnapshot().baseRevision, 2);
+                assert.isTrue(await peer.bridge.compensate("undo"));
+                assert.equal(view.state.doc.textContent, "original");
+                assert.equal(peer.state.doc.textContent, "original");
+                assert.equal(controller.session.getSnapshot().baseRevision, 3);
+                assert.isFalse(await view.bridge.compensate("undo"));
+                assert.isTrue(await view.bridge.compensate("redo"));
+                assert.equal(peer.state.doc.textContent, "first-original");
+                assert.deepEqual(
+                  h.requests.map((request) => request.baseRevision),
+                  [1, 2, 3],
+                );
+                assert.equal(new Set(h.requests.map((request) => request.mutationId)).size, 3);
+                assert.equal(h.admissions(), 3);
+                assert.isTrue(
+                  h.requests.every((request) =>
+                    request.mutations.every((mutation) => mutation.kind === "replace"),
+                  ),
+                );
+                peer.bridge.setWritable(false);
+                assert.isFalse(await peer.bridge.compensate("undo"));
                 assert.equal(h.requests.length, 3);
-                assert.equal(JSON.stringify(h.requests[2]), wire);
-              } else assert.equal(h.requests.length, 2);
-              assert.equal(pending.receiptEpoch, h.requests[1]!.receiptEpoch);
-            } finally {
-              view.stop();
-            }
-          });
-        }),
-      ),
-  );
-  it.effect(
-    "keeps edits typed during saved undo acknowledgement and guards redo until that draft is resolved",
-    () =>
-      fixture((service) =>
-        Effect.gen(function* () {
-          const h = yield* savedUndoFixture(service);
-          yield* Effect.promise(async () => {
-            const controller = h.createController();
-            await controller.open();
-            const view = savedView(controller);
-            try {
-              view.edit("saved-");
-              await controller.save();
-              h.transport.hold = true;
-              const undoing = view.bridge.compensate("undo");
-              await h.transport.committed.promise;
-              view.edit("late-");
-              h.transport.reply.resolve();
-              assert.isTrue(await undoing);
-              assert.isTrue(controller.session.getSnapshot().dirty);
-              assert.include(view.state.doc.textContent, "late-");
-              assert.isFalse(await view.bridge.compensate("redo"));
-              await controller.save();
-              assert.equal(h.requests[2]!.baseRevision, 3);
-              assert.isTrue(await view.bridge.compensate("undo"));
-              assert.equal(view.state.doc.textContent, "original");
-            } finally {
-              h.transport.reply.resolve();
-              view.stop();
-            }
-          });
-        }),
-      ),
-  );
-  it.effect(
-    "keeps two document views and exact pending intent across fresh v2 location ownership and moves",
-    () =>
-      fixture((service) =>
-        Effect.gen(function* () {
-          const { key, ports, run, capability } = yield* boot(service);
-          assert.equal(capability.version, 2);
-          const h = yield* queryRuntime(ports, (input) => run(service.readBlocks(input)));
-          yield* Effect.promise(async () => {
-            const drafts = new Map<C.SpacePageId, SpaceDocumentDraft | null>();
-            const requests: C.SpaceApplyBlockBatchInput[] = [];
-            const committed = signal(),
-              reply = signal();
-            let holdReply = false,
-              reads = 0,
-              ids = 0,
-              mutations = 0;
+                const restored = h.createController();
+                await restored.open();
+                const reopened = savedView(restored);
+                try {
+                  assert.isTrue(await reopened.bridge.compensate("undo"));
+                  assert.equal(reopened.state.doc.textContent, "original");
+                } finally {
+                  reopened.stop();
+                }
+              } finally {
+                view.stop();
+                peer.stop();
+              }
+            });
+          }),
+        ),
+    );
+    it.effect(
+      "keeps the attempted saved undo draft on a real revision conflict without rebase",
+      () =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const h = yield* savedUndoFixture(service);
+            yield* Effect.promise(async () => {
+              const controller = h.createController();
+              await controller.open();
+              const view = savedView(controller);
+              try {
+                view.edit("saved-");
+                await controller.save();
+                const current = await h.ports.getPage(h.key);
+                const external = savedParagraph("a", "external");
+                await h.run(
+                  service.applyBlockBatch({
+                    ...h.key,
+                    mutationId: "external",
+                    receiptEpoch: current.mutationAdmission.epoch,
+                    baseRevision: 2,
+                    generation: 1,
+                    mutations: [{ kind: "replace", block: external }],
+                  }),
+                );
+                assert.isFalse(await view.bridge.compensate("undo"));
+                assert.equal(controller.session.getSnapshot().status, "conflict");
+                assert.equal(controller.session.getSnapshot().baseRevision, 2);
+                assert.equal(controller.session.getSnapshot().history.action, "undo");
+                assert.equal(view.state.doc.textContent, "original");
+                assert.deepEqual(h.stored()?.blocks, [savedParagraph("a", "original")]);
+                assert.deepEqual(
+                  (await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks,
+                  [external],
+                );
+                const admissions = h.admissions();
+                await expect(controller.save()).rejects.toThrow("conflict");
+                assert.equal(h.admissions(), admissions);
+                assert.equal(h.requests.length, 2);
+                await controller.discard();
+                assert.equal(view.state.doc.textContent, "external");
+                assert.isFalse(await view.bridge.compensate("undo"));
+              } finally {
+                view.stop();
+              }
+            });
+          }),
+        ),
+    );
+    it.effect.each(["before", "after"] as const)(
+      "recovers saved undo after %s interruption using the exact persisted receipt intent",
+      (lose) =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const h = yield* savedUndoFixture(service);
+            yield* Effect.promise(async () => {
+              const controller = h.createController();
+              await controller.open();
+              const view = savedView(controller);
+              try {
+                view.edit("saved-");
+                await controller.save();
+                h.transport.lose = lose;
+                await expect(view.bridge.compensate("undo")).rejects.toThrow("interrupted");
+                const pending = controller.session.getSnapshot().pending!;
+                const wire = JSON.stringify(h.requests[1]);
+                assert.equal(h.stored()?.history?.action, "undo");
+                assert.isFalse(await view.bridge.compensate("redo"));
+                const restored = h.createController();
+                await restored.open();
+                assert.equal(restored.session.getSnapshot().status, "uncertain");
+                const admissionCount = h.admissions();
+                await restored.save();
+                assert.equal(h.admissions(), admissionCount);
+                assert.equal(JSON.stringify(h.lookups[0]?.request.input), wire);
+                assert.equal(restored.session.getSnapshot().baseRevision, 3);
+                assert.isNull(restored.session.getSnapshot().pending);
+                assert.isNull(restored.session.compensationAvailability("redo"));
+                if (lose === "before") {
+                  assert.equal(h.requests.length, 3);
+                  assert.equal(JSON.stringify(h.requests[2]), wire);
+                } else assert.equal(h.requests.length, 2);
+                assert.equal(pending.receiptEpoch, h.requests[1]!.receiptEpoch);
+              } finally {
+                view.stop();
+              }
+            });
+          }),
+        ),
+    );
+    it.effect(
+      "keeps edits typed during saved undo acknowledgement and guards redo until that draft is resolved",
+      () =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const h = yield* savedUndoFixture(service);
+            yield* Effect.promise(async () => {
+              const controller = h.createController();
+              await controller.open();
+              const view = savedView(controller);
+              try {
+                view.edit("saved-");
+                await controller.save();
+                h.transport.hold = true;
+                const undoing = view.bridge.compensate("undo");
+                await h.transport.committed.promise;
+                view.edit("late-");
+                h.transport.reply.resolve();
+                assert.isTrue(await undoing);
+                assert.isTrue(controller.session.getSnapshot().dirty);
+                assert.include(view.state.doc.textContent, "late-");
+                assert.isFalse(await view.bridge.compensate("redo"));
+                await controller.save();
+                assert.equal(h.requests[2]!.baseRevision, 3);
+                assert.isTrue(await view.bridge.compensate("undo"));
+                assert.equal(view.state.doc.textContent, "original");
+              } finally {
+                h.transport.reply.resolve();
+                view.stop();
+              }
+            });
+          }),
+        ),
+    );
+    it.effect(
+      "keeps two document views and exact pending intent across fresh v2 location ownership and moves",
+      () =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const { key, ports, run, capability } = yield* boot(service);
+            assert.equal(capability.version, 2);
+            const h = yield* queryRuntime(ports, (input) => run(service.readBlocks(input)));
+            yield* Effect.promise(async () => {
+              const drafts = new Map<C.SpacePageId, SpaceDocumentDraft | null>();
+              const requests: C.SpaceApplyBlockBatchInput[] = [];
+              const committed = signal(),
+                reply = signal();
+              let holdReply = false,
+                reads = 0,
+                ids = 0,
+                mutations = 0;
+              const documents = new SpaceDocumentControllers(
+                (target) =>
+                  new SpaceDocumentController(
+                    target,
+                    {
+                      adapter: createSpaceServiceSessionAdapter(target, {
+                        ...ports,
+                        applyBlockBatch: async (input) => {
+                          assert.deepEqual(
+                            drafts.get(target.pageId)?.pending?.mutations,
+                            input.mutations,
+                          );
+                          requests.push(input);
+                          const result = await ports.applyBlockBatch(input);
+                          if (holdReply) {
+                            holdReply = false;
+                            committed.resolve();
+                            await reply.promise;
+                          }
+                          return result;
+                        },
+                      }),
+                      drafts: {
+                        load: async (target) => drafts.get(target.pageId) ?? null,
+                        write: async (target, value) => {
+                          drafts.set(target.pageId, value);
+                        },
+                      },
+                      createMutationId: () => `v2-editor-${++mutations}`,
+                      maxLoadedBlocks: 100,
+                      maxMutations: 100,
+                    },
+                    {
+                      getPage: () => h.read(h.queries.page({ environmentId, input: target })),
+                      readBlocks: (input) => {
+                        reads++;
+                        return h.read(h.queries.blocks({ environmentId, input }));
+                      },
+                      windowLimit: () => 100,
+                    },
+                  ),
+              );
+              const route = documents.open(key),
+                panel = documents.open(key);
+              const leases = [route, panel];
+              const controller = await route.ready;
+              assert.equal(await panel.ready, controller);
+              assert.isNull(controller.getSnapshot().error);
+              assert.equal(reads, 1);
+              const bridge = new SpaceEditorBridge(controller, () =>
+                C.SpaceBlockId.make(`v2-block-${++ids}`),
+              );
+              const peer = new SpaceEditorBridge(controller, () =>
+                C.SpaceBlockId.make(`v2-peer-${++ids}`),
+              );
+              bridge.setWritable(true);
+              peer.setWritable(true);
+              let state = EditorState.create({
+                doc: bridge.adapter.document,
+                plugins: bridge.adapter.plugins(),
+              });
+              let peerState = EditorState.create({
+                doc: peer.adapter.document,
+                plugins: peer.adapter.plugins(),
+              });
+              const stop = controller.subscribe(() => {
+                state = bridge.synchronize(state);
+                peerState = peer.synchronize(peerState);
+              });
+              const dispatch = (tr: Transaction) => {
+                state = bridge.apply(state, tr).state;
+              };
+              try {
+                assert.isTrue(bridge.adapter.append()(state, dispatch));
+                dispatch(state.tr.insertText("unsaved text"));
+                await controller.session.persistDraft();
+                const dirty = controller.session.getSnapshot(),
+                  editor = state;
+                const admission = (await ports.getPage(key)).mutationAdmission;
+                const other = await run(
+                  service.createSpace({
+                    environmentId,
+                    mutationId: "v2-space",
+                    receiptEpoch: admission.epoch,
+                    title: "Destination",
+                  }),
+                );
+                const parent = await run(
+                  service.createPage({
+                    environmentId,
+                    mutationId: "v2-parent",
+                    receiptEpoch: admission.epoch,
+                    title: "Parent",
+                    spaceId: other.space.id,
+                    baseRootOrderRevision: 0,
+                  }),
+                );
+                if (parent.status !== "saved") throw new Error("Expected parent");
+                const move = async (mutationId: string, destination: C.SpacePageDestination) => {
+                  const inspected = await run(
+                    service.inspectStructure({
+                      environmentId,
+                      target: { kind: "page", pageId: key.pageId },
+                      destination,
+                    }),
+                  );
+                  const current = await ports.getPage(key);
+                  const result = await run(
+                    service.movePage({
+                      ...key,
+                      mutationId,
+                      receiptEpoch: current.mutationAdmission.epoch,
+                      destination,
+                      guards: inspected.guards,
+                    }),
+                  );
+                  assert.equal(result.status, "saved");
+                };
+                await move("v2-nest", {
+                  kind: "child",
+                  placement: { pageId: parent.page.id, parentId: null, beforeBlockId: null },
+                });
+                const location = h.queries.location({
+                  environmentId,
+                  input: { ...key, version: 2 },
+                });
+                const moved = await h.read(location);
+                assert.equal(moved.current()?.page.spaceId, other.space.id);
+                assert.deepEqual(
+                  moved.ancestors.map((page) => page.id),
+                  [parent.page.id],
+                );
+                assert.deepEqual(
+                  (
+                    await run(service.listPages({ environmentId, spaceId: other.space.id }))
+                  ).items.map((page) => page.id),
+                  [parent.page.id],
+                );
+                assert.deepEqual(
+                  (
+                    await run(
+                      service.listPages({
+                        environmentId,
+                        spaceId: other.space.id,
+                        parentPageId: parent.page.id,
+                      }),
+                    )
+                  ).items.map((page) => page.id),
+                  [key.pageId],
+                );
+                assert.equal(controller.session.getSnapshot(), dirty);
+                assert.equal(state, editor);
+                assert.deepEqual(spaceDocumentBlocks(peerState.doc), dirty.blocks);
+                route.release();
+                const canonicalTarget = {
+                  ...key,
+                  spaceId: other.space.id,
+                  blockId: dirty.blocks[0]!.id,
+                };
+                const canonical = documents.open(canonicalTarget);
+                leases.push(canonical);
+                assert.equal(await canonical.ready, controller);
+                assert.equal(reads, 1);
+                await controller.save();
+                assert.equal(controller.session.getSnapshot().status, "conflict");
+                assert.deepEqual(controller.session.getSnapshot().blocks, dirty.blocks);
+                await controller.discard();
+                assert.equal(controller.session.getSnapshot().baseRevision, moved.page.revision);
+                assert.deepEqual(controller.session.getSnapshot().blocks, []);
+                assert.isTrue(bridge.adapter.append()(state, dispatch));
+                dispatch(state.tr.insertText("saved through move"));
+                holdReply = true;
+                const saving = controller.save();
+                await committed.promise;
+                const pending = controller.session.getSnapshot().pending!;
+                const pendingWire = JSON.stringify(requests[1]);
+                await move("v2-promote", {
+                  kind: "root",
+                  spaceId: other.space.id,
+                  beforePageId: null,
+                });
+                const current = await h.read(location);
+                assert.equal(current.page.location?.kind, "root");
+                assert.deepEqual(current.ancestors, []);
+                assert.equal(controller.session.getSnapshot().pending, pending);
+                assert.equal(JSON.stringify(requests[1]), pendingWire);
+                assert.equal(pending.key.pageId, key.pageId);
+                reply.resolve();
+                await saving;
+                assert.isNull(controller.session.getSnapshot().pending);
+                assert.isFalse(controller.session.getSnapshot().dirty);
+                assert.equal(controller.session.getSnapshot().baseRevision, current.page.revision);
+                assert.include(controller.editorWindow().completeParents, null);
+                assert.deepEqual(
+                  spaceDocumentBlocks(state.doc),
+                  controller.session.getSnapshot().blocks,
+                );
+                assert.deepEqual(
+                  spaceDocumentBlocks(peerState.doc),
+                  controller.session.getSnapshot().blocks,
+                );
+                assert.include(state.doc.textContent, "saved through move");
+                assert.equal(requests.length, 2);
+                assert.equal(requests[1]!.baseRevision, moved.page.revision);
+                assert.equal(requests[1]!.receiptEpoch, pending.receiptEpoch);
+                assert.equal(requests[1]!.generation, pending.generation);
+              } finally {
+                reply.resolve();
+                stop();
+                for (const lease of leases) lease.release();
+              }
+            });
+          }),
+        ),
+    );
+    it.effect(
+      "releases an interrupted opening, ignores an obsolete RPC session read and replaces only a clean current window",
+      () =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const { key, ports, run } = yield* boot(service);
+            const h = yield* queryRuntime(ports, (input) => run(service.readBlocks(input)));
             const documents = new SpaceDocumentControllers(
               (target) =>
                 new SpaceDocumentController(
                   target,
                   {
-                    adapter: createSpaceServiceSessionAdapter(target, {
-                      ...ports,
-                      applyBlockBatch: async (input) => {
-                        assert.deepEqual(
-                          drafts.get(target.pageId)?.pending?.mutations,
-                          input.mutations,
-                        );
-                        requests.push(input);
-                        const result = await ports.applyBlockBatch(input);
-                        if (holdReply) {
-                          holdReply = false;
-                          committed.resolve();
-                          await reply.promise;
-                        }
-                        return result;
-                      },
-                    }),
-                    drafts: {
-                      load: async (target) => drafts.get(target.pageId) ?? null,
-                      write: async (target, value) => {
-                        drafts.set(target.pageId, value);
-                      },
-                    },
-                    createMutationId: () => `v2-editor-${++mutations}`,
+                    adapter: createSpaceServiceSessionAdapter(target, ports),
+                    drafts: { load: async () => null, write: async () => {} },
+                    createMutationId: () => "unused",
                     maxLoadedBlocks: 100,
                     maxMutations: 100,
                   },
                   {
                     getPage: () => h.read(h.queries.page({ environmentId, input: target })),
-                    readBlocks: (input) => {
-                      reads++;
-                      return h.read(h.queries.blocks({ environmentId, input }));
-                    },
+                    readBlocks: (input) => h.read(h.queries.blocks({ environmentId, input })),
                     windowLimit: () => 100,
                   },
                 ),
             );
-            const route = documents.open(key),
-              panel = documents.open(key);
-            const leases = [route, panel];
-            const controller = await route.ready;
-            assert.equal(await panel.ready, controller);
-            assert.isNull(controller.getSnapshot().error);
-            assert.equal(reads, 1);
-            const bridge = new SpaceEditorBridge(controller, () =>
-              C.SpaceBlockId.make(`v2-block-${++ids}`),
-            );
-            const peer = new SpaceEditorBridge(controller, () =>
-              C.SpaceBlockId.make(`v2-peer-${++ids}`),
-            );
-            bridge.setWritable(true);
-            peer.setWritable(true);
-            let state = EditorState.create({
-              doc: bridge.adapter.document,
-              plugins: bridge.adapter.plugins(),
-            });
-            let peerState = EditorState.create({
-              doc: peer.adapter.document,
-              plugins: peer.adapter.plugins(),
-            });
-            const stop = controller.subscribe(() => {
-              state = bridge.synchronize(state);
-              peerState = peer.synchronize(peerState);
-            });
-            const dispatch = (tr: Transaction) => {
-              state = bridge.apply(state, tr).state;
-            };
-            try {
-              assert.isTrue(bridge.adapter.append()(state, dispatch));
-              dispatch(state.tr.insertText("unsaved text"));
-              await controller.session.persistDraft();
-              const dirty = controller.session.getSnapshot(),
-                editor = state;
-              const admission = (await ports.getPage(key)).mutationAdmission;
-              const other = await run(
-                service.createSpace({
-                  environmentId,
-                  mutationId: "v2-space",
-                  receiptEpoch: admission.epoch,
-                  title: "Destination",
-                }),
-              );
-              const parent = await run(
-                service.createPage({
-                  environmentId,
-                  mutationId: "v2-parent",
-                  receiptEpoch: admission.epoch,
-                  title: "Parent",
-                  spaceId: other.space.id,
-                  baseRootOrderRevision: 0,
-                }),
-              );
-              if (parent.status !== "saved") throw new Error("Expected parent");
-              const move = async (mutationId: string, destination: C.SpacePageDestination) => {
-                const inspected = await run(
-                  service.inspectStructure({
-                    environmentId,
-                    target: { kind: "page", pageId: key.pageId },
-                    destination,
-                  }),
-                );
-                const current = await ports.getPage(key);
-                const result = await run(
-                  service.movePage({
-                    ...key,
-                    mutationId,
-                    receiptEpoch: current.mutationAdmission.epoch,
-                    destination,
-                    guards: inspected.guards,
-                  }),
-                );
-                assert.equal(result.status, "saved");
-              };
-              await move("v2-nest", {
-                kind: "child",
-                placement: { pageId: parent.page.id, parentId: null, beforeBlockId: null },
-              });
-              const location = h.queries.location({ environmentId, input: { ...key, version: 2 } });
-              const moved = await h.read(location);
-              assert.equal(moved.current()?.page.spaceId, other.space.id);
-              assert.deepEqual(
-                moved.ancestors.map((page) => page.id),
-                [parent.page.id],
-              );
-              assert.deepEqual(
-                (
-                  await run(service.listPages({ environmentId, spaceId: other.space.id }))
-                ).items.map((page) => page.id),
-                [parent.page.id],
-              );
-              assert.deepEqual(
-                (
-                  await run(
-                    service.listPages({
-                      environmentId,
-                      spaceId: other.space.id,
-                      parentPageId: parent.page.id,
-                    }),
-                  )
-                ).items.map((page) => page.id),
-                [key.pageId],
-              );
-              assert.equal(controller.session.getSnapshot(), dirty);
-              assert.equal(state, editor);
-              assert.deepEqual(spaceDocumentBlocks(peerState.doc), dirty.blocks);
-              route.release();
-              const canonicalTarget = {
-                ...key,
-                spaceId: other.space.id,
-                blockId: dirty.blocks[0]!.id,
-              };
-              const canonical = documents.open(canonicalTarget);
-              leases.push(canonical);
-              assert.equal(await canonical.ready, controller);
-              assert.equal(reads, 1);
-              await controller.save();
-              assert.equal(controller.session.getSnapshot().status, "conflict");
-              assert.deepEqual(controller.session.getSnapshot().blocks, dirty.blocks);
-              await controller.discard();
-              assert.equal(controller.session.getSnapshot().baseRevision, moved.page.revision);
-              assert.deepEqual(controller.session.getSnapshot().blocks, []);
-              assert.isTrue(bridge.adapter.append()(state, dispatch));
-              dispatch(state.tr.insertText("saved through move"));
-              holdReply = true;
-              const saving = controller.save();
-              await committed.promise;
-              const pending = controller.session.getSnapshot().pending!;
-              const pendingWire = JSON.stringify(requests[1]);
-              await move("v2-promote", {
-                kind: "root",
-                spaceId: other.space.id,
-                beforePageId: null,
-              });
-              const current = await h.read(location);
-              assert.equal(current.page.location?.kind, "root");
-              assert.deepEqual(current.ancestors, []);
-              assert.equal(controller.session.getSnapshot().pending, pending);
-              assert.equal(JSON.stringify(requests[1]), pendingWire);
-              assert.equal(pending.key.pageId, key.pageId);
-              reply.resolve();
-              await saving;
-              assert.isNull(controller.session.getSnapshot().pending);
-              assert.isFalse(controller.session.getSnapshot().dirty);
-              assert.equal(controller.session.getSnapshot().baseRevision, current.page.revision);
-              assert.include(controller.editorWindow().completeParents, null);
-              assert.deepEqual(
-                spaceDocumentBlocks(state.doc),
-                controller.session.getSnapshot().blocks,
-              );
-              assert.deepEqual(
-                spaceDocumentBlocks(peerState.doc),
-                controller.session.getSnapshot().blocks,
-              );
-              assert.include(state.doc.textContent, "saved through move");
-              assert.equal(requests.length, 2);
-              assert.equal(requests[1]!.baseRevision, moved.page.revision);
-              assert.equal(requests[1]!.receiptEpoch, pending.receiptEpoch);
-              assert.equal(requests[1]!.generation, pending.generation);
-            } finally {
-              reply.resolve();
-              stop();
-              for (const lease of leases) lease.release();
-            }
-          });
-        }),
-      ),
-  );
-  it.effect(
-    "releases an interrupted opening, ignores an obsolete RPC session read and replaces only a clean current window",
-    () =>
-      fixture((service) =>
-        Effect.gen(function* () {
-          const { key, ports, run } = yield* boot(service);
-          const h = yield* queryRuntime(ports, (input) => run(service.readBlocks(input)));
-          const documents = new SpaceDocumentControllers(
-            (target) =>
-              new SpaceDocumentController(
-                target,
-                {
-                  adapter: createSpaceServiceSessionAdapter(target, ports),
-                  drafts: { load: async () => null, write: async () => {} },
-                  createMutationId: () => "unused",
-                  maxLoadedBlocks: 100,
-                  maxMutations: 100,
-                },
-                {
-                  getPage: () => h.read(h.queries.page({ environmentId, input: target })),
-                  readBlocks: (input) => h.read(h.queries.blocks({ environmentId, input })),
-                  windowLimit: () => 100,
-                },
-              ),
-          );
-          h.holdNext();
-          const first = documents.open(key);
-          const blocked = yield* Queue.take(h.blocked);
-          first.release();
-          yield* SubscriptionRef.set(h.sessions, Option.some(h.makeSession()));
-          yield* Deferred.await(blocked.canceled);
-          const old = yield* Effect.promise(() => first.ready);
-          assert.isFalse(old.session.getSnapshot().hydrated);
-          const admission = yield* service.getPage(key);
-          const block: C.SpaceBlock = {
-            id: C.SpaceBlockId.make("current"),
-            parentId: null,
-            order: "80000000000000000000000000000000",
-            type: "paragraph",
-            version: 1,
-            content: { runs: [{ text: "new connection", marks: [] }] },
-          };
-          yield* service.applyBlockBatch({
-            ...key,
-            mutationId: "after-reconnect",
-            receiptEpoch: admission.mutationAdmission.epoch,
-            baseRevision: 0,
-            generation: 1,
-            mutations: [{ kind: "insert", block }],
-          });
-          const next = documents.open(key);
-          try {
-            const current = yield* Effect.promise(() => next.ready);
-            assert.notEqual(current, old);
-            yield* Deferred.succeed(blocked.reply, undefined);
-            assert.equal(current.session.getSnapshot().baseRevision, 1);
-            assert.deepEqual(current.session.getSnapshot().blocks, [block]);
+            h.holdNext();
+            const first = documents.open(key);
+            const blocked = yield* Queue.take(h.blocked);
             first.release();
-            const secondBlock = {
-              ...block,
-              content: { runs: [{ text: "clean refresh", marks: [] }] },
+            yield* SubscriptionRef.set(h.sessions, Option.some(h.makeSession()));
+            yield* Deferred.await(blocked.canceled);
+            const old = yield* Effect.promise(() => first.ready);
+            assert.isFalse(old.session.getSnapshot().hydrated);
+            const admission = yield* service.getPage(key);
+            const block: C.SpaceBlock = {
+              id: C.SpaceBlockId.make("current"),
+              parentId: null,
+              order: "80000000000000000000000000000000",
+              type: "paragraph",
+              version: 1,
+              content: { runs: [{ text: "new connection", marks: [] }] },
             };
             yield* service.applyBlockBatch({
               ...key,
-              mutationId: "clean-update",
+              mutationId: "after-reconnect",
               receiptEpoch: admission.mutationAdmission.epoch,
-              baseRevision: 1,
-              generation: 2,
-              mutations: [{ kind: "replace", block: secondBlock }],
+              baseRevision: 0,
+              generation: 1,
+              mutations: [{ kind: "insert", block }],
             });
-            yield* Effect.promise(() => current.refresh());
-            assert.equal(current.session.getSnapshot().baseRevision, 2);
-            assert.deepEqual(current.session.getSnapshot().blocks, [secondBlock]);
-            assert.include(current.editorWindow().completeParents, null);
-          } finally {
-            next.release();
-          }
-        }),
-      ),
-  );
-  it.effect.each([false, true])(
-    "saves real editor commands once, resets acknowledged undo and retains later text (late reply: %s)",
-    (late) =>
-      fixture((service) =>
-        Effect.gen(function* () {
-          const { key, ports, run } = yield* boot(service);
-          const committed = yield* Effect.sync(() => {
-            let resolve!: () => void;
-            const promise = new Promise<void>((done) => {
-              resolve = done;
-            });
-            return { promise, resolve };
-          });
-          const reply = yield* Effect.sync(() => {
-            let resolve!: () => void;
-            const promise = new Promise<void>((done) => {
-              resolve = done;
-            });
-            return { promise, resolve };
-          });
-          const requests: C.SpaceApplyBlockBatchInput[] = [];
-          let stored: SpaceDocumentDraft | null = null;
-          let mutationIds = 0;
-          const controller = new SpaceDocumentController(
-            key,
-            {
-              adapter: createSpaceServiceSessionAdapter(key, {
-                ...ports,
-                applyBlockBatch: async (input) => {
-                  assert.equal(stored?.pending?.generation, input.generation);
-                  assert.equal(stored?.pending?.receiptEpoch, input.receiptEpoch);
-                  requests.push(input);
-                  const result = await ports.applyBlockBatch(input);
-                  if (late && requests.length === 1) {
-                    committed.resolve();
-                    await reply.promise;
-                  }
-                  return result;
-                },
-              }),
-              drafts: {
-                load: async () => null,
-                write: async (_key, value) => {
-                  stored = value;
-                },
-              },
-              createMutationId: () => `editor-command-${++mutationIds}`,
-              maxLoadedBlocks: 100,
-              maxMutations: 100,
-            },
-            {
-              getPage: () => ports.getPage(key),
-              readBlocks: (input) => run(service.readBlocks(input)),
-              windowLimit: () => 100,
-            },
-          );
-          yield* Effect.promise(async () => {
-            await controller.open();
-            let ids = 0;
-            const bridge = new SpaceEditorBridge(controller, () =>
-              C.SpaceBlockId.make(`command-${++ids}`),
-            );
-            bridge.setWritable(true);
-            let state = EditorState.create({
-              doc: bridge.adapter.document,
-              plugins: bridge.adapter.plugins(),
-            });
-            const dispatch = (tr: Transaction) => {
-              state = bridge.apply(state, tr).state;
-            };
-            const command = (value: Command) => {
-              assert.isTrue(value(state, dispatch));
-            };
-            const select = (id: string, offset = 0) => {
-              let position = -1;
-              state.doc.descendants((node, pos) => {
-                if (node.attrs.block?.id === id) position = pos + 1 + offset;
-              });
-              dispatch(state.tr.setSelection(TextSelection.create(state.doc, position)));
-            };
-            const unsubscribe = controller.subscribe(() => {
-              state = bridge.synchronize(state);
-            });
+            const next = documents.open(key);
             try {
-              command(bridge.adapter.append());
-              dispatch(state.tr.insertText("hello"));
-              select("command-1", 2);
-              command(bridge.adapter.split());
-              select("command-2");
-              command(bridge.adapter.joinBackward());
-              command(bridge.adapter.undoLocal());
-              command(bridge.adapter.redoLocal());
-              const copied = bridge.adapter.copyBlocks(state, [C.SpaceBlockId.make("command-1")]);
-              command(bridge.adapter.pasteBlocks(copied, key));
-              const deletedTarget = spaceDocumentBlocks(state.doc).find(
-                (block) => block.id === "command-3",
-              )!;
-              dispatch(
-                state.tr.addMark(
-                  1,
-                  6,
-                  state.schema.marks.space_block_mention!.create({
-                    value: {
-                      type: "block_mention",
-                      version: 1,
-                      target: { ...key, blockId: deletedTarget.id },
-                    },
-                  }),
-                ),
-              );
-              command(bridge.adapter.remove(deletedTarget.id));
-              select("command-1", 5);
-              dispatch(state.tr.insertText("!"));
-              const saving = controller.save();
-              if (late) {
-                await committed.promise;
-                assert.isFalse(bridge.adapter.split()(state, dispatch));
-                dispatch(state.tr.insertText("late"));
-                reply.resolve();
-              }
-              await saving;
-              assert.equal(requests.length, 1);
-              const inserted = requests[0]!.mutations.filter((m) => m.kind === "insert");
-              assert.equal(new Set(inserted.map((m) => m.block.id)).size, inserted.length);
-              assert.equal(inserted.length, 3);
-              assert.isTrue(inserted.every((m) => /^[0-9a-f]{32}$/.test(m.block.order)));
-              assert.equal((await run(service.getPage(key))).page.revision, 1);
-              const replayAdmission = await ports.getPage(key);
-              const resurrection = await run(
-                service
-                  .applyBlockBatch({
-                    ...key,
-                    mutationId: C.SpaceMutationId.make("reference-resurrection"),
-                    receiptEpoch: replayAdmission.mutationAdmission.epoch,
-                    baseRevision: 1,
-                    generation: 1,
-                    mutations: [{ kind: "insert", block: deletedTarget }],
-                  })
-                  .pipe(Effect.flip),
-              );
-              assert.equal(resurrection._tag, "SpaceValidationError");
-              if (resurrection._tag === "SpaceValidationError")
-                assert.equal(resurrection.reason, "duplicate_id");
-              assert.isFalse(bridge.adapter.undoLocal()(state, dispatch));
-              if (late) {
-                assert.isTrue(controller.session.getSnapshot().dirty);
-                assert.include(state.doc.textContent, "late");
-              }
-              select("command-1", 5);
-              dispatch(state.tr.insertText("next"));
-              command(bridge.adapter.undoLocal());
-              command(bridge.adapter.redoLocal());
-              const expected = spaceDocumentBlocks(state.doc);
-              await controller.save();
-              assert.equal(requests.length, 2);
-              assert.equal(requests[1]!.baseRevision, 1);
-              assert.equal(requests[1]!.mutations.length, 1);
-              assert.equal(requests[1]!.mutations[0]!.kind, "replace");
-              assert.deepEqual(
-                (await run(service.readBlocks({ ...key, revision: 2 }))).blocks,
-                expected,
-              );
-              assert.isNull(stored?.pending);
-              assert.isNotNull(stored?.history?.undo);
-              assert.isFalse(bridge.adapter.redoLocal()(state, dispatch));
+              const current = yield* Effect.promise(() => next.ready);
+              assert.notEqual(current, old);
+              yield* Deferred.succeed(blocked.reply, undefined);
+              assert.equal(current.session.getSnapshot().baseRevision, 1);
+              assert.deepEqual(current.session.getSnapshot().blocks, [block]);
+              first.release();
+              const secondBlock = {
+                ...block,
+                content: { runs: [{ text: "clean refresh", marks: [] }] },
+              };
+              yield* service.applyBlockBatch({
+                ...key,
+                mutationId: "clean-update",
+                receiptEpoch: admission.mutationAdmission.epoch,
+                baseRevision: 1,
+                generation: 2,
+                mutations: [{ kind: "replace", block: secondBlock }],
+              });
+              yield* Effect.promise(() => current.refresh());
+              assert.equal(current.session.getSnapshot().baseRevision, 2);
+              assert.deepEqual(current.session.getSnapshot().blocks, [secondBlock]);
+              assert.include(current.editorWindow().completeParents, null);
             } finally {
-              unsubscribe();
+              next.release();
             }
-          });
-        }),
-      ),
-  );
-});
+          }),
+        ),
+    );
+    it.effect.each([false, true])(
+      "saves real editor commands once, resets acknowledged undo and retains later text (late reply: %s)",
+      (late) =>
+        fixture((service) =>
+          Effect.gen(function* () {
+            const { key, ports, run } = yield* boot(service);
+            const committed = yield* Effect.sync(() => {
+              let resolve!: () => void;
+              const promise = new Promise<void>((done) => {
+                resolve = done;
+              });
+              return { promise, resolve };
+            });
+            const reply = yield* Effect.sync(() => {
+              let resolve!: () => void;
+              const promise = new Promise<void>((done) => {
+                resolve = done;
+              });
+              return { promise, resolve };
+            });
+            const requests: C.SpaceApplyBlockBatchInput[] = [];
+            let stored: SpaceDocumentDraft | null = null;
+            let mutationIds = 0;
+            const controller = new SpaceDocumentController(
+              key,
+              {
+                adapter: createSpaceServiceSessionAdapter(key, {
+                  ...ports,
+                  applyBlockBatch: async (input) => {
+                    assert.equal(stored?.pending?.generation, input.generation);
+                    assert.equal(stored?.pending?.receiptEpoch, input.receiptEpoch);
+                    requests.push(input);
+                    const result = await ports.applyBlockBatch(input);
+                    if (late && requests.length === 1) {
+                      committed.resolve();
+                      await reply.promise;
+                    }
+                    return result;
+                  },
+                }),
+                drafts: {
+                  load: async () => null,
+                  write: async (_key, value) => {
+                    stored = value;
+                  },
+                },
+                createMutationId: () => `editor-command-${++mutationIds}`,
+                maxLoadedBlocks: 100,
+                maxMutations: 100,
+              },
+              {
+                getPage: () => ports.getPage(key),
+                readBlocks: (input) => run(service.readBlocks(input)),
+                windowLimit: () => 100,
+              },
+            );
+            yield* Effect.promise(async () => {
+              await controller.open();
+              let ids = 0;
+              const bridge = new SpaceEditorBridge(controller, () =>
+                C.SpaceBlockId.make(`command-${++ids}`),
+              );
+              bridge.setWritable(true);
+              let state = EditorState.create({
+                doc: bridge.adapter.document,
+                plugins: bridge.adapter.plugins(),
+              });
+              const dispatch = (tr: Transaction) => {
+                state = bridge.apply(state, tr).state;
+              };
+              const command = (value: Command) => {
+                assert.isTrue(value(state, dispatch));
+              };
+              const select = (id: string, offset = 0) => {
+                let position = -1;
+                state.doc.descendants((node, pos) => {
+                  if (node.attrs.block?.id === id) position = pos + 1 + offset;
+                });
+                dispatch(state.tr.setSelection(TextSelection.create(state.doc, position)));
+              };
+              const unsubscribe = controller.subscribe(() => {
+                state = bridge.synchronize(state);
+              });
+              try {
+                command(bridge.adapter.append());
+                dispatch(state.tr.insertText("hello"));
+                select("command-1", 2);
+                command(bridge.adapter.split());
+                select("command-2");
+                command(bridge.adapter.joinBackward());
+                command(bridge.adapter.undoLocal());
+                command(bridge.adapter.redoLocal());
+                const copied = bridge.adapter.copyBlocks(state, [C.SpaceBlockId.make("command-1")]);
+                command(bridge.adapter.pasteBlocks(copied, key));
+                const deletedTarget = spaceDocumentBlocks(state.doc).find(
+                  (block) => block.id === "command-3",
+                )!;
+                dispatch(
+                  state.tr.addMark(
+                    1,
+                    6,
+                    state.schema.marks.space_block_mention!.create({
+                      value: {
+                        type: "block_mention",
+                        version: 1,
+                        target: { ...key, blockId: deletedTarget.id },
+                      },
+                    }),
+                  ),
+                );
+                command(bridge.adapter.remove(deletedTarget.id));
+                select("command-1", 5);
+                dispatch(state.tr.insertText("!"));
+                const saving = controller.save();
+                if (late) {
+                  await committed.promise;
+                  assert.isFalse(bridge.adapter.split()(state, dispatch));
+                  dispatch(state.tr.insertText("late"));
+                  reply.resolve();
+                }
+                await saving;
+                assert.equal(requests.length, 1);
+                const inserted = requests[0]!.mutations.filter((m) => m.kind === "insert");
+                assert.equal(new Set(inserted.map((m) => m.block.id)).size, inserted.length);
+                assert.equal(inserted.length, 3);
+                assert.isTrue(inserted.every((m) => /^[0-9a-f]{32}$/.test(m.block.order)));
+                assert.equal((await run(service.getPage(key))).page.revision, 1);
+                const replayAdmission = await ports.getPage(key);
+                const resurrection = await run(
+                  service
+                    .applyBlockBatch({
+                      ...key,
+                      mutationId: C.SpaceMutationId.make("reference-resurrection"),
+                      receiptEpoch: replayAdmission.mutationAdmission.epoch,
+                      baseRevision: 1,
+                      generation: 1,
+                      mutations: [{ kind: "insert", block: deletedTarget }],
+                    })
+                    .pipe(Effect.flip),
+                );
+                assert.equal(resurrection._tag, "SpaceValidationError");
+                if (resurrection._tag === "SpaceValidationError")
+                  assert.equal(resurrection.reason, "duplicate_id");
+                assert.isFalse(bridge.adapter.undoLocal()(state, dispatch));
+                if (late) {
+                  assert.isTrue(controller.session.getSnapshot().dirty);
+                  assert.include(state.doc.textContent, "late");
+                }
+                select("command-1", 5);
+                dispatch(state.tr.insertText("next"));
+                command(bridge.adapter.undoLocal());
+                command(bridge.adapter.redoLocal());
+                const expected = spaceDocumentBlocks(state.doc);
+                await controller.save();
+                assert.equal(requests.length, 2);
+                assert.equal(requests[1]!.baseRevision, 1);
+                assert.equal(requests[1]!.mutations.length, 1);
+                assert.equal(requests[1]!.mutations[0]!.kind, "replace");
+                assert.deepEqual(
+                  (await run(service.readBlocks({ ...key, revision: 2 }))).blocks,
+                  expected,
+                );
+                assert.isNull(stored?.pending);
+                assert.isNotNull(stored?.history?.undo);
+                assert.isFalse(bridge.adapter.redoLocal()(state, dispatch));
+              } finally {
+                unsubscribe();
+              }
+            });
+          }),
+        ),
+    );
+  },
+);
 
 const decodeStructureServiceError = Schema.decodeUnknownOption(C.SpaceServiceError);
 const encodedRootRpc = Effect.fn("SpaceEditorServiceTest.encodedRootRpc")(function* (
@@ -1742,7 +1756,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -1783,7 +1797,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -1834,7 +1848,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -1866,7 +1880,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -1896,7 +1910,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -1930,7 +1944,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -1957,7 +1971,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -1985,7 +1999,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2017,7 +2031,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2053,7 +2067,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2103,7 +2117,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect("does not replace the saved inverse on a definite no-op root placement", () =>
@@ -2125,7 +2139,7 @@ it.effect("does not replace the saved inverse on a definite no-op root placement
         });
       }),
     ),
-  ).pipe(Effect.provide(NodeServices.layer)),
+  ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2171,7 +2185,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2218,7 +2232,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2291,7 +2305,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2334,7 +2348,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 const nestedMoveFixture = Effect.fn("SpaceEditorServiceTest.nestedMoves")(function* (
@@ -2460,7 +2474,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2520,7 +2534,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2583,7 +2597,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2653,7 +2667,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2709,7 +2723,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2755,7 +2769,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2795,7 +2809,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2848,7 +2862,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -2907,7 +2921,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 const blockMoveFixture = Effect.fn("SpaceEditorServiceTest.blockMoves")(function* (
@@ -3044,7 +3058,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3120,7 +3134,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3167,7 +3181,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3275,7 +3289,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3479,7 +3493,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3555,7 +3569,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3603,7 +3617,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3662,7 +3676,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3696,7 +3710,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect("announces a structural change only after the affected pages are released", () =>
@@ -3735,7 +3749,7 @@ it.effect("announces a structural change only after the affected pages are relea
         });
       }),
     ),
-  ).pipe(Effect.provide(NodeServices.layer)),
+  ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect("creates a child once across a lost reply and reload through the durable journal", () =>
@@ -3782,7 +3796,7 @@ it.effect("creates a child once across a lost reply and reload through the durab
         });
       }),
     ),
-  ).pipe(Effect.provide(NodeServices.layer)),
+  ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3836,7 +3850,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect("persists child intent before send and preserves exact identity on an unsent retry", () =>
@@ -3913,7 +3927,7 @@ it.effect("persists child intent before send and preserves exact identity on an 
         });
       }),
     ),
-  ).pipe(Effect.provide(NodeServices.layer)),
+  ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -3969,7 +3983,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4013,7 +4027,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4094,7 +4108,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4127,7 +4141,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4204,7 +4218,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["id", "epoch", "new-page-revision", "existing-owner", "missing-parent"] as const)(
@@ -4271,7 +4285,7 @@ it.effect.each(["id", "epoch", "new-page-revision", "existing-owner", "missing-p
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4330,7 +4344,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4379,7 +4393,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4439,7 +4453,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4492,7 +4506,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4552,7 +4566,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4589,7 +4603,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4642,7 +4656,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4691,7 +4705,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4771,7 +4785,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4834,7 +4848,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4885,7 +4899,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each([5, 6])(
@@ -4930,7 +4944,7 @@ it.effect.each([5, 6])(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -4981,7 +4995,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5015,7 +5029,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5053,7 +5067,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect("sets and clears a page icon through the library receipt without extra revisions", () =>
@@ -5081,7 +5095,7 @@ it.effect("sets and clears a page icon through the library receipt without extra
         });
       }),
     ),
-  ).pipe(Effect.provide(NodeServices.layer)),
+  ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5116,7 +5130,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["createSpace", "renameSpace", "setDefaultSpace", "updatePage"] as const)(
@@ -5175,7 +5189,7 @@ it.effect.each(["createSpace", "renameSpace", "setDefaultSpace", "updatePage"] a
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5225,7 +5239,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect("refuses a hidden page draft on rename while library-only metadata preserves it", () =>
@@ -5255,7 +5269,7 @@ it.effect("refuses a hidden page draft on rename while library-only metadata pre
         });
       }),
     ),
-  ).pipe(Effect.provide(NodeServices.layer)),
+  ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5301,7 +5315,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5329,7 +5343,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["renameSpace", "setDefaultSpace"] as const)(
@@ -5375,7 +5389,7 @@ it.effect.each(["renameSpace", "setDefaultSpace"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5410,7 +5424,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5545,7 +5559,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5598,7 +5612,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 const decodeSourceSearch = Schema.decodeUnknownSync(C.SpaceSearchResult);
@@ -5791,7 +5805,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -5852,7 +5866,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["search", "resolve"] as const)(
@@ -5959,7 +5973,7 @@ it.effect.each(["search", "resolve"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -6045,7 +6059,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -6131,7 +6145,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -6230,7 +6244,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -6281,7 +6295,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -6355,7 +6369,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -6400,7 +6414,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -6433,7 +6447,7 @@ it.effect(
           assert.isNull(missing.value());
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 const decodeImageBatch = Schema.decodeUnknownSync(C.SpaceApplyBlockBatchResult);
@@ -6812,7 +6826,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["original", "minting", "upload"] as const)(
@@ -6859,7 +6873,7 @@ it.effect.each(["original", "minting", "upload"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -6892,7 +6906,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["page-draft", "binding"] as const)(
@@ -6948,7 +6962,7 @@ it.effect.each(["page-draft", "binding"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each([false, true])(
@@ -7047,7 +7061,7 @@ it.effect.each([false, true])(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -7119,7 +7133,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -7168,7 +7182,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -7213,7 +7227,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["edit", "permission", "connection"] as const)(
@@ -7262,7 +7276,7 @@ it.effect.each(["edit", "permission", "connection"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -7311,7 +7325,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -7339,7 +7353,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["save-prior-text", "discard-conflict"] as const)(
@@ -7445,7 +7459,7 @@ it.effect.each(["save-prior-text", "discard-conflict"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each([false, true])(
@@ -7507,7 +7521,7 @@ it.effect.each([false, true])(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["pdf", "video"] as const)(
@@ -7664,7 +7678,7 @@ it.effect.each(["pdf", "video"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -7717,7 +7731,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["pdf", "video"] as const)(
@@ -7757,7 +7771,7 @@ it.effect.each(["pdf", "video"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["pdf", "video"] as const)(
@@ -7824,7 +7838,7 @@ it.effect.each(["pdf", "video"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["image", "pdf", "video"] as const)(
@@ -7958,7 +7972,7 @@ it.effect.each(["image", "pdf", "video"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["image", "pdf", "video"] as const)(
@@ -8040,7 +8054,7 @@ it.effect.each(["image", "pdf", "video"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["late-caption", "lost-reply-reload"] as const)(
@@ -8138,7 +8152,7 @@ it.effect.each(["late-caption", "lost-reply-reload"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["undo-save", "conflict-discard"] as const)(
@@ -8223,7 +8237,7 @@ it.effect.each(["undo-save", "conflict-discard"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -8312,7 +8326,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -8395,7 +8409,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -8511,7 +8525,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each([
@@ -8594,7 +8608,7 @@ it.effect.each([
         });
       }),
     ),
-  ).pipe(Effect.provide(NodeServices.layer)),
+  ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect(
@@ -8668,7 +8682,7 @@ it.effect(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );
 
 it.effect.each(["page_mention", "block_mention"] as const)(
@@ -8753,5 +8767,5 @@ it.effect.each(["page_mention", "block_mention"] as const)(
           });
         }),
       ),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.merge(NodeServices.layer, NodeCrypto.layer))),
 );

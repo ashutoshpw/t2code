@@ -34,7 +34,10 @@ vi.mock("~/state/peerLinks", () => ({
 vi.mock("@effect/atom-react", () => ({
   useAtomValue: () => false,
 }));
-vi.mock("~/state/entities", () => ({ useThreadShells: () => [] }));
+vi.mock("~/state/entities", () => ({
+  useThreadShells: () => [],
+  useVisibleThreadShells: () => [],
+}));
 vi.mock("~/state/queries", () => ({
   useDebouncedValue: <A>(value: A) => value,
   useThreadSearch: () => {},
