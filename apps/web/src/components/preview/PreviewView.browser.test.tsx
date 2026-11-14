@@ -179,6 +179,7 @@ vi.mock(import("~/browser/ServerBrowserSurface"), async (original) => ({
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { commitBrowserViewportChange } from "~/browser/browserViewportActions";
 import { resolveResponsiveBrowserViewportSize } from "~/browser/browserViewportLayout";
+import { usePreviewHostStore } from "~/browser/previewHost";
 import { useBrowserPointerStore } from "~/browser/browserPointerStore";
 import { previewRuntimeTabId } from "~/browser/previewRuntimeTabId";
 import { usePreviewMiniPlayerStore } from "~/previewMiniPlayerStore";
@@ -240,6 +241,7 @@ function setup() {
     addImage: mocks.addImage,
   });
   usePreviewMiniPlayerStore.setState({ byThreadKey: {} });
+  usePreviewHostStore.setState({ statusByEnvironmentId: {} });
   useBrowserPointerStore.setState({ byTabId: {} });
 }
 
@@ -285,6 +287,32 @@ describe("PreviewView", () => {
     expect(enter.defaultPrevented).toBe(true);
   });
 
+  it("marks a tab whose environment this device serves", async () => {
+    setup();
+    await using screen = await render(view());
+    expect(screen.getByText("On this device")).not.toBeInTheDocument();
+
+    await act(() =>
+      usePreviewHostStore.setState({
+        statusByEnvironmentId: { [TEST_THREAD_REF.environmentId]: "connecting" },
+      }),
+    );
+    await expect.element(screen.getByText("On this device")).toBeVisible();
+
+    await act(() =>
+      usePreviewHostStore.setState({
+        statusByEnvironmentId: { [TEST_THREAD_REF.environmentId]: "connected" },
+      }),
+    );
+    await expect.element(screen.getByText("On this device")).toBeVisible();
+
+    await act(() =>
+      usePreviewHostStore.setState({
+        statusByEnvironmentId: { [TEST_THREAD_REF.environmentId]: "closed" },
+      }),
+    );
+    expect(screen.getByText("On this device")).not.toBeInTheDocument();
+  });
   it("retains the annotation locally when its own environment loses access during capture", async () => {
     setup();
     const picked = annotation("annotation-revoked");
