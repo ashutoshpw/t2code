@@ -1204,7 +1204,7 @@ export const recordingEncoderScript = (frameRate: BrowserRecordingFrameRate) => 
       context.restore();
     }
   };
-  window.__t3Recorder = {
+  window.__t2Recorder = {
     async frame(base64, cssWidth) {
       if (tooLarge) return false;
       // A per-character atob copy costs ~30 ms on a 3200x1800 frame and throttles recordings.

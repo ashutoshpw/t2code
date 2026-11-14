@@ -1,5 +1,5 @@
 import type { OrchestrationV2TurnItem } from "@t2code/contracts";
-import { resolveT3McpToolId } from "@t2code/shared/t3McpToolPresentation";
+import { resolveT2McpToolId } from "@t2code/shared/t2McpToolPresentation";
 import { formatReadToolLabel, formatSearchToolLabel } from "@t2code/shared/toolActivity";
 import {
   MAX_TOOL_OUTPUT_IMAGES,
@@ -36,7 +36,7 @@ type ToolItemBase = Omit<
 function openCodeToolProjectionKind(
   toolName: string,
 ): "command_execution" | "file_change" | "file_search" | "web_search" | "dynamic_tool" {
-  if (toolName.startsWith("mcp__") || resolveT3McpToolId(toolName) !== null) return "dynamic_tool";
+  if (toolName.startsWith("mcp__") || resolveT2McpToolId(toolName) !== null) return "dynamic_tool";
   const normalized = toolName.toLowerCase();
   if (normalized === "todowrite") {
     return "dynamic_tool";

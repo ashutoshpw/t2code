@@ -11,9 +11,9 @@ import * as Option from "effect/Option";
 import * as PubSub from "effect/PubSub";
 import * as Ref from "effect/Ref";
 import * as Stream from "effect/Stream";
-import * as HttpClient from "effect/unstable/http/HttpClient";
-import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
-import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
+import * as HttpClient from "effect/http/HttpClient";
+import * as HttpClientRequest from "effect/http/HttpClientRequest";
+import * as HttpClientResponse from "effect/http/HttpClientResponse";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
@@ -127,6 +127,8 @@ it.effect("cancels an older synchronization when a newer label arrives", () =>
         ready: Effect.void,
         getSettings: Effect.succeed({ ...DEFAULT_SERVER_SETTINGS, environmentLabel: "Old label" }),
         updateSettings: () => Effect.die("unused"),
+        updateProviderInstance: () => Effect.die("unused"),
+        withSettingsSnapshot: (use) => use(DEFAULT_SERVER_SETTINGS),
         streamChanges: Stream.empty,
         subscribeChanges: PubSub.subscribe(changes).pipe(
           Effect.map((subscription) => Stream.fromSubscription(subscription)),

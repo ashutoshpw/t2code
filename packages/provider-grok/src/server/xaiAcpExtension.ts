@@ -73,7 +73,10 @@ export function xAiPromptCompleteFromSessionUpdate(
   };
 }
 
-/** Background command wakes use their own task-completed-* prompt IDs. */
+/**
+ * Grok answers a finished background command in its own turn, tagging every
+ * frame with a `task-completed-*` prompt id instead of the one T2 sent.
+ */
 export function isXAiTaskCompletedWakeNotification(
   notification: EffectAcpSchema.SessionNotification,
 ): boolean {

@@ -15,7 +15,7 @@ import {
   readMcpAppReference,
   type McpAppReference,
 } from "./mcpApp.ts";
-import { resolveT3McpToolId } from "./t3McpToolPresentation.ts";
+import { resolveT2McpToolId } from "./t2McpToolPresentation.ts";
 
 export const SEND_TO_USER_TOOL_NAME = "send_to_user";
 // 4,000 UTF-16 units stay inside MAX_PARSED_BYTES even as 3-byte characters.
@@ -208,7 +208,7 @@ export function htmlRenderFromToolItem(item: {
 }): HtmlRenderReference | undefined {
   if (
     item.toolName !== OPENCODE_CODE_MODE_TOOL_NAME &&
-    resolveT3McpToolId(item.toolName) !== HTML_RENDER_TOOL_NAME
+    resolveT2McpToolId(item.toolName) !== HTML_RENDER_TOOL_NAME
   ) {
     return undefined;
   }
@@ -223,7 +223,7 @@ export function sentMessageFromToolItem(item: {
 }): string | undefined {
   if (
     item.toolName !== OPENCODE_CODE_MODE_TOOL_NAME &&
-    resolveT3McpToolId(item.toolName) !== SEND_TO_USER_TOOL_NAME
+    resolveT2McpToolId(item.toolName) !== SEND_TO_USER_TOOL_NAME
   ) {
     return undefined;
   }
@@ -236,7 +236,7 @@ export function previewRecordingIdFromToolItem(item: {
   readonly toolName: string | null | undefined;
   readonly output?: unknown;
 }): string | undefined {
-  if (resolveT3McpToolId(item.toolName) !== "preview_recording_stop") return undefined;
+  if (resolveT2McpToolId(item.toolName) !== "preview_recording_stop") return undefined;
   const budget: ResultReadBudget = {
     remainingBytes: MAX_PARSED_BYTES,
     remainingNodes: MAX_ENVELOPE_NODES,

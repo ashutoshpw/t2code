@@ -53,14 +53,14 @@ export function CliCommandSettingsRow() {
   if (!state?.supported) return null;
   const installed = state.installedPath !== null;
   const description = state.shadowedBy
-    ? `Another t3 at ${state.shadowedBy} runs first in a new terminal. Remove it to use T3 Code's.`
+    ? `Another t2 at ${state.shadowedBy} runs first in a new terminal. Remove it to use T2 Code's.`
     : !installed
-      ? "Run T3 Code's CLI as `t3` from any terminal."
+      ? "Run T2 Code's CLI as `t2` from any terminal."
       : state.onPath
         ? `Installed at ${state.installedPath}. Open a new terminal to use it.`
         : state.pathSetup?.added
           ? `Installed at ${state.installedPath} and added to PATH in ${state.pathSetup.file}. Open a new terminal to use it.`
-          : `Installed at ${state.installedPath}, which is not on your PATH yet.${state.pathSetup ? "" : " Add its folder to your PATH to run `t3`."}`;
+          : `Installed at ${state.installedPath}, which is not on your PATH yet.${state.pathSetup ? "" : " Add its folder to your PATH to run `t2`."}`;
 
   return (
     <SettingsRow

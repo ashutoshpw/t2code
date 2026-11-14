@@ -52,7 +52,7 @@ export function SourceControlAppAccessNotice(props: {
         accessibilityRole="link"
         onPress={() => void Linking.openURL(appSignIn.installUrl).catch(() => undefined)}
       >
-        <Text className="text-sm font-t3-bold text-foreground">Install on {owner}</Text>
+        <Text className="text-sm font-t2-bold text-foreground">Install on {owner}</Text>
       </Pressable>
     </View>
   );

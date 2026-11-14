@@ -198,7 +198,7 @@ describe("threadHtmlRenderAttachmentIds", () => {
         {
           toolName: "weather.get_weather",
           output: {
-            t3McpApp: {
+            t2McpApp: {
               attachmentId: app,
               server: "weather",
               tool: "get_weather",

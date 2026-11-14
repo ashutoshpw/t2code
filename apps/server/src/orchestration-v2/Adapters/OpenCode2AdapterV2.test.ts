@@ -48,7 +48,7 @@ import * as ProviderContinuationRequests from "@t2code/provider-core/server/Prov
 import {
   OPENCODE_2_STILL_STOPPING,
   OPENCODE_PROVIDER,
-  t3McpServerName,
+  t2McpServerName,
 } from "@t2code/provider-opencode/testing";
 import { resolveAttachmentPath } from "../../attachmentStore.ts";
 import { openCode2ReplayRuntime } from "./OpenCode2AdapterV2.testkit.ts";
@@ -97,12 +97,12 @@ const mcpRules = [
   { action: "t3-code-*", resource: "*", effect: "deny" },
   { action: "t3-code-thread_opencode2-adapter_*", resource: "*", effect: "allow" },
 ];
-const t3Rules = [{ action: "*", resource: "*", effect: "allow" }, ...mcpRules];
+const t2Rules = [{ action: "*", resource: "*", effect: "allow" }, ...mcpRules];
 const TITLE = "Prime check";
 const sessionInfo = (overrides: Record<string, unknown> = {}) => ({
   id: SESSION,
   title: TITLE,
-  permissions: t3Rules,
+  permissions: t2Rules,
   projectID: "global",
   model: { id: "big-pickle", providerID: "opencode", variant: "default" },
   cost: 0,
@@ -1046,7 +1046,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           ],
           { replayGate: gate },
         );
-        const items: Array<import("@t3tools/contracts").OrchestrationV2TurnItem> = [];
+        const items: Array<import("@t2code/contracts").OrchestrationV2TurnItem> = [];
         const shellStarted = yield* Deferred.make<void>();
         const terminal = yield* runtime.events.pipe(
           Stream.tap((e) =>
@@ -2711,7 +2711,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         [
           ...backgroundLaunch(CHILD),
           event("session.execution.succeeded", { sessionID: SESSION }),
-          out("session.update", { sessionID: CHILD, permissions: t3Rules }),
+          out("session.update", { sessionID: CHILD, permissions: t2Rules }),
           reply("session.update", null),
           out("session.prompt", { sessionID: SESSION, text: "<any>" }),
           reply("session.prompt", {
@@ -2837,7 +2837,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }),
   );
 
-  it.effect("gives a resumed session T3's rules when it was made with others", () =>
+  it.effect("gives a resumed session T2's rules when it was made with others", () =>
     Effect.gen(function* () {
       const runtime = yield* openCode2ReplayRuntimeWithInstructions([
         ...opening,
@@ -2852,7 +2852,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           }),
         ),
         ...noOpenRequests,
-        out("session.update", { sessionID: SESSION, permissions: t3Rules }),
+        out("session.update", { sessionID: SESSION, permissions: t2Rules }),
         reply("session.update", null),
       ]);
       yield* runtime.resumeThread({
@@ -2884,7 +2884,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }),
   );
 
-  it.effect("breaks the thread and forgets it when the session was deleted outside T3", () =>
+  it.effect("breaks the thread and forgets it when the session was deleted outside T2", () =>
     Effect.gen(function* () {
       const { runtime, thread } = yield* resumed([
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -2908,7 +2908,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }),
   );
 
-  it.effect("stops the requests a session still waits on when a restarted T3 loads it", () =>
+  it.effect("stops the requests a session still waits on when a restarted T2 loads it", () =>
     Effect.gen(function* () {
       const runtime = yield* openCode2ReplayRuntimeWithInstructions(
         [
@@ -2983,7 +2983,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
       assert.equal(ended?.status, "failed");
       assert.equal(
         ended?.status === "failed" ? ended.failure.message : undefined,
-        "OpenCode is waiting on a request T3 Code couldn't answer.",
+        "OpenCode is waiting on a request T2 Code couldn't answer.",
       );
     }),
   );
@@ -3021,7 +3021,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }),
   );
 
-  it.effect("declines a form T3 cannot show with the reason, instead of leaving it open", () =>
+  it.effect("declines a form T2 cannot show with the reason, instead of leaving it open", () =>
     Effect.gen(function* () {
       const { runtime, thread } = yield* resumed([
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -3243,7 +3243,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     "reconciles a %s steer after reconnect without losing its execution",
     (delivery) =>
       Effect.gen(function* () {
-        const steerId = `msg_t3_steer_${SESSION}:message:opencode2-adapter:steer`;
+        const steerId = `msg_t2_steer_${SESSION}:message:opencode2-adapter:steer`;
         const reconnect = reconnected(
           {},
           "succeeded",
@@ -4997,7 +4997,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         threadId: child,
         providerSessionId: "mcp:opencode2-adapter",
         providerInstanceId: instanceId,
-        endpoint: "http://127.0.0.1:3773/mcp",
+        endpoint: "http://127.0.0.1:3772/mcp",
         authorizationHeader: "Bearer thread-credential",
         browserToolsAvailable: false,
       });
@@ -5021,7 +5021,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           "location[directory]": WORK,
           config: {
             type: "remote",
-            url: "http://127.0.0.1:3773/mcp",
+            url: "http://127.0.0.1:3772/mcp",
             headers: { Authorization: "Bearer thread-credential" },
             oauth: false,
           },
@@ -5060,12 +5060,12 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         "thread:delegated-task:command%3Amcp%3A48bef2bf-6d0e-4f7a-9c3b-2e5d8a1f7c40%3Adelegate-task%3Around1",
         "thread:delegated-task:command%3Amcp%3A48bef2bf-6d0e-4f7a-9c3b-2e5d8a1f7c40%3Adelegate-task%3Around2",
       ];
-      const names = yield* Effect.forEach(ids, t3McpServerName);
+      const names = yield* Effect.forEach(ids, t2McpServerName);
       for (const name of names) assert.match(name, /^t3-code-[A-Za-z0-9_-]{1,56}$/);
       assert.equal(new Set(names).size, ids.length);
-      assert.deepEqual(yield* Effect.forEach(ids, t3McpServerName), names);
+      assert.deepEqual(yield* Effect.forEach(ids, t2McpServerName), names);
       assert.equal(names[0], "t3-code-63abb5df2b188bdd");
-      assert.equal(yield* t3McpServerName(threadId), "t3-code-thread_opencode2-adapter");
+      assert.equal(yield* t2McpServerName(threadId), "t3-code-thread_opencode2-adapter");
     }).pipe(Effect.provide(NodeCrypto.layer)),
   );
 
@@ -5749,7 +5749,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         out("session.create", {
           location: { directory: custom },
           model: { providerID: "opencode", id: "big-pickle" },
-          permissions: t3Rules,
+          permissions: t2Rules,
         }),
         replyData("session.create", sessionInfo({ location: { directory: custom } })),
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -5844,8 +5844,8 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
 
   it.effect("clears a staged revert whose commit failed, before the next prompt too", () =>
     Effect.gen(function* () {
-      const kept = "msg_t3_turn_run-attempt:kept:1";
-      const dropped = "msg_t3_turn_run-attempt:dropped:1";
+      const kept = "msg_t2_turn_run-attempt:kept:1";
+      const dropped = "msg_t2_turn_run-attempt:dropped:1";
       const { runtime, thread } = yield* resumed([
         out("message.list", "<any>"),
         reply("message.list", {
@@ -5884,7 +5884,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         runAttemptId: RunAttemptId.make(`run-attempt:${attempt}:1`),
         nativeTurnRef: {
           driver: OPENCODE_PROVIDER,
-          nativeId: `msg_t3_turn_run-attempt:${attempt}:1`,
+          nativeId: `msg_t2_turn_run-attempt:${attempt}:1`,
           strength: "weak" as const,
         },
         ordinal,
@@ -5912,8 +5912,8 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
 
   it.effect("offers no follow-up for the execution a cleared revert starts", () =>
     Effect.gen(function* () {
-      const kept = "msg_t3_turn_run-attempt:kept:1";
-      const dropped = "msg_t3_turn_run-attempt:dropped:1";
+      const kept = "msg_t2_turn_run-attempt:kept:1";
+      const dropped = "msg_t2_turn_run-attempt:dropped:1";
       const offers: Array<ProviderContinuationRequests.ProviderContinuationRequest> = [];
       const { runtime, thread } = yield* resumed([
         out("message.list", "<any>"),
@@ -5931,7 +5931,9 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           status: 500,
           body: { _tag: "UnknownError", message: "disk I/O error" },
         }),
-        // Uncleared stages commit on the next prompt; clearing triggers an empty execution without a T3 turn.
+        // Uncleared, OpenCode would commit the stage on the next prompt. The
+        // clear wakes the session into an empty execution of its own, with no
+        // turn of T2's running: it is no subagent's follow-up.
         out("session.revert.clear", { sessionID: SESSION }),
         reply("session.revert.clear", null),
         event("session.revert.cleared", { sessionID: SESSION }),
@@ -5951,7 +5953,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         runAttemptId: RunAttemptId.make(`run-attempt:${attempt}:1`),
         nativeTurnRef: {
           driver: OPENCODE_PROVIDER,
-          nativeId: `msg_t3_turn_run-attempt:${attempt}:1`,
+          nativeId: `msg_t2_turn_run-attempt:${attempt}:1`,
           strength: "weak" as const,
         },
         ordinal,
@@ -5979,7 +5981,11 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
 
   it.effect("prompts under ids no other session on the server can hold", () =>
     Effect.gen(function* () {
-      // Separate databases can repeat prompt ids on one server; OpenCode rejects cross-session duplicates with 409.
+      // Two T2 databases on one external server repeat thread ids and run
+      // ordinals, so their turns can share an attempt id and their steers a
+      // message id. OpenCode refuses a prompt id another session already
+      // holds with 409 ConflictError; the replay refuses a client id it
+      // already gave another recorded message.
       const OTHER = "ses_f148ca2deffeOtherSession000";
       const steerInto = (session: string, recorded: string): ReadonlyArray<ProviderReplayEntry> => [
         out("session.prompt", {
@@ -6138,7 +6144,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     ["refuses a rollback while a timed-out Stop's run is still going", true],
   ] as const)("%s", ([, running]) =>
     Effect.gen(function* () {
-      const prompt = `msg_t3_turn_${SESSION}:attempt:opencode2-adapter`;
+      const prompt = `msg_t2_turn_${SESSION}:attempt:opencode2-adapter`;
       const { runtime, thread } = yield* resumed([
         ...stopTimedOut,
         out("session.active"),
@@ -6206,7 +6212,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
 
   it.effect("takes back a stranded steer again when its first cancel failed", () =>
     Effect.gen(function* () {
-      const steerId = `msg_t3_steer_${SESSION}:message:opencode2-adapter:steer`;
+      const steerId = `msg_t2_steer_${SESSION}:message:opencode2-adapter:steer`;
       const cancelOut = out("session.inbox.cancel", { sessionID: SESSION, inboxID: steerId });
       const { runtime, thread } = yield* resumed([
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -6295,8 +6301,8 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
 
   it.effect("drops the turns a rollback cut from the snapshot it returns", () =>
     Effect.gen(function* () {
-      const kept = `msg_t3_turn_${SESSION}:attempt:opencode2-adapter`;
-      const dropped = `msg_t3_turn_${SESSION}:attempt:opencode2-adapter:2`;
+      const kept = `msg_t2_turn_${SESSION}:attempt:opencode2-adapter`;
+      const dropped = `msg_t2_turn_${SESSION}:attempt:opencode2-adapter:2`;
       const { runtime, thread } = yield* resumed([
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
         promptAccepted,
@@ -6364,7 +6370,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
 
   it.effect("starts a turn sent during a rollback only once the cut is made", () =>
     Effect.gen(function* () {
-      const prompted = `msg_t3_turn_${SESSION}:attempt:earlier`;
+      const prompted = `msg_t2_turn_${SESSION}:attempt:earlier`;
       const { runtime, thread } = yield* resumed([
         out("message.list", "<any>"),
         reply("message.list", {
@@ -6420,8 +6426,8 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     ],
   ] as const)("%s", ([, running]) =>
     Effect.gen(function* () {
-      const first = `msg_t3_turn_${SESSION}:attempt:first`;
-      const second = `msg_t3_turn_${SESSION}:attempt:second`;
+      const first = `msg_t2_turn_${SESSION}:attempt:first`;
+      const second = `msg_t2_turn_${SESSION}:attempt:second`;
       const runtime = yield* openCode2ReplayRuntime([
         ...opening,
         out("session.active"),
@@ -6699,7 +6705,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
       const [first, second] = turns;
       return { runtime, thread, first: first!, second: second! };
     });
-  const CONTINUED_PROMPT = `msg_t3_turn_${SESSION}:attempt:attempt:opencode2-adapter`;
+  const CONTINUED_PROMPT = `msg_t2_turn_${SESSION}:attempt:attempt:opencode2-adapter`;
   const CONTINUED_REPORT = `<subagent sessionID="${CHILD}" state="completed" description="Sleep">\nCHILD_OK\n</subagent>`;
   const continuedHistory = {
     data: [
@@ -7178,7 +7184,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     "reverts a report's continuation at its report after a Stop dropped another client's prompt",
     () =>
       Effect.gen(function* () {
-        const kept = `msg_t3_turn_${SESSION}:attempt:opencode2-adapter`;
+        const kept = `msg_t2_turn_${SESSION}:attempt:opencode2-adapter`;
         const offers: Array<ProviderContinuationRequests.ProviderContinuationRequest> = [];
         const reportOffered = yield* Deferred.make<void>();
         const { runtime, thread } = yield* resumed([
@@ -7313,7 +7319,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     "reverts a report's continuation at its report after a reconnect lost another client's prompt start",
     () =>
       Effect.gen(function* () {
-        const kept = `msg_t3_turn_${SESSION}:attempt:opencode2-adapter`;
+        const kept = `msg_t2_turn_${SESSION}:attempt:opencode2-adapter`;
         const offered =
           yield* Deferred.make<ProviderContinuationRequests.ProviderContinuationRequest>();
         const { runtime, thread } = yield* resumed([
@@ -7440,8 +7446,8 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           sessionID: SESSION,
           item: { type: "user", payload: { text, files: [] }, delivery: "steer" },
         });
-      // T3's own prompt can be admitted after a failed submit ended its turn.
-      const late = `msg_t3_turn_${SESSION}:attempt:late`;
+      // T2's own prompt can be admitted after a failed submit ended its turn.
+      const late = `msg_t2_turn_${SESSION}:attempt:late`;
       const { runtime, thread } = yield* resumed([
         prompt(late, "mine"),
         prompt("msg_external_a", "first?"),
@@ -7625,7 +7631,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
   it.effect("ends a follow-up turn a steer joined exactly once", () =>
     Effect.gen(function* () {
       const reportText = `<subagent sessionID="${CHILD}" state="completed" description="Sleep">\nCHILD_OK\n</subagent>`;
-      const steerId = `msg_t3_steer_${SESSION}:message:opencode2-adapter:steer`;
+      const steerId = `msg_t2_steer_${SESSION}:message:opencode2-adapter:steer`;
       const offers: Array<ProviderContinuationRequests.ProviderContinuationRequest> = [];
       const offered = yield* Deferred.make<void>();
       const { runtime, thread } = yield* resumed([
