@@ -1,4 +1,4 @@
-import { resolveLocale } from "@t3tools/client-runtime/locales";
+import { resolveLocale } from "@t2code/client-runtime/locales";
 import { getTranslationsSnapshot } from "gt-react";
 
 import {

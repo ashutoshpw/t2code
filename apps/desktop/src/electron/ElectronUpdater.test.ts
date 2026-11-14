@@ -5,7 +5,7 @@ import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import { autoUpdater } from "electron-updater";
 import type * as NodeChildProcess from "node:child_process";
 import * as NodeModule from "node:module";
@@ -26,7 +26,7 @@ vi.hoisted(() => {
   electronModule.exports = {
     app: {
       getVersion: () => "1.0.0",
-      getName: () => "T3 Code",
+      getName: () => "T2 Code",
       isPackaged: true,
       quit: () => undefined,
       once: () => undefined,

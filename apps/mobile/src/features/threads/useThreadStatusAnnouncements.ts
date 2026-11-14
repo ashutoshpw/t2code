@@ -45,7 +45,7 @@ export function useThreadStatusAnnouncements({
   const runId = run?.runId ?? null;
   const runStatus = run?.status ?? null;
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- speaks committed status changes through the platform screen reader
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- speaks committed status changes through the platform screen reader
   useEffect(() => {
     if (activeKey === null) {
       memoryRef.current = null;

@@ -1,19 +1,19 @@
-// `test` for web scenarios: e2e's web test plus `t3`, which seeds state and opens the signed-in
-// app. `t3-mobile.ts` is the same for the iOS app.
+// `test` for web scenarios: e2e's web test plus `t2`, which seeds state and opens the signed-in
+// app. `t2-mobile.ts` is the same for the iOS app.
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { test as base } from "@e2e-dev/web";
 import { expect } from "e2e";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/http";
 
-import { APP_DIR, T3_HOME } from "../e2e.config.ts";
+import { APP_DIR, T2_HOME } from "../e2e.config.ts";
 import { run } from "./shell.ts";
 
-export interface T3State {
+export interface T2State {
   /** Creates a git repository holding `files` and adds it as a project. Returns its path. */
   readonly project: (
     title: string,
@@ -29,19 +29,19 @@ export interface T3State {
     readonly title: string;
     readonly messages: ReadonlyArray<string>;
     readonly model?: string;
-  }) => Promise<T3Thread>;
+  }) => Promise<T2Thread>;
 }
 
-export interface T3Thread {
+export interface T2Thread {
   readonly threadId: string;
 }
 
-export interface T3 extends T3State {
+export interface T2 extends T2State {
   /**
-   * Opens the app, signed in, at a path or on a thread `t3.thread` returned. Opening the thread
+   * Opens the app, signed in, at a path or on a thread `t2.thread` returned. Opening the thread
    * by its link is the reliable way to reach it: a sidebar row covers its own title text.
    */
-  readonly open: (target?: string | T3Thread) => Promise<void>;
+  readonly open: (target?: string | T2Thread) => Promise<void>;
 }
 
 /** e2e's fixtures are promise functions; this is the one place an Effect becomes a promise. */
@@ -114,7 +114,7 @@ export function makeState(home: string, env: NodeJS.ProcessEnv = {}) {
     const started = yield* turn(["start", input.project, first, "--title", input.title, ...replay]);
     const { threadId } = yield* decodeLaunched(started.stdout);
     for (const message of rest) yield* turn(["send", threadId, message]);
-    return { threadId } satisfies T3Thread;
+    return { threadId } satisfies T2Thread;
   });
 
   return {
@@ -122,7 +122,7 @@ export function makeState(home: string, env: NodeJS.ProcessEnv = {}) {
     state: {
       project: (title, files = {}) => runPromise(project(title, files)),
       thread: (input) => runPromise(thread(input)),
-    } satisfies T3State,
+    } satisfies T2State,
     // The server outlives the test, so the next one must not see this one's projects.
     cleanup: Effect.forEach(
       projects,
@@ -135,12 +135,12 @@ export function makeState(home: string, env: NodeJS.ProcessEnv = {}) {
 const readPairingPath = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  return yield* fs.readFileString(path.join(T3_HOME, "pairing-path"));
+  return yield* fs.readFileString(path.join(T2_HOME, "pairing-path"));
 });
 
 /** The id every thread link starts with, asked of the server the app talks to. */
 const environmentId = (baseUrl: string) =>
-  HttpClient.get(`${baseUrl}/.well-known/t3/environment`).pipe(
+  HttpClient.get(`${baseUrl}/.well-known/t2/environment`).pipe(
     Effect.flatMap(HttpClientResponse.filterStatusOk),
     Effect.flatMap(
       HttpClientResponse.schemaBodyJson(Schema.Struct({ environmentId: Schema.String })),
@@ -149,9 +149,9 @@ const environmentId = (baseUrl: string) =>
     Effect.provide(FetchHttpClient.layer),
   );
 
-export const test = base.extend<{ t3: T3 }>({
-  t3: async ({ app, browser }, use) => {
-    const { state, cleanup } = makeState(T3_HOME);
+export const test = base.extend<{ t2: T2 }>({
+  t2: async ({ app, browser }, use) => {
+    const { state, cleanup } = makeState(T2_HOME);
     await use({
       ...state,
       open: async (target = "/") => {

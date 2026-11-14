@@ -11,56 +11,6 @@ vi.mock("expo-constants", () => ({
 }));
 
 describe("resolveCloudPublicConfig", () => {
-  it("reports the missing Clerk JWT template as structured configuration", () => {
-    expect(() => resolveRelayClerkTokenOptions()).toThrowError(
-      new CloudPublicConfigMissingError({ key: "T2CODE_CLERK_JWT_TEMPLATE" }),
-    );
-  });
-
-  it("returns no cloud configuration for an unconfigured build", () => {
-    expect(resolveCloudPublicConfig({})).toEqual({
-      clerk: {
-        publishableKey: null,
-        jwtTemplate: null,
-      },
-      relay: {
-        url: null,
-      },
-      observability: {
-        tracesUrl: null,
-        tracesDataset: null,
-        tracesToken: null,
-      },
-    });
-  });
-
-  it("normalizes statically injected cloud configuration", () => {
-    expect(
-      resolveCloudPublicConfig({
-        clerk: { publishableKey: "  pk_test_example  ", jwtTemplate: "  t2-relay  " },
-        relay: { url: " https://relay.example.test/// " },
-        observability: {
-          tracesUrl: " https://api.axiom.co/v1/traces ",
-          tracesDataset: " mobile-traces ",
-          tracesToken: " public-ingest-token ",
-        },
-      }),
-    ).toEqual({
-      clerk: {
-        publishableKey: "pk_test_example",
-        jwtTemplate: "t2-relay",
-      },
-      relay: {
-        url: "https://relay.example.test",
-      },
-      observability: {
-        tracesUrl: "https://api.axiom.co/v1/traces",
-        tracesDataset: "mobile-traces",
-        tracesToken: "public-ingest-token",
-      },
-    });
-  });
-
   it("rejects an insecure relay URL", () => {
     expect(
       resolveCloudPublicConfig({

@@ -57,7 +57,7 @@ import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
 import * as EnvironmentAuth from "./auth/EnvironmentAuth.ts";
 import { formatHeadlessServeOutput, issueHeadlessServeAccessInfo } from "./startupAccess.ts";
 
-export const runEnvironmentLabelUpdates = Effect.fn("runEnvironmentLabelUpdates")(function* (
+const runEnvironmentLabelUpdates = Effect.fn("runEnvironmentLabelUpdates")(function* (
   scope: Scope.Scope,
 ) {
   const settings = yield* ServerSettings.ServerSettingsService;

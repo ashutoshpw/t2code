@@ -55,10 +55,11 @@ export {
 } from "./serviceProtocol.ts";
 
 const BOOT_SERVICE_NAME = "t2code";
+const CLI_PACKAGE_NAME = "@t2code/cli";
 export const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // `.service` suffix keeps the label distinct from the desktop app's bundle id
-// (com.t2tools.t2code), so launchd and TCC records never collide.
-export const BOOT_SERVICE_LAUNCHD_LABEL = "com.t2tools.t2code.service";
+// (codes.t2.desktop), so launchd and TCC records never collide.
+export const BOOT_SERVICE_LAUNCHD_LABEL = "codes.t2.desktop.service";
 export const BOOT_SERVICE_PLIST_FILE = `${BOOT_SERVICE_LAUNCHD_LABEL}.plist`;
 export const BOOT_SERVICE_LOG_FILE = "boot-service.log";
 /** `schtasks /Query /HRESULT` exits with this when the task is not registered. */
@@ -114,7 +115,7 @@ export function renderBootServiceUnit(plan: BootServicePlan): string {
     `Environment=T2CODE_HOME=${quoteSystemdValue(plan.baseDir)}`,
     ...(plan.installBinDir === undefined
       ? []
-      : [`Environment=T3CODE_INSTALL_BIN_DIR=${quoteSystemdValue(plan.installBinDir)}`]),
+      : [`Environment=T2CODE_INSTALL_BIN_DIR=${quoteSystemdValue(plan.installBinDir)}`]),
     `Environment=${SERVICE_UNIT_ENV}=${BOOT_SERVICE_UNIT_FILE}`,
     `ExecStart=${plan.program.map(quoteSystemdValue).join(" ")}`,
     // Let the launcher mark an explicit stop before it signals the server.
@@ -179,7 +180,7 @@ export function renderBootServicePlist(
     ...(plan.installBinDir === undefined
       ? []
       : [
-          `    <key>T3CODE_INSTALL_BIN_DIR</key>`,
+          `    <key>T2CODE_INSTALL_BIN_DIR</key>`,
           `    <string>${escapeXmlText(plan.installBinDir)}</string>`,
         ]),
     `    <key>${SERVICE_UNIT_ENV}</key>`,
@@ -664,11 +665,11 @@ export function formatBootServiceProblem(problem: BootServiceProblem): string {
     case "linger-disabled":
       return 'Lingering is disabled. T2 Code will stop when your last login session ends and will not start at boot. Run `sudo loginctl enable-linger "$(id -un)"` on this machine, then retry the service command as your normal user.';
     case "service-disabled":
-      return "The service is not enabled to start automatically. Run `t2code service install` to repair it.";
+      return "The service is not enabled to start automatically. Run `t2 service install` to repair it.";
     case "service-stopped":
-      return "The service is not running. Check the service log (on Linux, also `systemctl --user status t2code.service`), then run `t2code service install`.";
+     return "The service is not running. Check the service log and `systemctl --user status t2code.service`, then run `t2 service install`.";
     case "restart-pending":
-      return "A newer version is installed but the service is still running the previous one. Run `t2code service restart` to switch.";
+      return "A newer version is installed but the service is still running the previous one. Run `t2 service restart` to switch.";
   }
 }
 
@@ -701,7 +702,7 @@ export class BootServiceDowngradeRefusedError extends Schema.TaggedError<BootSer
   },
 ) {
   override get message(): string {
-    return `Refusing to replace ${CLI_PACKAGE_NAME}@${this.installedVersion} with older ${CLI_PACKAGE_NAME}@${this.targetVersion}. Run the command again with --allow-downgrade to continue.`;
+    return `Refusing to replace t2@${this.installedVersion} with older t2@${this.targetVersion}. Run the command again with --allow-downgrade to continue.`;
   }
 }
 
@@ -753,12 +754,6 @@ export interface BootServiceStatus {
   readonly installed: boolean;
   readonly current: boolean;
   readonly installedVersion?: string;
-  /**
-   * The T2 home the installed unit serves. The unit name is fixed per user,
-   * so a caller working against another base dir must not treat this service
-   * as its own; `t2code update --base-dir` learned that by restarting the live
-   * server of the machine it ran on.
-   */
   readonly installedBaseDir?: string;
   /** Set when the installed unit serves a different T3 home than this CLI. */
   readonly otherBaseDir?: string;
@@ -772,11 +767,6 @@ export class BootService extends Context.Service<
   {
     readonly install: (options?: {
       readonly allowDowngrade?: boolean;
-      /**
-       * Write the unit for this version but leave the service on whatever it
-       * is running now. `t2code update` uses this when the user declines the
-       * restart, so a later `t2code service restart` lands on the new version.
-       */
       readonly start?: boolean;
     }) => Effect.Effect<BootServicePlan, BootServiceError>;
     /**
@@ -823,7 +813,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
   const xdgConfigHome = yield* Config.String("XDG_CONFIG_HOME").pipe(Config.withDefault(""));
   const installerPath = yield* Config.String("PATH").pipe(Config.withDefault(""));
   const installBinDir = Option.getOrUndefined(
-    yield* Config.String("T3CODE_INSTALL_BIN_DIR").pipe(Config.option),
+    yield* Config.String("T2CODE_INSTALL_BIN_DIR").pipe(Config.option),
   );
   const xdgRuntimeDir = yield* Config.String("XDG_RUNTIME_DIR").pipe(Config.withDefault(""));
   // Root under sudo must not reach or start a separate root service.
@@ -1043,7 +1033,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
     ).pipe(Effect.mapError((cause) => new BootServiceInstallError({ cause })));
   const planForUnit = (unit: string): BootServicePlan => {
     const effectiveInstallBinDir =
-      installBinDir || serviceUnitEnvironmentValueOf(unit, "T3CODE_INSTALL_BIN_DIR");
+      installBinDir || serviceUnitEnvironmentValueOf(unit, "T2CODE_INSTALL_BIN_DIR");
     return effectiveInstallBinDir ? { ...plan, installBinDir: effectiveInstallBinDir } : plan;
   };
   // The executable hosts the launcher as a hidden subcommand of itself, so
@@ -1053,7 +1043,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
     baseDir: input.baseDir,
     logPath,
     unitPath,
-  });
+  };
 
   const requireManager = Effect.suspend(() =>
     detectedManager === undefined
@@ -1283,7 +1273,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
             Effect.mapError(
               (cause) =>
                 new PinnedRuntimeInstallError({
-                  step: "verifying the pinned t2code runtime",
+                  step: "verifying the pinned t2 runtime",
                   cause,
                 }),
             ),
@@ -1293,7 +1283,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
                 ? Effect.void
                 : Effect.fail(
                     new PinnedRuntimeInstallError({
-                      step: "verifying the pinned t2code runtime",
+                      step: "verifying the pinned t2 runtime",
                       exitCode: Number(result.code),
                       stdoutLength: result.stdout.length,
                       stderrLength: result.stderr.length,

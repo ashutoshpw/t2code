@@ -3,8 +3,8 @@ import type {
   PullRequestDetailView,
   PullRequestRef,
   PullRequestConversationThread,
-} from "@t3tools/contracts";
-import { canResolvePullRequestThread } from "@t3tools/client-runtime/pull-request-editing";
+} from "@t2code/contracts";
+import { canResolvePullRequestThread } from "@t2code/client-runtime/pull-request-editing";
 import { useState } from "react";
 
 import { pullRequestEnvironment } from "~/state/pullRequests";

@@ -1847,14 +1847,14 @@ it.effect.each(["exit", "missing"] as const)(
       expect(error.message).toBe(
         failure === "exit"
           ? "Device update device tool failed: The device command failed (exit code 243)."
-          : "Device update device tool failed: Device support needs npm, which is not on the T3 server's PATH. Install npm (it comes with Node.js from nodejs.org), restart T3 Code, then retry.",
+          : "Device update device tool failed: Device support needs npm, which is not on the T2 server's PATH. Install npm (it comes with Node.js from nodejs.org), restart T2 Code, then retry.",
       );
     }).pipe(
       Effect.provide(
         Layer.mergeAll(
           ServerSettings.layerTest({ enableDeviceSupport: true }),
           layerSecretResolver,
-          ServerConfig.layerTest(process.cwd(), { prefix: "t3-device-update-" }),
+          ServerConfig.layerTest(process.cwd(), { prefix: "t2-device-update-" }),
           NodeCrypto.layer,
           NetService.layer,
         ).pipe(Layer.provideMerge(NodeServices.layer)),

@@ -1,4 +1,4 @@
-import { MessageId, RunId } from "@t3tools/contracts";
+import { MessageId, RunId } from "@t2code/contracts";
 import { type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 
@@ -129,9 +129,9 @@ describe("ThreadActivityAnnouncer", () => {
 
     expect(heard).toEqual([
       ["Working", ""],
-      ["Working", "T3 Code: Checking the repo"],
-      ["Needs approval", "T3 Code: Checking the repo"],
-      ["Needs approval", "T3 Code: Checking the repo"],
+      ["Working", "T2 Code: Checking the repo"],
+      ["Needs approval", "T2 Code: Checking the repo"],
+      ["Needs approval", "T2 Code: Checking the repo"],
       ["Needs approval", "Running rg"],
     ]);
   });
@@ -151,7 +151,7 @@ describe("ThreadActivityAnnouncer", () => {
       }),
     );
 
-    await expect.element(detail).toHaveTextContent("T3 Code: Checking the repo. Needs approval");
+    await expect.element(detail).toHaveTextContent("T2 Code: Checking the repo. Needs approval");
     await expect.element(status).toHaveTextContent("Working");
   });
 });

@@ -75,7 +75,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("t3 uninstall com
 });
 
 it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
-  it.effect("claims only launchers that point into this home's runtime tree", () =>
+  it.effect("claims only a launcher that points into this home's runtime tree", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;

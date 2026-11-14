@@ -21,26 +21,26 @@ const RUNS_EVERYTHING = [
 // Includes cross-package reads absent from package.json dependencies.
 const EXTRA_OWNERS = [
   // Vite configs and tsconfigs of these apps import scripts/lib directly.
-  [/^scripts\/lib\//, ["@t2code/desktop", "@t2code/mobile", "@t2code/web", "t2"]],  // scripts/build-desktop-artifact.ts reads the GNOME extension manifest.
+  [/^scripts\/lib\//, ["@t2code/desktop", "@t2code/mobile", "@t2code/web", "@t2code/cli"]],  // scripts/build-desktop-artifact.ts reads the GNOME extension manifest.
   [/^apps\/desktop\/gnome-extension\//, ["@t2code/scripts"]],
   [/^native\/browser-secret\//, ["@t2code/desktop"]],
   [/^native\/kde-snap-shot\//, ["@t2code/desktop"]],
   [/^native\/libghostty-vt\//, ["@t2code/web"]],
   // apps/server/src/cloud/ConnectReachability.test.ts checks the guide's headings.
-  [/^docs\/user\/t2-connect-troubleshooting\.md$/, ["t2"]],
+  [/^docs\/user\/t2-connect-troubleshooting\.md$/, ["@t2code/cli"]],
 ];
 const RUST = /^native\/(resource-monitor|kde-snap-shot|hyprland-snap-shot)\//;
 
 // These tests read other packages without declaring dependencies.
 const TEST_ONLY_DEPS = {
   // Evals import the server's source to test its real model-facing text.
-  "@t2code/evals": ["t2"],
+  "@t2code/evals": ["@t2code/cli"],
   "@t2code/provider-pi": ["@t2code/client-runtime"],
   "@t2code/scripts": [
     "@t2code/desktop",
     "@t2code/mobile",
     "@t2code/web",
-    "t2",
+    "@t2code/cli",
     "@t2code/provider-cursor",
   ],
 };
@@ -70,7 +70,7 @@ const DESKTOP_LAUNCH = [
 // The server package's suite runs sharded in test_server; listing it here
 // keeps the shared Test job from running it unsharded, which cannot fit the
 // job's timeout.
-const OWN_TEST_JOB = new Set(["t2", "@t2code/cli", "@t2code/web", "@t2code/monorepo"]);
+const OWN_TEST_JOB = new Set(["@t2code/cli", "@t2code/web", "@t2code/monorepo"]);
 
 function readWorkspace() {
   const patterns = [];
@@ -180,13 +180,13 @@ function decide(files, packages, full) {
     affected: [...affected].sort(),
     outputs: {
       typecheck: affected.size > 0,
-      build: has("@t2code/desktop") || has("t2") || has("@t2code/web") || desktopLaunch,
+      build: has("@t2code/desktop") || has("@t2code/cli") || has("@t2code/web") || desktopLaunch,
       desktop_launch: desktopLaunch,
       test: tested.length > 0,
       // Empty means every package the Test job covers.
       test_packages: everything ? "" : tested.map((pkg) => pkg.name).join(" "),
       test_web: has("@t2code/web"),
-      test_server: has("t2"),
+      test_server: has("@t2code/cli"),
       rust: everything || rust,
       release_smoke: scriptsChanged,
       mobile_native: files === null || files.some((file) => MOBILE_NATIVE.test(file)),

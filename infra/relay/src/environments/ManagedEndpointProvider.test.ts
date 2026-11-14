@@ -732,7 +732,7 @@ describe("ManagedEndpointProvider", () => {
       const request = {
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         reuseReadyTunnel: true,
       } as const;
       yield* provider.provision(request);
@@ -1050,7 +1050,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       expect(yield* provider.release({ ...key, markReleased: true })).toBe(true);
       expect((yield* allocations.get(key))?.tunnelReleasedAt).toBe("2026-06-02T00:00:00.000Z");
@@ -1215,7 +1215,7 @@ describe("ManagedEndpointProvider", () => {
     return Effect.gen(function* () {
       const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
-      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3773 } as const;
+      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3772 } as const;
       const provisioned = yield* provider.provision({ ...key, origin });
       const reconcile = provider.reconcileOrigin({
         ...key,
@@ -1670,7 +1670,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       const result = yield* Effect.result(provider.deprovision(key));
 

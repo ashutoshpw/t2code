@@ -1,4 +1,4 @@
-import type { ScopedThreadRef } from "@t3tools/contracts";
+import type { ScopedThreadRef } from "@t2code/contracts";
 import { flushSync } from "react-dom";
 import { dispatchCommandPalette } from "../commandPaletteStore";
 import { SidebarPointerSensor } from "./Sidebar.pointer";

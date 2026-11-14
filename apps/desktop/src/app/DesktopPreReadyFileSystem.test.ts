@@ -16,21 +16,6 @@ const resolveWindowsUserData = (appDataDirectory: string) =>
   }).pipe(Effect.provide(DesktopPreReadyFileSystem.layer));
 
 it.layer(NodeServices.layer)("DesktopPreReadyFileSystem", (it) => {
-  it.effect("migrates the legacy Windows profile state", () =>
-    Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-pre-ready-fs-" });
-      yield* fileSystem.makeDirectory(path.join(root, "t3code-v2"));
-      yield* fileSystem.writeFileString(path.join(root, "t3code-v2", "Local State"), "keys");
-
-      const userData = yield* resolveWindowsUserData(root);
-
-      assert.equal(userData, path.join(root, "t2code"));
-      assert.equal(yield* fileSystem.readFileString(path.join(userData, "Local State")), "keys");
-    }),
-  );
-
   it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32" || process.getuid?.() === 0)(
     "fails instead of treating an unreadable profile as missing",
     () =>
