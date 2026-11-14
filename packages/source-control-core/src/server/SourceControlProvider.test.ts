@@ -15,12 +15,12 @@ it("removes URL credentials, query parameters, and fragments from error transpor
 });
 
 it.each([
-  ["git@github.com:T2Tools/t2code.git", "T2Tools/t2code"],
-  ["github.com:T2Tools/t2code.git", "T2Tools/t2code"],
+  ["git@github.com:Ashutoshpw/t2code.git", "Ashutoshpw/t2code"],
+  ["github.com:Ashutoshpw/t2code.git", "Ashutoshpw/t2code"],
   ["gitlab.com:T2Tools/platform/t2code", "T2Tools/platform/t2code"],
-  ["https://github.com/T2Tools/t2code.git", "T2Tools/t2code"],
-  ["https://github.com/T2Tools/t2code.git?view=compact", "T2Tools/t2code"],
-  ["https://github.com/T2Tools/t2code.git#section", "T2Tools/t2code"],
+  ["https://github.com/Ashutoshpw/t2code.git", "Ashutoshpw/t2code"],
+  ["https://github.com/Ashutoshpw/t2code.git?view=compact", "Ashutoshpw/t2code"],
+  ["https://github.com/Ashutoshpw/t2code.git#section", "Ashutoshpw/t2code"],
   ["C:/repos/t3code", null],
 ])("reads the repository path of %s", (remoteUrl, expected) => {
   assert.strictEqual(repositoryPathFromRemoteUrl(remoteUrl), expected);

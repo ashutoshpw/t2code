@@ -135,7 +135,7 @@ export function useSideChatCitationReveal(
   const environmentId = routeThreadRef?.environmentId;
   const threadId = routeThreadRef?.threadId;
   const sideChatThreadId = sourceRef?.threadId;
-  // oxlint-disable-next-line t2code/react-effect-budget -- moves a side chat quote's router location and parent right panel once per activation, including after its shell loads
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- moves a side chat quote's router location and parent right panel once per activation, including after its shell loads
   useEffect(() => {
     if (
       environmentId === undefined ||

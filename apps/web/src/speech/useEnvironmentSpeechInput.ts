@@ -207,11 +207,11 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     text?: string;
   } | null>(null);
   const latestRef = useRef({ input, clientSettings, cleanupPrepared, projectWords });
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     latestRef.current = { input, clientSettings, cleanupPrepared, projectWords };
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- owns the recording controller bound to the consented destination; it is disposed with the consent
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- owns the recording controller bound to the consented destination; it is disposed with the consent
   useEffect(() => {
     if (!prepared || !grantId || typeof navigator === "undefined") return;
     const hasAudioConsent = bindAudioGrant(grantId);
@@ -349,7 +349,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     };
   }, [prepared, grantId, cloudProvider, cloudModel]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (!prepared || cloudProvider) return;
     let disposed = false;
@@ -367,7 +367,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
   const currentStatus = !cloudProvider && status?.prepared === prepared ? status.value : null;
   const setupModelId = setup.model?.id;
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (!setup.open || !setup.downloading || !prepared || !setupModelId) return;
     let disposed = false;
@@ -393,7 +393,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
   }, [prepared, setup.downloading, setup.open, setupModelId]);
 
   const previousOwnerRef = useRef(input.ownerKey);
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (previousOwnerRef.current === input.ownerKey && !input.disabled) return;
     previousOwnerRef.current = input.ownerKey;
@@ -402,7 +402,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     controllerRef.current?.ownerChanged();
   }, [input.ownerKey, input.disabled]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     const pending = pendingSubmissionRef.current;
     if (state.phase !== "idle" || !pending) return;

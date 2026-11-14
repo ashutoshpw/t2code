@@ -19,6 +19,7 @@ export function useThreadPromptLink(
   const navigation = useNavigation();
   const search = promptLinkSearchFromParams(params, THREAD_LINK_KEYS);
   const handledSearchRef = useRef<string | null>(null);
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- consumes the link search param once per value by clearing it on the navigation object and applying it to the thread draft
   useEffect(() => {
     if (search === null) {
       handledSearchRef.current = null;

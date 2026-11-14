@@ -339,7 +339,7 @@ describe("server ownership", () => {
               "launchctl print": { code: 113 },
               "launchctl print-disabled": {
                 code: 0,
-                stdout: '"com.t2tools.t2code.service" => false',
+                stdout: '"codes.t2.desktop.service" => false',
               },
             },
           },

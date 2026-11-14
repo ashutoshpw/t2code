@@ -6,7 +6,7 @@ import {
   DATABASE_MIGRATIONS_FINISHED_MESSAGE,
   DATABASE_MIGRATIONS_STARTED_MESSAGE,
 } from "@t2code/shared/databaseMigrationLog";
-import { reconcileLegacyMcpIdentityMigration } from "./reconcileLegacyMcpIdentityMigration.ts";
+import { reconcileForkMigrations, runForkMigrations } from "./forkMigrations.ts";
 import { reconcileV2PreviewMigration } from "./reconcileV2PreviewMigration.ts";
 
 import Migration0001 from "./Migrations/001_OrchestrationEvents.ts";
@@ -292,7 +292,7 @@ export const runMigrations = Effect.fn("runMigrations")(function* ({
     toMigrationInclusive === undefined || toMigrationInclusive >= FIRST_V2_MIGRATION_ID;
   const previewMigrations = includesV2 ? yield* reconcileV2PreviewMigration() : [];
   if (includesV2) {
-    yield* reconcileLegacyMcpIdentityMigration();
+    yield* reconcileForkMigrations();
     yield* assertV2MigrationsCanRun(toMigrationInclusive);
   }
   const sql = yield* SqlClient.SqlClient;
@@ -324,7 +324,10 @@ export const runMigrations = Effect.fn("runMigrations")(function* ({
     }
     executedMigrations.push(...(yield* run({ loader: makeMigrationLoader(id) })));
   }
-  const migrations = executedMigrations.map(([id, name]) => `${id}_${name}`);
+  const forkMigrations = toMigrationInclusive === undefined ? yield* runForkMigrations() : [];
+  const migrations = [...executedMigrations, ...forkMigrations].map(
+    ([id, name]) => `${id}_${name}`,
+  );
   yield* migrations.length === 0
     ? Effect.logDebug("Database schema is current")
     : Effect.log(DATABASE_MIGRATIONS_FINISHED_MESSAGE).pipe(Effect.annotateLogs({ migrations }));

@@ -48,7 +48,7 @@ export function useVoiceModels(environmentId: EnvironmentId, label: string) {
   const models = AsyncResult.getOrElse(modelsResult, () => null)?.models ?? [];
   const downloading = requested !== null || models.some(isDownloading);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- polls the environment's download progress while one runs
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- polls the environment's download progress while one runs
   useEffect(() => {
     if (!downloading) return;
     const timer = setInterval(refreshModels, 1_000);
@@ -305,12 +305,18 @@ export function LocalModelChoice(props: {
   const progress =
     pending?.downloaded === undefined ? undefined : pending.downloaded / pending.size;
   return (
-    <SettingsSection
-      title={title}
-      footer={
-        voice.canManage
-          ? undefined
-          : `This connection can’t change settings on ${props.label}. Add a transcription model using T2 Code on that machine.`
+    <ListRow
+      label={active?.model ?? "Local model"}
+      description={
+        pending
+          ? pending.state === "verifying"
+            ? `Verifying ${pending.name}…`
+            : `Downloading ${pending.name} · ${Math.round((progress ?? 0) * 100)}%`
+          : active
+            ? `Local model · ${formatBytes(active.size)}`
+            : voice.canManage
+              ? "No model installed · Choose one to download"
+              : `No model installed · Add one using T2 Code on ${props.label}`
       }
       selected={props.selected}
       onPress={() => {
