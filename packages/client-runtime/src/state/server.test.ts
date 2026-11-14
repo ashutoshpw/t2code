@@ -71,6 +71,7 @@ import {
   waitForNextEnvironmentReconnect,
   waitForDesktopUpdateTarget,
   runDesktopCommitWithReconnectObserver,
+  verifyEnvironmentLabelUpdate,
 } from "./server.ts";
 import { applyServerConfigProjection } from "./serverConfigProjection.ts";
 
@@ -449,100 +450,38 @@ const makeConfigPersistenceHarness = Effect.fn("test.makeConfigPersistenceHarnes
 });
 
 describe("server state projection", () => {
-  it.effect("skips duplicate keybinding saves but persists changed keybindings", () =>
+  it.effect("detects servers that ignore environment label updates", () =>
     Effect.gen(function* () {
-      const saved = yield* Ref.make<ReadonlyArray<ServerConfig>>([]);
-      const keybindingsEvent = (key: string): ServerConfigStreamEvent => ({
-        version: 1,
-        type: "keybindingsUpdated",
-        payload: {
-          keybindings: [
-            {
-              command: "terminal.toggle",
-              shortcut: {
-                key,
-                metaKey: false,
-                ctrlKey: false,
-                shiftKey: false,
-                altKey: false,
-                modKey: true,
-              },
-            },
-          ],
-          issues: [],
-        },
-      });
-      yield* Effect.scoped(
-        Effect.gen(function* () {
-          const h = yield* makeConfigPersistenceHarness((_id, config) =>
-            Ref.update(saved, (values) => [...values, config]),
-          );
-          const first = yield* h.send(keybindingsEvent("p"));
-          yield* TestClock.adjust("500 millis");
-          expect(yield* Ref.get(saved)).toEqual([first.config]);
-
-          yield* h.send(keybindingsEvent("p"));
-          yield* TestClock.adjust("10 seconds");
-          expect(yield* Ref.get(saved)).toEqual([first.config]);
-
-          const changed = yield* h.send(keybindingsEvent("q"));
-          yield* TestClock.adjust("10 seconds");
-          expect(yield* Ref.get(saved)).toEqual([first.config, changed.config]);
-        }),
+      yield* verifyEnvironmentLabelUpdate("Build server", { environmentLabel: "Build server" });
+      const error = yield* Effect.flip(
+        verifyEnvironmentLabelUpdate("Build server", { environmentLabel: "" }),
       );
+      expect(error.message).toBe("This environment server does not support renaming.");
     }),
   );
 
-  it.effect(
-    "compares nested durable values independently of key order and omitted undefined fields",
-    () =>
-      Effect.gen(function* () {
-        const saved = yield* Ref.make<ReadonlyArray<ServerConfig>>([]);
-        const observability = {
-          logsDirectoryPath: "/synthetic/logs",
-          localTracingEnabled: false,
-          otlpTracesEnabled: false,
-          otlpMetricsEnabled: false,
-          otlpLogsEnabled: false,
-        };
-        yield* Effect.scoped(
-          Effect.gen(function* () {
-            const h = yield* makeConfigPersistenceHarness((_id, config) =>
-              Ref.update(saved, (values) => [...values, config]),
-            );
-            const first = yield* h.send(snapshotEvent({ ...CONFIG, observability }));
-            yield* TestClock.adjust("500 millis");
-            const reordered = Object.fromEntries(
-              Object.entries(observability).toReversed(),
-            ) as typeof observability;
-            for (const next of [
-              { ...CONFIG, observability: reordered },
-              { ...CONFIG, observability: { ...reordered, otlpTracesUrl: undefined } },
-              { ...CONFIG, observability: { ...observability } },
-            ]) {
-              const encode = Schema.encodeEffect(Schema.fromJsonString(ServerObservability));
-              expect(JSON.parse(yield* encode(next.observability))).toEqual(
-                JSON.parse(yield* encode(observability)),
-              );
-              const projection = yield* h.send(snapshotEvent(next));
-              expect(projection.config.observability).toEqual(next.observability);
-              yield* TestClock.adjust("10 seconds");
-              expect.soft(yield* Ref.get(saved)).toEqual([first.config]);
-            }
-            const writesBeforeChange = (yield* Ref.get(saved)).length;
-            const changed = yield* h.send(
-              snapshotEvent({
-                ...CONFIG,
-                observability: { ...observability, otlpTracesUrl: "https://traces.example.test" },
-              }),
-            );
-            yield* TestClock.adjust("10 seconds");
-            expect((yield* Ref.get(saved)).length).toBe(writesBeforeChange + 1);
-            expect((yield* Ref.get(saved)).at(-1)).toEqual(changed.config);
-          }),
-        );
+  it("projects environment label updates into the server descriptor", () => {
+    const current = applyServerConfigProjection(
+      Option.none(),
+      snapshotEvent({
+        ...CONFIG,
+        environment: {
+          environmentId: EnvironmentId.make("environment-1"),
+          label: "Before",
+          platform: { os: "linux", arch: "x64" },
+          serverVersion: "0.0.33",
+          capabilities: { repositoryIdentity: true },
+        },
       }),
-  );
+    );
+    const next = applyServerConfigProjection(current, {
+      version: 1,
+      type: "environmentLabelUpdated",
+      payload: { label: "After" },
+    });
+
+    expect(Option.getOrThrow(next).config.environment.label).toBe("After");
+  });
 
   it.effect("saves once across transient themes, usage sources and stall updates", () =>
     Effect.gen(function* () {

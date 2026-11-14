@@ -1,11 +1,11 @@
 apply plugin: 'com.android.library'
 apply plugin: 'org.jetbrains.kotlin.android'
 
-group = 'com.t3tools.reviewdiff'
+group = 'com.t2tools.reviewdiff'
 version = '0.0.0'
 
 android {
-  namespace 'expo.modules.t3reviewdiff'
+  namespace 'expo.modules.t2reviewdiff'
   compileSdk rootProject.ext.compileSdkVersion
 
   testOptions {

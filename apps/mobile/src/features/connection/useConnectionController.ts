@@ -9,7 +9,7 @@ import type {
   RelayEnvironmentStatusResponse,
 } from "@t2code/contracts/relay";
 import * as Option from "effect/Option";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import { environmentCatalog } from "../../connection/catalog";
 import {
@@ -72,28 +72,43 @@ export function useConnectionController() {
       pairingUrl,
       ...(expectedEnvironmentId === undefined ? {} : { expectedEnvironmentId }),
     });
-  const connectRelayEnvironment = (environment: RelayClientEnvironmentRecord) =>
-    registerEnvironment(
-      new RelayConnectionRegistration({
-        target: new RelayConnectionTarget({
-          environmentId: environment.environmentId,
-          label: environment.label,
+  const connectRelayEnvironment = useCallback(
+    (environment: RelayClientEnvironmentRecord) =>
+      registerEnvironment(
+        new RelayConnectionRegistration({
+          target: new RelayConnectionTarget({
+            environmentId: environment.environmentId,
+            label: environment.label,
+          }),
         }),
+      ),
+    [registerEnvironment],
+  );
+  const removeEnvironment = useCallback(
+    (environmentId: EnvironmentId) => removeEnvironmentMutation(environmentId),
+    [removeEnvironmentMutation],
+  );
+  const retryEnvironment = useCallback(
+    (environmentId: EnvironmentId) => retryEnvironmentMutation(environmentId),
+    [retryEnvironmentMutation],
+  );
+  const setEnvironmentEnabled = useCallback(
+    (environmentId: EnvironmentId, enabled: boolean) =>
+      setEnvironmentEnabledMutation({ environmentId, enabled }),
+    [setEnvironmentEnabledMutation],
+  );
+  const updateEnvironment = useCallback(
+    (
+      environmentId: EnvironmentId,
+      updates: { readonly label?: string; readonly displayUrl: string },
+    ) =>
+      updateBearer({
+        environmentId,
+        ...(updates.label === undefined ? {} : { label: updates.label }),
+        httpBaseUrl: updates.displayUrl,
       }),
-    );
-  const removeEnvironment = (environmentId: EnvironmentId) =>
-    removeEnvironmentMutation(environmentId);
-  const setEnvironmentEnabled = (environmentId: EnvironmentId, enabled: boolean) =>
-    setEnvironmentEnabledMutation({ environmentId, enabled });
-  const updateEnvironment = (
-    environmentId: EnvironmentId,
-    updates: { readonly label: string; readonly displayUrl: string },
-  ) =>
-    updateBearer({
-      environmentId,
-      label: updates.label,
-      httpBaseUrl: updates.displayUrl,
-    });
+    [updateBearer],
+  );
 
   return {
     connectedEnvironments,
@@ -108,6 +123,7 @@ export function useConnectionController() {
     connectPairingUrl,
     connectRelayEnvironment,
     removeEnvironment,
+    retryEnvironment,
     setEnvironmentEnabled,
     updateEnvironment,
     refreshRelayEnvironments,

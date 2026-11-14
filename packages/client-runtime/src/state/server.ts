@@ -30,6 +30,7 @@ import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
 
 import {
   createAtomCommandScheduler,
+  createEnvironmentCommand,
   createEnvironmentRpcCommand,
   createEnvironmentQueryAtomFamily,
   createEnvironmentRpcQueryAtomFamily,
@@ -90,6 +91,26 @@ export type ServerUpdateState =
 export interface ServerUpdateTarget {
   readonly environmentId: EnvironmentId;
   readonly input: EnvironmentRpcInput<typeof WS_METHODS.serverUpdateServer>;
+}
+
+export class EnvironmentLabelUpdateUnsupportedError extends Schema.TaggedError<EnvironmentLabelUpdateUnsupportedError>()(
+  "EnvironmentLabelUpdateUnsupportedError",
+  {
+    requestedLabel: Schema.String,
+  },
+) {
+  override get message(): string {
+    return "This environment server does not support renaming.";
+  }
+}
+
+export function verifyEnvironmentLabelUpdate(
+  requestedLabel: string,
+  settings: { readonly environmentLabel: string },
+): Effect.Effect<void, EnvironmentLabelUpdateUnsupportedError> {
+  return settings.environmentLabel === requestedLabel
+    ? Effect.void
+    : new EnvironmentLabelUpdateUnsupportedError({ requestedLabel });
 }
 
 const IDLE_SERVER_UPDATE_STATE: ServerUpdateState = { status: "idle" };
@@ -939,6 +960,15 @@ export function createServerEnvironmentAtoms<R, E>(
   );
   const updateStateAtom = (environmentId: EnvironmentId | null) =>
     environmentId === null ? EMPTY_SERVER_UPDATE_STATE_ATOM : updateStateValueAtom(environmentId);
+  const updateEnvironmentLabel = createEnvironmentCommand(runtime, {
+    label: "environment-data:server:update-environment-label",
+    scheduler: configScheduler,
+    concurrency: configConcurrency,
+    execute: (environmentLabel: string) =>
+      request(WS_METHODS.serverUpdateSettings, {
+        patch: { environmentLabel },
+      }).pipe(Effect.tap((settings) => verifyEnvironmentLabelUpdate(environmentLabel, settings))),
+  });
   const updateServer = createRuntimeCommand<
     EnvironmentRegistry.EnvironmentRegistry | Persistence.EnvironmentCacheStore | R,
     E,
@@ -1757,6 +1787,7 @@ export function createServerEnvironmentAtoms<R, E>(
         key: ({ environmentId, input }) => `${environmentId}:${input.instanceId}`,
       },
     }),
+    updateEnvironmentLabel,
     signalProcess: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:signal-process",
       tag: WS_METHODS.serverSignalProcess,

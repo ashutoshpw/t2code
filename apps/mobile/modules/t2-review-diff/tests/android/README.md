@@ -3,7 +3,7 @@
 From the repository root:
 
 ```sh
-apps/mobile/modules/t3-review-diff/tests/run-android.sh
+apps/mobile/modules/t2-review-diff/tests/run-android.sh
 ```
 
 Requires JDK 17+ (`JAVA_HOME`) and Gradle on `PATH`. Tested with JDK 17 and
