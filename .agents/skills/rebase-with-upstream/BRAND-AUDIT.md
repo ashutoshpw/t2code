@@ -46,3 +46,12 @@ rg -no "(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+" -g '!node_modules' -g '!.t3' -g
 - **Fixtures as inputs vs expectations**: a `releaseName` a test feeds in and asserts back verbatim can stay as-is only if it is not rebranded upstream; if the real producer (e.g. `resolve-nightly-release.ts`) emits T2, rebrand the fixture too so the test stays realistic.
 - **Env names are contextual, not textual**: legacy `T3CODE_*`/`T3_*` spellings are legitimate in exactly three places — the guarded seam files, baseline-grandfathered compat lines (dual-read fallbacks like `(repoEnv.T2CODE_X ?? repoEnv.T3CODE_X)`, legacy strippers in `infra/relay/scripts/deploy.ts`, boot-service parsers that accept both spellings, workflow `vars.T2_X || vars.T3_X` rotations), and the guard's retained identifier list. Anything else — including prefix checks (`startsWith("T2CODE_")`), sentinel strings (`__T2_SETUP_DONE__`), and generated remote-shell scripts — must use the T2 namespace. Identifier substrings (`LEGACY_T3_CHAT_DARK_THEME_ID`, `devRemoteServerEntryPath`-style camelCase) do not match the rule; do not use that as a loophole to spell env names with a T3 prefix.
 - **Legacy-name coverage lives in dedicated tests**: the fallback path is exercised by `packages/shared/src/legacyEnv.test.ts`, the legacy `T3CODE_HOME` test in `apps/server/src/cli/config.test.ts`, and the legacy env-file fixtures in `scripts/lib/public-config.test.ts`. New env-name tests assert T2 names; do not spread legacy spellings into other fixtures.
+
+## The audit's expected remainder
+
+`--audit` prints bare `T3` tokens no rule names. After the fixture sweep, these are the only expected hits; anything else is a gap worth a rule or a rename:
+
+- Marketing testimonials in `apps/marketing/src/lib/tweets.ts` quote real people saying "T3" — never rewrite quotes.
+- The `T3 Chat` palette (comments, tests, and the palette label) references the t3.chat product, not this fork.
+- `packages/client-runtime/src/errors/transport.ts` matches a legacy "Unable to connect to the T3 server WebSocket." error string, and its test asserts the legacy spelling.
+- Work-log fixtures use lowercase `t3-code` on purpose: `packages/client-runtime/src/work-log/presentation.ts` recognizes both `t2-code` and `t3-code` MCP prefixes from older servers.
