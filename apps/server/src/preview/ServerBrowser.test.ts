@@ -129,7 +129,12 @@ function makeSession(
           "t3-preview": 1,
         };
         return {
-          executionContextId: worldContexts[(input as { worldName: string }).worldName] ?? 7,
+          executionContextId:
+            (input as { worldName?: string }).worldName === "t2-preview-viewport"
+              ? 9
+              : (input as { worldName?: string }).worldName === "t2-preview"
+                ? 1
+                : 7,
         };
       }
       // A title watch settles only when the document's title changes.
