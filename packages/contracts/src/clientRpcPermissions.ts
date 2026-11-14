@@ -45,6 +45,7 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.spacesSharesCreate]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesSharesStop]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesSharesGet]: AuthOrchestrationReadScope,
+  [WS_METHODS.spacesSharesSetResponses]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesCommentsCreate]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesCommentsReply]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesCommentsEdit]: AuthOrchestrationOperateScope,

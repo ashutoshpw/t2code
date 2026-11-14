@@ -76,6 +76,9 @@ export const SPACE_VIEW_TYPES = [
   "gallery",
   "calendar",
   "timeline",
+  "chart",
+  "form",
+  "feed",
 ] as const;
 export const SpaceViewType = Schema.Literals(SPACE_VIEW_TYPES);
 export type SpaceViewType = typeof SpaceViewType.Type;
@@ -473,6 +476,15 @@ export const SpaceDataSource = Schema.Struct({
   ),
 });
 export type SpaceDataSource = typeof SpaceDataSource.Type;
+export const SpaceRowPreviewBlock = Schema.Struct({
+  /** The block type; unknown types render as a label. */
+  type: StableId,
+  /** Empty for blocks without text. */
+  runs: Schema.Array(SpaceRichRun),
+  level: Schema.optionalKey(Schema.Literals([1, 2, 3])),
+  checked: Schema.optionalKey(Schema.Boolean),
+});
+export type SpaceRowPreviewBlock = typeof SpaceRowPreviewBlock.Type;
 export const SpaceDatabaseRow = Schema.Struct({
   page: Schema.Struct({
     id: SpacePageId,
@@ -492,6 +504,10 @@ export const SpaceDatabaseRow = Schema.Struct({
       url: Schema.optionalKey(Schema.String),
       assetId: Schema.optionalKey(SpaceAssetId),
     }),
+  ),
+  /** Present when the query asked for `include.preview`: the first top-level body blocks. */
+  preview: Schema.optionalKey(
+    Schema.Struct({ blocks: Schema.Array(SpaceRowPreviewBlock), more: Schema.Boolean }),
   ),
 });
 export type SpaceDatabaseRow = typeof SpaceDatabaseRow.Type;

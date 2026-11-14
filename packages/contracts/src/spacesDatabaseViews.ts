@@ -3,6 +3,11 @@ import * as Schema from "effect/Schema";
 import { NonNegativeInt, PositiveInt } from "./baseSchemas.ts";
 import { SpaceBlockId, StableId } from "./spacesCore.ts";
 import {
+  SPACE_FORM_DESCRIPTION_MAX,
+  SPACE_FORM_MAX_QUESTIONS,
+  SpaceFormQuestion,
+} from "./spacesDatabaseForms.ts";
+import {
   SpaceDataSourceId,
   SpaceDatabaseId,
   SpacePropertyId,
@@ -72,6 +77,12 @@ export const SpaceCardPreview = Schema.Union([
 ]);
 export type SpaceCardPreview = typeof SpaceCardPreview.Type;
 
+export const SPACE_CHART_TYPES = ["bar", "horizontal_bar", "line", "donut"] as const;
+export const SPACE_CHART_Y_FUNCTIONS = ["sum", "average", "median", "min", "max"] as const;
+export const SPACE_FEED_WINDOW_ROWS = 25;
+export const SPACE_FEED_PREVIEW_ROW_BYTES = 2048;
+export const SPACE_CHART_MAX_BARS = 50;
+
 const optional = Schema.optionalKey;
 const cardSize = Schema.Literals(["small", "medium", "large"]);
 const commonLayout = {
@@ -119,6 +130,34 @@ export const SpaceKnownViewLayout = {
     showTable: optional(Schema.Boolean),
     tableWidth: optional(PositiveInt),
   }),
+  chart: Schema.Struct({
+    ...commonLayout,
+    /** Absent is "bar". */
+    chartType: optional(Schema.Literals(SPACE_CHART_TYPES)),
+    /** Absent counts rows. */
+    y: optional(
+      Schema.Struct({
+        property: SpacePropertyId,
+        function: Schema.Literals(SPACE_CHART_Y_FUNCTIONS),
+      }),
+    ),
+    /** Absent is true. */
+    colorByOption: optional(Schema.Boolean),
+    sortByValue: optional(Schema.Literals(["ascending", "descending"])),
+    showValues: optional(Schema.Boolean),
+  }),
+  form: Schema.Struct({
+    ...commonLayout,
+    questions: optional(
+      Schema.Array(SpaceFormQuestion).check(Schema.isMaxLength(SPACE_FORM_MAX_QUESTIONS)),
+    ),
+    description: optional(Schema.String.check(Schema.isMaxLength(SPACE_FORM_DESCRIPTION_MAX))),
+  }),
+  feed: Schema.Struct({
+    ...commonLayout,
+    /** Absent is 3. */
+    previewBlocks: optional(Schema.Literals([0, 1, 3, 5, 10])),
+  }),
 } as const satisfies Record<SpaceViewType, Schema.Top>;
 
 const knownView = <const Type extends keyof typeof SpaceKnownViewLayout>(type: Type) =>
@@ -144,5 +183,8 @@ export const SpaceKnownDatabaseView = Schema.Union([
   knownView("gallery"),
   knownView("calendar"),
   knownView("timeline"),
+  knownView("chart"),
+  knownView("form"),
+  knownView("feed"),
 ]);
 export type SpaceKnownDatabaseView = typeof SpaceKnownDatabaseView.Type;

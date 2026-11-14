@@ -11,9 +11,12 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { knownView } from "./schema.ts";
 import {
+  chartGroupForTypeChange,
   datePropertyCandidates,
+  defaultFormQuestions,
   defaultViewDraft,
   layoutForTypeChange,
+  offeredViewTypes,
   seedCellsForView,
 } from "./viewDefaults.ts";
 
@@ -131,5 +134,51 @@ describe("view defaults", () => {
     });
     expect(seedCellsForView(view("table", {}), withDates, today)).toEqual({});
     expect(seedCellsForView(null, withDates, today)).toEqual({});
+  });
+
+  it("groups a new chart by status, or by nothing when only a title exists", () => {
+    expect(defaultViewDraft("chart", withDates)).toEqual({
+      name: "Chart",
+      layout: { chartType: "bar" },
+      group: { property: "state" },
+    });
+    expect(defaultViewDraft("chart", noDates).group).toBeUndefined();
+    const text = source(property("title", "title", 0), property("kind", "checkbox", 1));
+    expect(chartGroupForTypeChange(null, text)).toEqual({ property: "kind" });
+    expect(chartGroupForTypeChange(null, noDates)).toBeUndefined();
+  });
+
+  it("starts a form with the title first and at most ten answerable questions", () => {
+    const many = source(
+      property("title", "title", 5),
+      property("rel", "relation", 0),
+      ...Array.from({ length: 12 }, (_, index) => property(`p${index}`, "text", index + 6)),
+    );
+    const questions = defaultFormQuestions(many);
+    expect(questions).toHaveLength(10);
+    expect(questions[0]).toEqual({ propertyId: "title" });
+    expect(questions.some((question) => question.propertyId === "rel")).toBe(false);
+    expect(defaultViewDraft("form", withDates).layout).toEqual({
+      questions: [{ propertyId: "title" }, { propertyId: "due" }, { propertyId: "state" }],
+    });
+    expect(defaultViewDraft("feed", withDates).layout).toEqual({});
+  });
+
+  it("adds form questions and a chart type on a type change, and drops them going back", () => {
+    const toForm = layoutForTypeChange("form", withDates, { wrapCells: true });
+    expect(toForm).toEqual({
+      questions: [{ propertyId: "title" }, { propertyId: "due" }, { propertyId: "state" }],
+    });
+    expect(layoutForTypeChange("table", withDates, toForm)).toEqual({});
+    expect(layoutForTypeChange("chart", withDates, {})).toEqual({ chartType: "bar" });
+    expect(layoutForTypeChange("chart", withDates, { chartType: "line" })).toEqual({
+      chartType: "line",
+    });
+  });
+
+  it("offers the three newer view types only with the capability flag", () => {
+    expect(offeredViewTypes(undefined)).toHaveLength(6);
+    expect(offeredViewTypes({})).not.toContain("chart");
+    expect(offeredViewTypes({ databaseChartFormFeed: true })).toHaveLength(9);
   });
 });

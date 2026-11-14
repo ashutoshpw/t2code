@@ -2,6 +2,9 @@ import type { ReactNode } from "react";
 
 import { BoardLayoutSection } from "../board/BoardLayoutSection";
 import { CalendarLayoutSection } from "../calendar/CalendarLayoutSection";
+import { ChartLayoutSection } from "../chart/ChartLayoutSection";
+import { FeedLayoutSection } from "../feed/FeedLayoutSection";
+import { FormLayoutSection } from "../form/FormLayoutSection";
 import { GalleryLayoutSection } from "../gallery/GalleryLayoutSection";
 import { ListLayoutSection } from "../list/ListLayoutSection";
 import type { LayoutSectionProps } from "../shell/layoutSection";
@@ -24,6 +27,12 @@ function TypeSection(props: LayoutSectionProps): ReactNode {
       return <CalendarLayoutSection {...props} />;
     case "timeline":
       return <TimelineLayoutSection {...props} />;
+    case "chart":
+      return <ChartLayoutSection {...props} />;
+    case "form":
+      return <FormLayoutSection {...props} />;
+    case "feed":
+      return <FeedLayoutSection {...props} />;
     default:
       return null;
   }

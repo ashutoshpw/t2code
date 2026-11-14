@@ -1,4 +1,4 @@
-import { filterShape } from "@t2code/client-runtime/spaces";
+import { filterShape, viewTraits } from "@t2code/client-runtime/spaces";
 import { ArrowDownUpIcon, ListFilterIcon } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 
@@ -74,28 +74,33 @@ function ControlButton({
 
 /** Filter and Sort of the active view: icon buttons whose popovers edit it through `actions.editView`. */
 export function ViewControls(): ReactNode {
-  const { known, model } = useViewControls();
+  const { known, model, view } = useViewControls();
+  const traits = viewTraits(view.type);
   const disabled = !model.permissions.views || known === null;
   return (
     <>
-      <ControlButton
-        control="filter"
-        label="Filter"
-        icon={ListFilterIcon}
-        disabled={disabled}
-        count={filterShape(known?.filter).conditions}
-      >
-        <FilterPopover />
-      </ControlButton>
-      <ControlButton
-        control="sort"
-        label="Sort"
-        icon={ArrowDownUpIcon}
-        disabled={disabled}
-        count={known?.sorts.length ?? 0}
-      >
-        <SortPopover />
-      </ControlButton>
+      {traits.filter ? (
+        <ControlButton
+          control="filter"
+          label="Filter"
+          icon={ListFilterIcon}
+          disabled={disabled}
+          count={filterShape(known?.filter).conditions}
+        >
+          <FilterPopover />
+        </ControlButton>
+      ) : null}
+      {traits.sort ? (
+        <ControlButton
+          control="sort"
+          label="Sort"
+          icon={ArrowDownUpIcon}
+          disabled={disabled}
+          count={known?.sorts.length ?? 0}
+        >
+          <SortPopover />
+        </ControlButton>
+      ) : null}
     </>
   );
 }

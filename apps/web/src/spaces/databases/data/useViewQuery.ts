@@ -11,6 +11,7 @@ import {
   type ViewColumn,
 } from "@t2code/client-runtime/spaces";
 import type {
+  SpaceAggregate,
   SpaceAggregateResult,
   SpaceDatabaseRow,
   SpaceDatabaseView,
@@ -42,6 +43,14 @@ export interface ViewQueryOptions {
   readonly scope?: { readonly parentRowId: SpacePageId | null };
   /** Ask for each row's first body image (the gallery's `page_content` preview). */
   readonly cover?: boolean;
+  /** Replaces the view's column aggregates: a chart's y. */
+  readonly aggregates?: ReadonlyArray<SpaceAggregate>;
+  /** Rows mode: one bucket's rows, with the view's grouping kept (a chart's filtered peek). */
+  readonly bucket?: SpaceGroupKey;
+  /** Rows mode: the first N body blocks of each row (feed cards). */
+  readonly preview?: number;
+  /** A window cap below the default 100 rows. */
+  readonly limit?: number;
   /** Keep loading windows until the query is whole or this many rows are loaded. */
   readonly fillRows?: number;
 }
@@ -90,7 +99,7 @@ export function viewInputOf(
   options: ViewQueryOptions,
 ) {
   const sizes = applyLoadLimit(view, {
-    limit: Math.min(100, model.limits.maxQueryRows),
+    limit: Math.min(100, model.limits.maxQueryRows, options.limit ?? 100),
     ...(options.rowsPerGroup === undefined ? {} : { rowsPerGroup: options.rowsPerGroup }),
   });
   return viewQueryInput(view, {
@@ -109,6 +118,9 @@ export function viewInputOf(
       : { extraPropertyIds: options.extraPropertyIds }),
     ...(options.scope === undefined ? {} : { scope: options.scope }),
     ...(options.cover === true ? { cover: true } : {}),
+    ...(options.aggregates === undefined ? {} : { aggregates: options.aggregates }),
+    ...(options.bucket === undefined ? {} : { bucket: options.bucket }),
+    ...(options.preview === undefined ? {} : { preview: options.preview }),
   });
 }
 

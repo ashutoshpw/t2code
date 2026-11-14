@@ -28,6 +28,28 @@ import {
 import { execute } from "./Execute.ts";
 import type { Runtime } from "./Runtime.ts";
 
+/** The body of a mutation transaction: replay or find, limits, epoch check, execute, store. */
+export const commitRequest = Effect.fn("SpacesService.commitRequest")(function* (
+  request: C.SpaceMutationRequest,
+  meta: Receipts.Metadata,
+  replay: C.SpaceMutationReceipt | undefined,
+) {
+  const found = replay ?? (yield* Receipts.find(request));
+  if (found) return found;
+  yield* ensureLimit("maxMutationBytes", byteLength(request));
+  yield* checkIds(request.input);
+  if ("title" in request.input)
+    yield* ensureLimit("maxTitleBytes", byteLength(request.input.title));
+  if (request.operation === "applyBlockBatch")
+    yield* ensureLimit("maxMutationNodes", request.input.mutations.length);
+  const epoch = yield* Receipts.active(meta);
+  if (!epoch || epoch.epoch !== request.input.receiptEpoch)
+    return yield* new C.SpaceMutationAdmissionError({ receiptEpoch: request.input.receiptEpoch });
+  const receipt = yield* execute(request, meta);
+  yield* Receipts.store(request, receipt, meta, epoch.retain_until);
+  return receipt;
+});
+
 export const make = (rt: Runtime) => {
   const { admit, checkEnvironment, run } = rt;
   const mutate = Effect.fn("SpacesService.mutate")(function* (
@@ -44,25 +66,7 @@ export const make = (rt: Runtime) => {
     yield* checkEnvironment(environmentId, request.input.environmentId);
     return yield* run(
       environmentId,
-      (meta, replay) =>
-        Effect.gen(function* () {
-          const found = replay ?? (yield* Receipts.find(request));
-          if (found) return found;
-          yield* ensureLimit("maxMutationBytes", byteLength(request));
-          yield* checkIds(request.input);
-          if ("title" in request.input)
-            yield* ensureLimit("maxTitleBytes", byteLength(request.input.title));
-          if (request.operation === "applyBlockBatch")
-            yield* ensureLimit("maxMutationNodes", request.input.mutations.length);
-          const epoch = yield* Receipts.active(meta);
-          if (!epoch || epoch.epoch !== request.input.receiptEpoch)
-            return yield* new C.SpaceMutationAdmissionError({
-              receiptEpoch: request.input.receiptEpoch,
-            });
-          const receipt = yield* execute(request, meta);
-          yield* Receipts.store(request, receipt, meta, epoch.retain_until);
-          return receipt;
-        }),
+      (meta, replay) => commitRequest(request, meta, replay),
       request,
     );
   });

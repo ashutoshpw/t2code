@@ -415,6 +415,71 @@ it.layer(NodeServices.layer)("Spaces database views", (it) => {
     ),
   );
 
+  it.effect("creates chart, form and feed views and checks the properties they name", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const { points, tag, label, calc, create, update, views, created, kit } = yield* setup();
+        const reason = (effect: Effect.Effect<unknown, C.SpaceServiceError>) =>
+          Effect.map(databaseError(effect), (error) => error.reason);
+        const chart = yield* create({
+          name: "Chart",
+          type: "chart",
+          group: { property: tag },
+          layout: { chartType: "donut", y: { property: points, function: "sum" } },
+        });
+        const form = yield* create({
+          name: "Form",
+          type: "form",
+          layout: {
+            questions: [{ propertyId: pid("title"), required: true }, { propertyId: label }],
+          },
+        });
+        const feed = yield* create({ name: "Feed", type: "feed", layout: { previewBlocks: 5 } });
+        assert.deepEqual([chart.status, form.status, feed.status], ["saved", "saved", "saved"]);
+        assert.equal(
+          yield* reason(
+            create({
+              name: "x",
+              type: "chart",
+              layout: { y: { property: label, function: "sum" } },
+            }),
+          ),
+          "invalid_view",
+        );
+        assert.equal(
+          yield* reason(
+            create({ name: "x", type: "form", layout: { questions: [{ propertyId: calc }] } }),
+          ),
+          "invalid_view",
+        );
+        assert.equal(
+          yield* reason(
+            create({
+              name: "x",
+              type: "form",
+              layout: { questions: [{ propertyId: label }, { propertyId: label }] },
+            }),
+          ),
+          "invalid_view",
+        );
+        // Removing a property takes it out of the layouts that name it, and the view stays editable.
+        yield* kit.schema(created.dataSourceId, [
+          { op: "removeProperty", propertyId: points },
+          { op: "removeProperty", propertyId: label },
+        ]);
+        yield* update(form.viewId, { name: "Renamed" });
+        const after = yield* views;
+        assert.deepEqual(after.find((view) => view.id === form.viewId)!.layout, {
+          questions: [{ propertyId: "title", required: true }],
+        });
+        assert.deepEqual(after.find((view) => view.id === chart.viewId)!.layout, {
+          chartType: "donut",
+        });
+        assert.equal(after.find((view) => view.id === form.viewId)!.name, "Renamed");
+      }),
+    ),
+  );
+
   it.effect("keeps a view patchable after a property its layout names is removed", () =>
     fixture(() =>
       Effect.gen(function* () {

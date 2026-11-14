@@ -50,6 +50,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.spacesSharesCreate]: "spaces",
   [WS_METHODS.spacesSharesStop]: "spaces",
   [WS_METHODS.spacesSharesGet]: "spaces",
+  [WS_METHODS.spacesSharesSetResponses]: "spaces",
   [WS_METHODS.spacesCommentsList]: "spaces",
   [WS_METHODS.spacesCommentsCreate]: "spaces",
   [WS_METHODS.spacesCommentsReply]: "spaces",

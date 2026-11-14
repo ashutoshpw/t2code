@@ -498,9 +498,13 @@ export class DatabaseQuerySession {
   #firstInput(input: SpaceDatabaseQueryInput): SpaceDatabaseQueryInput {
     const { cursor: _cursor, scope, ...rest } = input;
     const parent = scope?.parentRowId;
+    const kept = {
+      ...(parent === undefined ? {} : { parentRowId: parent }),
+      ...(scope?.group === undefined ? {} : { group: scope.group }),
+    };
     return {
       ...rest,
-      ...(parent === undefined ? {} : { scope: { parentRowId: parent } }),
+      ...(Object.keys(kept).length === 0 ? {} : { scope: kept }),
       include: { ...input.include, total: true, aggregates: true },
     };
   }

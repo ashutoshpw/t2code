@@ -72,6 +72,22 @@ describe("viewQueryInput", () => {
     expect(covered.include).toEqual({ cover: true });
     expect(queryKey(covered)).not.toBe(queryKey(plain));
   });
+  it("sends a chart's y aggregate, a bucket scope and a preview, and drops a chart's sub-group", () => {
+    const sums = [{ property: "n" as never, function: "sum" }];
+    const grouped = viewQueryInput(view, { ...options, mode: "groups", aggregates: sums });
+    expect(grouped.aggregates).toEqual(sums);
+    const bucket = viewQueryInput(view, {
+      ...options,
+      bucket: { kind: "empty" },
+      scope: { parentRowId: null },
+      preview: 3,
+    });
+    expect(bucket.group).toEqual({ property: "g" });
+    expect(bucket.scope).toEqual({ parentRowId: null, group: { kind: "empty" } });
+    expect(bucket.include).toEqual({ preview: 3 });
+    const chart = { ...view, type: "chart", subGroup: { property: "h" } } as unknown as typeof view;
+    expect(viewQueryInput(chart, { ...options, mode: "groups" }).subGroup).toBeNull();
+  });
   it("keeps the key stable under column order and changes it with the filter", () => {
     const key = queryKey(viewQueryInput(view, options));
     expect(
@@ -82,6 +98,14 @@ describe("viewQueryInput", () => {
   });
   it("collects every dependency", () => {
     expect([...viewDependencies(view)].sort()).toEqual(["a", "f", "g", "s"]);
+    const chart = { ...view, type: "chart", layout: { y: { property: "n", function: "sum" } } };
+    expect([...viewDependencies(chart as unknown as typeof view)].sort()).toEqual([
+      "a",
+      "f",
+      "g",
+      "n",
+      "s",
+    ]);
   });
   it("adds the extra filter to the key, the dependencies and the returned cells", () => {
     const extraFilter: SpaceFilter = {

@@ -13,6 +13,10 @@ import {
   SpaceSharedDatabase,
   SpaceSharedDatabaseRowPage,
   SpaceSharedDatabaseWindow,
+  SPACE_FORM_SUBMISSION_MAX_BYTES,
+  SPACE_PAGE_SHARE_FORM_ROUTE,
+  SpaceSharedForm,
+  SpaceSharedFormSubmission,
   SPACE_PAGE_SHARE_ASSET_ROUTE,
   SPACE_PAGE_SHARE_CURSOR_PARAM,
   SPACE_PAGE_SHARE_HEADER,
@@ -25,11 +29,14 @@ import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
+import * as ByteSize from "effect/ByteSize";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
+import * as HttpIncomingMessage from "effect/http/HttpIncomingMessage";
 
 import { assetFileResponse } from "../http.ts";
 import {
   SharedDatabaseRequestError,
+  SharedFormRejectedError,
   SpacePageShareAccessError,
   SpacePageShareService,
 } from "./PageShareService.ts";
@@ -40,7 +47,14 @@ const MAX_QUERY_CURSOR_LENGTH = 8_192;
 
 const encodePage = Schema.encodeEffect(SpaceSharedPage);
 
-const STATUS = { invalid: 403, inactive: 403, unavailable: 403, busy: 429, failed: 503 } as const;
+const STATUS = {
+  invalid: 403,
+  inactive: 403,
+  unavailable: 403,
+  busy: 429,
+  failed: 503,
+  closed: 403,
+} as const;
 
 const errorResponse = (error: SpacePageShareAccessError) =>
   HttpServerResponse.json(
@@ -295,4 +309,97 @@ const rowRoute = HttpRouter.add(
   }),
 );
 
-export const layer = Layer.mergeAll(pageRoute, assetRoute, databaseRoute, queryRoute, rowRoute);
+const encodeForm = Schema.encodeEffect(SpaceSharedForm);
+const decodeSubmission = Schema.decodeUnknownEffect(SpaceSharedFormSubmission, {
+  onExcessProperty: "error",
+});
+
+const formRoute = HttpRouter.add(
+  "GET",
+  SPACE_PAGE_SHARE_FORM_ROUTE,
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const query = yield* parameters;
+    const token = within(request.headers[SPACE_PAGE_SHARE_HEADER] ?? null);
+    const block = within(query.get(SPACE_PAGE_SHARE_BLOCK_PARAM));
+    const view = within(query.get(SPACE_PAGE_SHARE_VIEW_PARAM));
+    const page = optionalParam(query, SPACE_PAGE_SHARE_PAGE_PARAM);
+    if (token === null || block === null || view === null || !page.ok) return yield* badRequest;
+    const shares = yield* SpacePageShareService;
+    return yield* answer(
+      shares.form(token, {
+        ...(page.value === undefined ? {} : { pageId: C.SpacePageId.make(page.value) }),
+        blockId: C.SpaceBlockId.make(block),
+        viewId: C.SpaceViewId.make(view),
+      }),
+      encodeForm,
+    );
+  }),
+);
+
+const tooLarge = HttpServerResponse.json(
+  { reason: "invalid", message: "The request was too large." },
+  { status: 413, headers: NO_STORE },
+);
+
+// A body over the cap is refused by its declared length before reading; a chunked body hits the reader cap.
+const readSubmission = Effect.gen(function* () {
+  const request = yield* HttpServerRequest.HttpServerRequest;
+  if (Number(request.headers["content-length"] ?? "0") > SPACE_FORM_SUBMISSION_MAX_BYTES)
+    return yield* Effect.fail("too_large" as const);
+  const json = yield* request.json.pipe(
+    Effect.provideService(
+      HttpIncomingMessage.MaxBodySize,
+      ByteSize.bytes(SPACE_FORM_SUBMISSION_MAX_BYTES),
+    ),
+    Effect.mapError(({ reason }) =>
+      "reason" in reason && reason.reason === "BodyTooLarge"
+        ? ("too_large" as const)
+        : ("bad" as const),
+    ),
+  );
+  return yield* decodeSubmission(json).pipe(Effect.mapError(() => "bad" as const));
+});
+
+// The credential comes from the header only, so it never reaches a URL log.
+const formSubmitRoute = HttpRouter.add(
+  "POST",
+  SPACE_PAGE_SHARE_FORM_ROUTE,
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const query = yield* parameters;
+    const token = within(request.headers[SPACE_PAGE_SHARE_HEADER] ?? null);
+    if (token === null || query.has(SPACE_PAGE_SHARE_PARAM)) return yield* badRequest;
+    const body = yield* readSubmission.pipe(Effect.result);
+    if (body._tag === "Failure") return yield* body.failure === "too_large" ? tooLarge : badRequest;
+    const shares = yield* SpacePageShareService;
+    return yield* shares.submitForm(token, body.success).pipe(
+      Effect.map(() =>
+        HttpServerResponse.jsonUnsafe({ status: "received" }, { headers: NO_STORE }),
+      ),
+      Effect.catchTags({
+        SpacePageShareAccessError: errorResponse,
+        SharedFormRejectedError: (error: SharedFormRejectedError) =>
+          HttpServerResponse.json(
+            {
+              reason: "rejected",
+              message: "Check your answers and try again.",
+              ...(error.propertyId === undefined ? {} : { propertyId: error.propertyId }),
+              problem: error.problem,
+            },
+            { status: 422, headers: NO_STORE },
+          ),
+      }),
+    );
+  }),
+);
+
+export const layer = Layer.mergeAll(
+  pageRoute,
+  assetRoute,
+  databaseRoute,
+  queryRoute,
+  rowRoute,
+  formRoute,
+  formSubmitRoute,
+);

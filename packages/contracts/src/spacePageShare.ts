@@ -41,6 +41,8 @@ export const SpacePageShare = Schema.Struct({
   host: TrimmedNonEmptyString,
   createdAt: IsoDateTime,
   expiresAt: IsoDateTime,
+  /** Present (true) when the page's shared forms accept anonymous responses. */
+  acceptResponses: Schema.optionalKey(Schema.Literal(true)),
 });
 export type SpacePageShare = typeof SpacePageShare.Type;
 
@@ -67,6 +69,14 @@ export const SpacePageShareGetResult = Schema.Struct({
   link: Schema.NullOr(SpacePageShareLink),
 });
 export type SpacePageShareGetResult = typeof SpacePageShareGetResult.Type;
+
+export const SpacePageShareResponsesInput = Schema.Struct({
+  pageId: SpacePageId,
+  acceptResponses: Schema.Boolean,
+});
+export type SpacePageShareResponsesInput = typeof SpacePageShareResponsesInput.Type;
+export const SpacePageShareResponsesResult = SpacePageShareLink;
+export type SpacePageShareResponsesResult = typeof SpacePageShareResponsesResult.Type;
 
 const SPACE_PAGE_SHARE_MESSAGES = {
   disabled: "Page sharing is off. Turn it on in Settings > Labs.",
@@ -132,7 +142,7 @@ export type SpaceSharedPage = typeof SpaceSharedPage.Type;
 
 /** The body of every refused shared-page request, with the status 403 (400 for a bad request, 429 when busy, 503 on a server fault). */
 export const SpaceSharedPageFailure = Schema.Struct({
-  reason: Schema.Literals(["invalid", "inactive", "unavailable", "busy", "failed"]),
+  reason: Schema.Literals(["invalid", "inactive", "unavailable", "busy", "failed", "closed"]),
   message: Schema.String,
 });
 export type SpaceSharedPageFailure = typeof SpaceSharedPageFailure.Type;

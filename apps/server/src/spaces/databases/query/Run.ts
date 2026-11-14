@@ -96,8 +96,10 @@ export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
     } satisfies C.SpaceDatabaseQueryResult;
   }
 
-  const limit = request.limit ?? DEFAULT_LIMIT;
-  yield* ensureDatabaseLimit("maxQueryRows", limit);
+  const preview = request.include?.preview ?? 0;
+  const requested = request.limit ?? DEFAULT_LIMIT;
+  yield* ensureDatabaseLimit("maxQueryRows", requested);
+  const limit = preview > 0 ? Math.min(requested, C.SPACE_FEED_WINDOW_ROWS) : requested;
   const after =
     request.cursor === undefined
       ? undefined
@@ -127,7 +129,7 @@ export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
       ...(total === undefined ? {} : { total }),
       ...(aggregates ? { aggregates } : {}),
     }),
-    { cover: request.include?.cover === true },
+    { cover: request.include?.cover === true, preview },
   );
   return {
     ...base,

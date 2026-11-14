@@ -2350,6 +2350,7 @@ export const layerWsRpc = (
         [WS_METHODS.spacesSharesCreate]: (input) => pageShares.create(input),
         [WS_METHODS.spacesSharesStop]: (input) => pageShares.stop(input).pipe(Effect.as({})),
         [WS_METHODS.spacesSharesGet]: (input) => pageShares.get(input),
+        [WS_METHODS.spacesSharesSetResponses]: (input) => pageShares.setResponses(input),
         [WS_METHODS.spacesCommentsDispatch]: (input) => commentDispatch.dispatch(input),
         [WS_METHODS.guestShareCreate]: (input) =>
           Effect.annotateCurrentSpan({ "orchestration_v2.thread_id": input.threadId }).pipe(

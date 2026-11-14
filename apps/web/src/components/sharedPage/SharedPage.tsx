@@ -4,6 +4,7 @@ import {
   SPACE_PAGE_SHARE_CURSOR_PARAM,
   SPACE_PAGE_SHARE_HEADER,
   SPACE_PAGE_SHARE_BLOCK_PARAM,
+  SPACE_PAGE_SHARE_FORM_PARAM,
   SPACE_PAGE_SHARE_PAGE_PARAM,
   SPACE_PAGE_SHARE_PAGE_ROUTE,
   SPACE_PAGE_SHARE_ROW_PARAM,
@@ -29,6 +30,9 @@ import { staticAdapter } from "./staticAdapter";
 
 // The public viewer loads the database code only for a page that has a database.
 const SharedDatabase = lazy(() => import("./database/SharedDatabase"));
+const SharedFormPage = lazy(() =>
+  import("./database/SharedForm").then((module) => ({ default: module.SharedFormPage })),
+);
 const SharedRowPage = lazy(() =>
   import("./database/SharedRowPage").then((module) => ({ default: module.SharedRowPage })),
 );
@@ -148,19 +152,25 @@ export function SharedPage() {
         }
       : null;
   const inRow = rowTarget !== null;
+  const formPage =
+    !inRow &&
+    requestedPage !== null &&
+    blockParam !== null &&
+    viewParam !== null &&
+    search.get(SPACE_PAGE_SHARE_FORM_PARAM) === "1";
   const key = loadKey(credential, requestedPage);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Fetches the shared page from the network whenever the link or page changes.
   useEffect(() => {
-    if (inRow) return;
+    if (inRow || formPage) return;
     const controller = new AbortController();
     void loadSharedPage(credential, requestedPage, controller.signal).then((result) => {
       if (!controller.signal.aborted)
         setLoaded({ key: loadKey(credential, requestedPage), ...result } as Loaded);
     });
     return () => controller.abort();
-  }, [credential, requestedPage, inRow]);
+  }, [credential, requestedPage, inRow, formPage]);
 
   const current = loaded?.key === key ? loaded : null;
   const openHref = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -172,8 +182,25 @@ export function SharedPage() {
     openHref(event, pageHref(location.pathname, credential, pageId));
 
   return (
-    <main className="min-h-dvh overflow-y-auto bg-background text-foreground">
-      {rowTarget !== null ? (
+    <main className="min-h-dvh scrollbar-gutter-both overflow-y-auto bg-background text-foreground">
+      {formPage ? (
+        <div className="mx-auto w-full max-w-xl px-6 pt-10 pb-24">
+          <Suspense
+            fallback={
+              <p role="status" className="py-24 text-center text-muted-foreground text-sm">
+                Loading form…
+              </p>
+            }
+          >
+            <SharedFormPage
+              credential={credential}
+              pageId={requestedPage}
+              blockId={blockParam}
+              viewId={viewParam}
+            />
+          </Suspense>
+        </div>
+      ) : rowTarget !== null ? (
         <Suspense
           fallback={
             <p role="status" className="px-6 py-24 text-center text-muted-foreground text-sm">

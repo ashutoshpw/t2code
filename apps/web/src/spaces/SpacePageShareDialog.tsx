@@ -29,7 +29,12 @@ import {
 } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { toastManager } from "../components/ui/toast";
-import { spacePageShareDialogAtom, type SpacePageShareTarget } from "./spacePageShareDialogState";
+import { Switch } from "../components/ui/switch";
+import {
+  formLinkUrl,
+  spacePageShareDialogAtom,
+  type SpacePageShareTarget,
+} from "./spacePageShareDialogState";
 
 const isShareError = Schema.is(SpacePageShareError);
 
@@ -38,7 +43,7 @@ export function SpacePageShareDialogHost() {
   if (target === null) return null;
   return (
     <SpacePageShareDialog
-      key={`${target.environmentId}:${target.pageId}`}
+      key={`${target.environmentId}:${target.pageId}:${target.form?.viewId ?? ""}`}
       target={target}
       onClose={() => appAtomRegistry.set(spacePageShareDialogAtom, null)}
     />
@@ -54,13 +59,22 @@ function SpacePageShareDialog({
 }) {
   const { environmentId, pageId } = target;
   const router = useRouter();
-  const enabled =
-    useEnvironment(environmentId)?.serverConfig?.settings.spacesPageSharingEnabled === true;
+  const environment = useEnvironment(environmentId);
+  const enabled = environment?.serverConfig?.settings.spacesPageSharingEnabled === true;
+  const formsEnabled =
+    environment?.serverConfig?.environment.capabilities.spaces?.features?.databaseChartFormFeed ===
+    true;
   const link = useAtomValue(spacesEnvironment.pageShare(environmentId, pageId));
   const canCreate = useAtomValue(spacesEnvironment.createPageShare.permissionAtom(environmentId));
+  const canResponses = useAtomValue(
+    spacesEnvironment.setPageShareResponses.permissionAtom(environmentId),
+  );
   const canStop = useAtomValue(spacesEnvironment.stopPageShare.permissionAtom(environmentId));
   const createShare = useAtomCommand(spacesEnvironment.createPageShare, { reportFailure: false });
   const stopShare = useAtomCommand(spacesEnvironment.stopPageShare, { reportFailure: false });
+  const setResponses = useAtomCommand(spacesEnvironment.setPageShareResponses, {
+    reportFailure: false,
+  });
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<SpacePageShareError["reason"] | null>(null);
   const connectMissing = problem === "connect_unavailable";
@@ -89,6 +103,18 @@ function SpacePageShareDialog({
     toastManager.add({ type: "error", title: "Could not update the page share." });
   };
 
+  const toggleResponses = async (acceptResponses: boolean) => {
+    setBusy(true);
+    const result = await setResponses({ environmentId, input: { pageId, acceptResponses } });
+    setBusy(false);
+    if (result._tag === "Success" || isAtomCommandInterrupted(result)) return;
+    const error = squashAtomCommandFailure(result);
+    toastManager.add({
+      type: "error",
+      title: isShareError(error) ? error.message : "Could not update the page share.",
+    });
+  };
+
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
       <DialogPopup className="max-w-lg">
@@ -97,6 +123,7 @@ function SpacePageShareDialog({
           <DialogDescription>
             Anyone with the link can read this page and its sub-pages in a browser, without signing
             in. They see it as it was when they opened it and cannot edit.
+            {formsEnabled ? " Turn on Accept responses to let them fill in this page's forms." : ""}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
@@ -139,7 +166,18 @@ function SpacePageShareDialog({
               {Math.round(SPACE_PAGE_SHARE_TTL_MS / 86_400_000)} days.
             </p>
           ) : (
-            <LinkDetails link={link} />
+            <LinkDetails
+              link={link}
+              target={target}
+              responses={
+                formsEnabled
+                  ? {
+                      disabled: busy || !canResponses,
+                      onChange: (on) => void toggleResponses(on),
+                    }
+                  : null
+              }
+            />
           )}
           {!canCreate && enabled ? (
             <p className="mt-3 text-muted-foreground text-xs">
@@ -188,7 +226,15 @@ function Notice({ text, action }: { text: string; action: ReactNode }) {
   );
 }
 
-function LinkDetails({ link }: { link: SpacePageShareLink }) {
+function LinkDetails({
+  link,
+  target,
+  responses,
+}: {
+  link: SpacePageShareLink;
+  target: SpacePageShareTarget;
+  responses: { readonly disabled: boolean; readonly onChange: (on: boolean) => void } | null;
+}) {
   const { copyToClipboard, isCopied } = useCopyToClipboard({ target: "page link" });
   const nowMinute = useNowMinute();
   const expired = link.share.expiresAt.slice(0, 16) <= nowMinute;
@@ -212,6 +258,43 @@ function LinkDetails({ link }: { link: SpacePageShareLink }) {
           ? "This link has expired. Create a new link to share the page again."
           : `${expires}. Creating a new link ends this one.`}
       </p>
+      {responses ? (
+        <>
+          <label className="mt-2 flex items-center justify-between gap-3 text-sm">
+            Accept responses
+            <Switch
+              aria-label="Accept responses"
+              checked={link.share.acceptResponses === true}
+              disabled={responses.disabled}
+              onCheckedChange={responses.onChange}
+            />
+          </label>
+          <p className="text-muted-foreground text-xs">
+            Anyone with the link can submit the forms on this page. Each response adds a row.
+          </p>
+          {target.form !== undefined && link.share.acceptResponses === true ? (
+            <FormLink url={formLinkUrl(link.url, target.pageId, target.form)} />
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function FormLink({ url }: { url: string }) {
+  const { copyToClipboard, isCopied } = useCopyToClipboard({ target: "form link" });
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        readOnly
+        aria-label="Form link"
+        value={url}
+        onFocus={(event) => event.currentTarget.select()}
+      />
+      <Button size="sm" variant="outline" onClick={() => copyToClipboard(url)}>
+        {isCopied ? <CheckIcon /> : <CopyIcon />}
+        {isCopied ? "Copied" : "Copy"}
+      </Button>
     </div>
   );
 }

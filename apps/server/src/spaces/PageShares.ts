@@ -18,6 +18,7 @@ interface ShareRow {
   readonly host: string;
   readonly created_at: string;
   readonly expires_at: string;
+  readonly accept_responses: number;
 }
 
 const shareFromRow = (row: ShareRow): SpacePageShare => ({
@@ -26,6 +27,7 @@ const shareFromRow = (row: ShareRow): SpacePageShare => ({
   host: row.host,
   createdAt: row.created_at,
   expiresAt: row.expires_at,
+  ...(row.accept_responses === 1 ? { acceptResponses: true as const } : {}),
 });
 
 export const findByPage = Effect.fn("SpacesPageShares.findByPage")(function* (
@@ -42,12 +44,23 @@ const findById = Effect.fn("SpacesPageShares.findById")(function* (shareId: Spac
   return row ? shareFromRow(row) : null;
 });
 
-/** One share per page: the new row ends the old link. */
+/** One share per page: the new row ends the old link and keeps the page's Accept responses setting. */
 export const replace = Effect.fn("SpacesPageShares.replace")(function* (share: SpacePageShare) {
   const sql = yield* SpacesSql.SpacesSql;
   yield* PageStore.assertActive(yield* PageStore.read(share.pageId));
-  yield* sql`INSERT OR REPLACE INTO spaces_page_shares (page_id, share_id, host, created_at, expires_at)
-    VALUES (${share.pageId}, ${share.id}, ${share.host}, ${share.createdAt}, ${share.expiresAt})`;
+  yield* sql`INSERT INTO spaces_page_shares (page_id, share_id, host, created_at, expires_at)
+    VALUES (${share.pageId}, ${share.id}, ${share.host}, ${share.createdAt}, ${share.expiresAt})
+    ON CONFLICT(page_id) DO UPDATE SET share_id = excluded.share_id, host = excluded.host,
+      created_at = excluded.created_at, expires_at = excluded.expires_at`;
+});
+
+export const setResponses = Effect.fn("SpacesPageShares.setResponses")(function* (
+  pageId: C.SpacePageId,
+  on: boolean,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  yield* sql`UPDATE spaces_page_shares SET accept_responses = ${on ? 1 : 0} WHERE page_id = ${pageId}`;
+  return yield* findByPage(pageId);
 });
 
 export const remove = Effect.fn("SpacesPageShares.remove")(function* (pageId: C.SpacePageId) {

@@ -8,6 +8,9 @@ import { monthRange } from "./agenda";
 import { sharedKnownProperties } from "./cells";
 import { ProblemNote, type SharedEnv, type ViewProps } from "./parts";
 import { SharedAgenda } from "./SharedAgenda";
+import { SharedChart } from "./SharedChart";
+import { SharedFeed } from "./SharedFeed";
+import { SharedForm } from "./SharedForm";
 import { SharedBoard } from "./SharedBoard";
 import { SharedGallery } from "./SharedGallery";
 import { SharedList } from "./SharedList";
@@ -30,6 +33,9 @@ export function SharedView(props: SharedViewProps) {
         This view type can't be shown on a shared link.
       </p>
     );
+  // A form never fetches a window: its questions come from the form route.
+  if (type === "form")
+    return <SharedForm env={props.env} view={props.view} source={props.source} />;
   return <ViewWindow {...props} type={type} />;
 }
 
@@ -68,6 +74,8 @@ function ViewWindow({ env, view, source, type }: SharedViewProps & { readonly ty
     loadMore,
     loadBucket,
   };
+  // A chart window has buckets with counts and no rows, so it must not reach the empty check.
+  if (type === "chart") return <SharedChart {...props} />;
   if (agenda && range !== undefined)
     return (
       <SharedAgenda
@@ -93,6 +101,8 @@ function ViewWindow({ env, view, source, type }: SharedViewProps & { readonly ty
       return <SharedList {...props} />;
     case "gallery":
       return <SharedGallery {...props} />;
+    case "feed":
+      return <SharedFeed {...props} />;
     default:
       return null;
   }

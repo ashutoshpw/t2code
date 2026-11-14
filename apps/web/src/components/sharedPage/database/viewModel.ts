@@ -12,7 +12,17 @@ import * as Schema from "effect/Schema";
 
 import { bucketId } from "./paging";
 
-const VIEW_TYPES = ["table", "board", "list", "gallery", "calendar", "timeline"] as const;
+const VIEW_TYPES = [
+  "table",
+  "board",
+  "list",
+  "gallery",
+  "calendar",
+  "timeline",
+  "chart",
+  "form",
+  "feed",
+] as const;
 export type ViewType = (typeof VIEW_TYPES)[number];
 export const isViewType = (type: string): type is ViewType =>
   (VIEW_TYPES as ReadonlyArray<string>).includes(type);

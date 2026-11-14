@@ -64,6 +64,7 @@ export * from "./spacesCore.ts";
 export * from "./spacesDatabases.ts";
 export * from "./spacesDatabaseFilters.ts";
 export * from "./spacesDatabaseViews.ts";
+export * from "./spacesDatabaseForms.ts";
 export * from "./spacesDatabaseQuery.ts";
 export * from "./spacesDatabaseMutations.ts";
 export * from "./spacesDatabaseChanges.ts";

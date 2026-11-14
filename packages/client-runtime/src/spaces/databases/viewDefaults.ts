@@ -3,6 +3,9 @@ import {
   SpaceKnownViewLayout,
   SpacePropertyId,
   SPACE_VIEW_TYPES,
+  SPACE_GROUPABLE_TYPES,
+  isFormAnswerType,
+  type SpaceFormQuestion,
   type SpaceCellValue,
   type SpaceDataSource,
   type SpaceDatabaseProperty,
@@ -22,6 +25,9 @@ export const VIEW_TYPE_NAMES: Readonly<Record<SpaceViewType, string>> = {
   gallery: "Gallery",
   calendar: "Calendar",
   timeline: "Timeline",
+  chart: "Chart",
+  form: "Form",
+  feed: "Feed",
 };
 
 /** Views that cannot exist without a date property. */
@@ -50,6 +56,54 @@ const firstOfType = (dataSource: SpaceDataSource, ...types: ReadonlyArray<string
     .map(knownProperty)
     .find((property) => property !== null)?.id;
 
+const FORM_DEFAULT_QUESTIONS = 10;
+
+/** The title first, then live answerable properties in position order, at most ten in all. */
+export function defaultFormQuestions(dataSource: SpaceDataSource): SpaceFormQuestion[] {
+  const known = Object.values(dataSource.properties)
+    .sort((a, b) => a.position - b.position)
+    .flatMap((property) => {
+      const decoded = knownProperty(property);
+      return decoded !== null && isFormAnswerType(decoded.type) ? [decoded] : [];
+    });
+  const title = known.filter((property) => property.type === "title");
+  const rest = known.filter((property) => property.type !== "title");
+  return [...title, ...rest]
+    .slice(0, FORM_DEFAULT_QUESTIONS)
+    .map((property) => ({ propertyId: property.id }));
+}
+
+const groupable = new Set<string>(SPACE_GROUPABLE_TYPES);
+
+/** A chart's X axis: the first status or select, else the first other groupable property. */
+function defaultChartGroup(dataSource: SpaceDataSource): SpaceKnownGroup | undefined {
+  const id =
+    firstOfType(dataSource, "status", "select") ??
+    Object.values(dataSource.properties)
+      .filter((property) => property.type !== "title" && groupable.has(property.type))
+      .sort((a, b) => a.position - b.position)
+      .map(knownProperty)
+      .find((property) => property !== null)?.id;
+  return id === undefined ? undefined : { property: id };
+}
+
+/** The group a chart converted from `view` uses: its own, else the default X axis. */
+export function chartGroupForTypeChange(
+  view: SpaceKnownDatabaseView | null,
+  dataSource: SpaceDataSource,
+): SpaceKnownGroup | undefined {
+  return view?.group ?? defaultChartGroup(dataSource);
+}
+
+/** View types a server offers: the newer ones need the capability flag. */
+export function offeredViewTypes(
+  features: { readonly databaseChartFormFeed?: true } | undefined,
+): ReadonlyArray<SpaceViewType> {
+  return features?.databaseChartFormFeed === true
+    ? SPACE_VIEW_TYPES
+    : SPACE_VIEW_TYPES.filter((type) => type !== "chart" && type !== "form" && type !== "feed");
+}
+
 /** The layout a type needs on its own; `dateId` is the date property of a calendar or timeline. */
 const requiredLayout = (type: SpaceViewType, dateId: SpacePropertyId | undefined): ViewLayout =>
   dateId === undefined
@@ -66,14 +120,22 @@ export function defaultViewDraft(
   dataSource: SpaceDataSource,
   dateId?: SpacePropertyId,
 ): { readonly name: string; readonly layout: ViewLayout; readonly group?: SpaceKnownGroup } {
-  const groupId = type === "board" ? firstOfType(dataSource, "status", "select") : undefined;
+  const boardId = type === "board" ? firstOfType(dataSource, "status", "select") : undefined;
+  const group =
+    type === "chart"
+      ? defaultChartGroup(dataSource)
+      : boardId === undefined
+        ? undefined
+        : { property: boardId };
   return {
     name: VIEW_TYPE_NAMES[type],
     layout: {
       ...(type === "board" ? { colorColumns: true } : {}),
+      ...(type === "chart" ? { chartType: "bar" } : {}),
+      ...(type === "form" ? { questions: defaultFormQuestions(dataSource) } : {}),
       ...requiredLayout(type, dateId ?? datePropertyCandidates(dataSource)[0]?.id),
     },
-    ...(groupId === undefined ? {} : { group: { property: groupId } }),
+    ...(group === undefined ? {} : { group }),
   };
 }
 
@@ -109,7 +171,13 @@ export function layoutForTypeChange(
     datePropertyCandidates(dataSource)[0]?.id;
   const tint: ViewLayout =
     type === "board" && !("colorColumns" in old) ? { colorColumns: true } : {};
-  return { ...kept, ...tint, ...requiredLayout(type, id) };
+  const added: ViewLayout =
+    type === "form" && !("questions" in old)
+      ? { questions: defaultFormQuestions(dataSource) }
+      : type === "chart" && !("chartType" in old)
+        ? { chartType: "bar" }
+        : {};
+  return { ...kept, ...tint, ...added, ...requiredLayout(type, id) };
 }
 
 /** Cells a toolbar "New" adds so the row shows up in a calendar or timeline. */

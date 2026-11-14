@@ -7,6 +7,7 @@ import {
   type SpacePageShareId,
   type SpaceSharedDatabase,
   type SpaceSharedDatabaseRowPage,
+  type SpaceSharedForm,
   type SpaceSharedPage,
   type SpacesStorageStatus,
   type SpaceContextCaptureResult,
@@ -30,6 +31,8 @@ import * as SyncedOps from "./service/Synced.ts";
 import * as CommentOps from "./service/Comments.ts";
 import * as ShareOps from "./service/Shares.ts";
 import * as SharedDatabaseOps from "./service/SharedDatabases.ts";
+import * as SharedFormOps from "./service/SharedForms.ts";
+import type { Json } from "./databases/Json.ts";
 import type { QueryOutcome, QueryParams } from "./sharedDatabases/Read.ts";
 import * as MutationOps from "./service/Mutations.ts";
 import * as MaintenanceOps from "./service/Maintenance.ts";
@@ -296,6 +299,10 @@ export class SpacesService extends Context.Service<
     /** Replaces the page's share, which ends its previous link. */
     readonly replacePageShare: (share: SpacePageShare) => Effect.Effect<void, C.SpaceServiceError>;
     readonly stopPageShare: (pageId: C.SpacePageId) => Effect.Effect<void, C.SpaceServiceError>;
+    readonly setPageShareResponses: (
+      pageId: C.SpacePageId,
+      on: boolean,
+    ) => Effect.Effect<SpacePageShare | null, C.SpaceServiceError>;
     readonly findPageShare: (by: {
       readonly pageId: C.SpacePageId;
     }) => Effect.Effect<SpacePageShare | null, C.SpaceServiceError>;
@@ -334,6 +341,22 @@ export class SpacesService extends Context.Service<
      * lock), and answers or fails with `SpaceNotFoundError` for anything outside the shared tree.
      * Cursors are the raw engine cursors; the share service seals them before they leave.
      */
+    readonly describeSharedForm: (input: {
+      readonly rootPageId: C.SpacePageId;
+      readonly pageId: C.SpacePageId;
+      readonly blockId: C.SpaceBlockId;
+      readonly viewId: C.SpaceViewId;
+    }) => Effect.Effect<SpaceSharedForm, C.SpaceServiceError>;
+    /** Anonymous form submission: validates against the form view's questions and creates one row through the mutation path. */
+    readonly submitSharedForm: (input: {
+      readonly rootPageId: C.SpacePageId;
+      readonly pageId: C.SpacePageId;
+      readonly blockId: C.SpaceBlockId;
+      readonly viewId: C.SpaceViewId;
+      readonly shareId: string;
+      readonly submissionId: string;
+      readonly answers: Readonly<Record<string, Json>>;
+    }) => Effect.Effect<SharedFormOps.FormSubmitOutcome, C.SpaceServiceError>;
     readonly describeSharedDatabase: (input: {
       readonly rootPageId: C.SpacePageId;
       readonly pageId: C.SpacePageId;
@@ -380,6 +403,7 @@ const make = Effect.fn("SpacesService.make")(function* (
   const comments = CommentOps.make(runtime);
   const shares = ShareOps.make(runtime, assets);
   const sharedDatabases = SharedDatabaseOps.make(runtime, assets);
+  const sharedForms = SharedFormOps.make(runtime);
   const mutations = MutationOps.make(runtime);
   const databaseReads = DatabaseReadOps.make(runtime);
   const databaseChanges = DatabaseChangeOps.make(runtime);
@@ -460,10 +484,13 @@ const make = Effect.fn("SpacesService.make")(function* (
     captureContextSnapshot: reads.captureContextSnapshot,
     replacePageShare: shares.replacePageShare,
     stopPageShare: shares.stopPageShare,
+    setPageShareResponses: shares.setPageShareResponses,
     findPageShare: shares.findPageShare,
     resolvePageShare: shares.resolvePageShare,
     readSharedPage: shares.readSharedPage,
     resolveSharedAssetFile: shares.resolveSharedAssetFile,
+    describeSharedForm: sharedForms.describeSharedForm,
+    submitSharedForm: sharedForms.submitSharedForm,
     describeSharedDatabase: sharedDatabases.describeSharedDatabase,
     querySharedDatabase: sharedDatabases.querySharedDatabase,
     readSharedDatabaseRow: sharedDatabases.readSharedDatabaseRow,

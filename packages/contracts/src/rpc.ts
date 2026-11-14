@@ -180,6 +180,8 @@ import {
   SpacePageShareError,
   SpacePageShareGetInput,
   SpacePageShareGetResult,
+  SpacePageShareResponsesInput,
+  SpacePageShareResponsesResult,
   SpacePageShareStopInput,
   SpacePageShareStopResult,
 } from "./spacePageShare.ts";
@@ -465,6 +467,7 @@ export const WS_METHODS = {
   spacesSharesCreate: "spaces.shares.create",
   spacesSharesStop: "spaces.shares.stop",
   spacesSharesGet: "spaces.shares.get",
+  spacesSharesSetResponses: "spaces.shares.setResponses",
   spacesCommentsList: "spaces.comments.list",
   spacesCommentsCreate: "spaces.comments.create",
   spacesCommentsReply: "spaces.comments.reply",
@@ -2441,6 +2444,12 @@ export const WsSpacesSharesGetRpc = Rpc.make(WS_METHODS.spacesSharesGet, {
   error: Schema.Union([SpacePageShareError, EnvironmentAuthorizationError]),
 });
 
+export const WsSpacesSharesSetResponsesRpc = Rpc.make(WS_METHODS.spacesSharesSetResponses, {
+  payload: SpacePageShareResponsesInput,
+  success: SpacePageShareResponsesResult,
+  error: Schema.Union([SpacePageShareError, EnvironmentAuthorizationError]),
+});
+
 export const WsSpacesCommentsListRpc = Rpc.make(WS_METHODS.spacesCommentsList, {
   payload: Spaces.SpaceCommentsListInput,
   success: Spaces.SpaceCommentsListResult,
@@ -2576,6 +2585,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesSharesCreateRpc,
   WsSpacesSharesStopRpc,
   WsSpacesSharesGetRpc,
+  WsSpacesSharesSetResponsesRpc,
   WsSpacesCommentsListRpc,
   WsSpacesCommentsCreateRpc,
   WsSpacesCommentsReplyRpc,

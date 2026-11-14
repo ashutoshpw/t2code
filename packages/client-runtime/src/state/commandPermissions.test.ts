@@ -186,6 +186,7 @@ describe("command permissions", () => {
             WS_METHODS.spacesPagesPermanentlyDelete,
             WS_METHODS.spacesSharesCreate,
             WS_METHODS.spacesSharesStop,
+            WS_METHODS.spacesSharesSetResponses,
             WS_METHODS.spacesDatabasesCreate,
             WS_METHODS.spacesDatabasesUpdate,
             WS_METHODS.spacesDatabasesDataSourcesCreate,

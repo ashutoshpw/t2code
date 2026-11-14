@@ -82,7 +82,7 @@ export const contains = Effect.fn("SpacesDatabases.rowsContain")(function* (
 export const hydrate = Effect.fn("SpacesDatabases.hydrateHits")(function* (
   plan: Plan,
   hits: readonly Hit[],
-  options?: { readonly cover?: boolean },
+  options?: { readonly cover?: boolean; readonly preview?: number },
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const pages = new Map<string, RowStore.HydratePage>();
@@ -104,6 +104,7 @@ export const hydrate = Effect.fn("SpacesDatabases.hydrateHits")(function* (
   const rows = yield* RowExtras.attach(plan.c.full, hydrated.rows, {
     children: plan.e.scope.parentRowId !== undefined,
     cover: options?.cover === true,
+    preview: options?.preview ?? 0,
   });
   return { rows, related: hydrated.related };
 });
@@ -120,7 +121,7 @@ export const page = Effect.fn("SpacesDatabases.rowsPage")(function* (
   limit: number,
   after: Cursor.Position | undefined,
   overhead: number,
-  options?: { readonly cover?: boolean },
+  options?: { readonly cover?: boolean; readonly preview?: number },
 ) {
   yield* ensureDatabaseLimit("maxQueryRows", limit);
   const fetched = yield* fetchWindow(plan, limit, after);

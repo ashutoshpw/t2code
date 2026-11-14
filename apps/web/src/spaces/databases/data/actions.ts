@@ -1,4 +1,5 @@
 import {
+  chartGroupForTypeChange,
   datePropertyCandidates,
   defaultViewDraft,
   planSubItems,
@@ -533,9 +534,14 @@ export function createDatabaseActions(deps: ActionsDeps): DatabaseActions {
         deps.state().dataSource;
       const dateId = needsDateProperty(type) ? await dateProperty(dataSource) : undefined;
       if (dateId === null) return;
+      const group =
+        type === "chart" && current.group === undefined
+          ? chartGroupForTypeChange(knownView(current), dataSource)
+          : undefined;
       sendViewEdit(viewId, {
         type,
         layout: layoutForTypeChange(type, dataSource, current.layout, dateId),
+        ...(group === undefined ? {} : { group }),
       });
     },
     deleteView: async (viewId) => {

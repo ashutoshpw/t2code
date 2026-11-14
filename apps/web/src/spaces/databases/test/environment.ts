@@ -16,7 +16,10 @@ const LIMITS = {
 };
 
 /** The environment presentation the shell reads, with or without the databases capability. */
-export function environmentWith(databases: boolean, { hideTitle = true } = {}) {
+export function environmentWith(
+  databases: boolean,
+  { hideTitle = true, chartFormFeed = true } = {},
+) {
   return {
     environmentId: TEST_ENVIRONMENT,
     serverConfig: {
@@ -25,7 +28,11 @@ export function environmentWith(databases: boolean, { hideTitle = true } = {}) {
           spaces: {
             version: 2,
             features: databases
-              ? { databases: true, ...(hideTitle ? { databaseHideTitle: true } : {}) }
+              ? {
+                  databases: true,
+                  ...(hideTitle ? { databaseHideTitle: true } : {}),
+                  ...(chartFormFeed ? { databaseChartFormFeed: true } : {}),
+                }
               : {},
             limits: databases ? { databases: LIMITS } : {},
           },

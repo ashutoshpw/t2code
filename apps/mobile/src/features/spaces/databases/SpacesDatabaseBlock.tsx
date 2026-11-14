@@ -21,6 +21,7 @@ import { DATABASES_NEED_NEWER_SERVER, databaseLimitsOf } from "./capability";
 import { DatabaseViewList } from "./DatabaseViewList";
 import { NewRowPill } from "./NewRowPill";
 import { WriteNotices } from "./WriteNotices";
+import { SpecialBlockView, isSpecialView } from "./SpecialView";
 import { useDatabaseModel, type DatabaseModel } from "./useDatabaseModel";
 import { useViewContent } from "./useViewContent";
 import { ViewSwitcher } from "./ViewSwitcher";
@@ -136,6 +137,21 @@ function BlockPreview(
   if (dataSource === undefined)
     return (
       <Text className="px-4 py-2 text-base text-foreground-muted">This view is not available.</Text>
+    );
+  if (isSpecialView(view))
+    return (
+      <View>
+        <SpecialBlockView
+          environmentId={props.environmentId}
+          model={model}
+          view={view}
+          dataSource={dataSource}
+          onOpenRow={(row) => openPage(row.page.id)}
+        />
+        <View className="flex-row gap-2 px-4 pt-2">
+          <ControlPill variant="pill" label="Open database" onPress={props.onOpenDatabase} />
+        </View>
+      </View>
     );
   return (
     <PreviewBody

@@ -357,6 +357,8 @@ export const sharedDatabase = Effect.fn("PageShareDatabasesTest.sharedDatabase")
 
 export type SharedDatabase = Effect.Success<ReturnType<typeof sharedDatabase>>;
 
+const jsonText = (value: unknown) => JSON.stringify(value);
+
 /** The routes mounted on a web handler, as the share tests drive them. */
 export const httpHarness = Effect.fn("PageShareDatabasesTest.httpHarness")(function* () {
   const context = yield* Effect.context<
@@ -387,5 +389,24 @@ export const httpHarness = Effect.fn("PageShareDatabasesTest.httpHarness")(funct
         context,
       ),
     );
-  return { get, post };
+  const postJson = (
+    path: string,
+    body: unknown,
+    token?: string,
+    options: { readonly params?: Record<string, string>; readonly raw?: string } = {},
+  ) =>
+    Effect.promise(() =>
+      handler(
+        new Request(`http://t2.test${path}?${new URLSearchParams(options.params ?? {})}`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            ...(token === undefined ? {} : { [SPACE_PAGE_SHARE_HEADER]: token }),
+          },
+          body: options.raw ?? jsonText(body),
+        }),
+        context,
+      ),
+    );
+  return { get, post, postJson };
 });

@@ -113,6 +113,8 @@ export const SpaceDatabaseQueryInput = Schema.Struct({
       total: optional(Schema.Boolean),
       aggregates: optional(Schema.Boolean),
       cover: optional(Schema.Boolean),
+      /** Rows mode: the first N top-level body blocks of each row, at most 25 rows per window. */
+      preview: optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 10 }))),
     }),
   ),
   /** Groups mode; default 0. */
