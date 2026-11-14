@@ -1,13 +1,13 @@
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
 import { WorkLogButton, WorkLogList, WorkLogRow } from "./WorkLog";
-import type { WorktreeSetupSnapshot } from "@t3tools/contracts";
-import { type ToolActivityIcon } from "@t3tools/contracts";
+import type { WorktreeSetupSnapshot } from "@t2code/contracts";
+import { type ToolActivityIcon } from "@t2code/contracts";
 import {
   liveThoughtLine,
   resolveViewedImageAsset,
   workEntriesViewedImagePaths,
-} from "@t3tools/client-runtime/work-log/presentation";
-import { resolveWorkGroupScrollAnchor } from "@t3tools/client-runtime/work-log/scroll-anchor";
+} from "@t2code/client-runtime/work-log/presentation";
+import { resolveWorkGroupScrollAnchor } from "@t2code/client-runtime/work-log/scroll-anchor";
 import { useAssetUrls } from "~/assets/assetUrls";
 import { observeResize } from "~/lib/observeResize";
 import { tickTextContent } from "~/lib/tickTextContent";
@@ -31,7 +31,7 @@ import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { Spinner } from "../ui/spinner";
 import { WorktreeSetupCard } from "./WorktreeSetupCard";
 import { cn } from "~/lib/utils";
-import { type TimestampFormat } from "@t3tools/contracts/settings";
+import { type TimestampFormat } from "@t2code/contracts/settings";
 import {
   TimelineRowCtx,
   TimelineRowActivityCtx,

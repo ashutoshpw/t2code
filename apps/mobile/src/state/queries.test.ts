@@ -1,5 +1,5 @@
-import { threadPullRequestKeyOf } from "@t3tools/client-runtime/thread-pull-requests";
-import { filterComposerPullRequestMatches } from "@t3tools/shared/composerPullRequestMatches";
+import { threadPullRequestKeyOf } from "@t2code/client-runtime/thread-pull-requests";
+import { filterComposerPullRequestMatches } from "@t2code/shared/composerPullRequestMatches";
 import { expect, it } from "@effect/vitest";
 
 it("keeps an older exact PR in the mobile menu ahead of twenty newer substring matches", () => {

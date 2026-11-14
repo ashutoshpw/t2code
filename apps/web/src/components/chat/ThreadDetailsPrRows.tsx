@@ -5,22 +5,22 @@ import type {
   ScopedThreadRef,
   ThreadPullRequestLink,
   VcsStatusResult,
-} from "@t3tools/contracts";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+} from "@t2code/contracts";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
 import {
   pullRequestListLines,
   resolveThreadPullRequestChains,
   threadPullRequestKeyOf,
   visibleThreadPullRequests,
-} from "@t3tools/client-runtime/thread-pull-requests";
+} from "@t2code/client-runtime/thread-pull-requests";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useState, type ComponentProps, type MouseEvent as ReactMouseEvent } from "react";
 
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 import {
   findProjectForChangeRequest,
   findProjectOnChangeRequestHost,
-} from "@t3tools/client-runtime/change-request-links";
+} from "@t2code/client-runtime/change-request-links";
 
 import type { ComposerThreadTarget } from "~/composerDraftStore";
 import { useProjects, useQuietThreadShell } from "~/state/entities";

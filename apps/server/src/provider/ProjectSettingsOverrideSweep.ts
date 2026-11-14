@@ -1,6 +1,6 @@
 import * as NodeUtil from "node:util";
 
-import { type ProjectSettingsOverrides } from "@t3tools/contracts";
+import { type ProjectSettingsOverrides } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 
 import * as ProjectStore from "../orchestration-v2/ProjectStore.ts";

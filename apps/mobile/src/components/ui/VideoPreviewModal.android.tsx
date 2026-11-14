@@ -1,5 +1,5 @@
-import { MISSING_FILE_ACCESS_MESSAGE } from "@t3tools/client-runtime/state/assets";
-import { videoMimeType } from "@t3tools/shared/video";
+import { MISSING_FILE_ACCESS_MESSAGE } from "@t2code/client-runtime/state/assets";
+import { videoMimeType } from "@t2code/shared/video";
 import { Modal, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

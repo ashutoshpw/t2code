@@ -1,5 +1,5 @@
-import { ThreadId, type WorktreeSetupSnapshot } from "@t3tools/contracts";
-import { resolveVisibleWorktreeSetup } from "@t3tools/client-runtime/worktree-setup";
+import { ThreadId, type WorktreeSetupSnapshot } from "@t2code/contracts";
+import { resolveVisibleWorktreeSetup } from "@t2code/client-runtime/worktree-setup";
 import { describe, expect, it } from "vite-plus/test";
 import { resolveWorktreeSetupSnapshot } from "./worktree-setup-state";
 

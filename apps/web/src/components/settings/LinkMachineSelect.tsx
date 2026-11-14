@@ -2,7 +2,7 @@ import {
   ANOTHER_ADDRESS,
   type LinkableMachine,
   linkDestination,
-} from "@t3tools/client-runtime/link-request";
+} from "@t2code/client-runtime/link-request";
 import { useId } from "react";
 
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";

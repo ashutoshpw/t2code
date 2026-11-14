@@ -1,4 +1,4 @@
-import { foldSearchQuery, rankSearchItems, scoreSearchTerms } from "@t3tools/shared/paletteSearch";
+import { foldSearchQuery, rankSearchItems, scoreSearchTerms } from "@t2code/shared/paletteSearch";
 
 import type { SettingsPageTarget } from "./components/settings-page-targets";
 

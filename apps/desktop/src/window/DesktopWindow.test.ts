@@ -573,6 +573,7 @@ describe("DesktopWindow", () => {
     );
   });
 
+
   it.effect(
     "opens and reopens the window without backend readiness when local execution is disabled",
     () =>

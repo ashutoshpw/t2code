@@ -1,4 +1,4 @@
-import { MessageId, type ProviderUploadFeedbackResult } from "@t3tools/contracts";
+import { MessageId, type ProviderUploadFeedbackResult } from "@t2code/contracts";
 
 import {
   isAtomCommandInterrupted,

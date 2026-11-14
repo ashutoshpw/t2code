@@ -1,5 +1,5 @@
-import { removeAgentCredits } from "@t3tools/source-control-core/server/mergeMessage";
-import { isCommitSha } from "@t3tools/source-control-core/server/pullRequestUtils";
+import { removeAgentCredits } from "@t2code/source-control-core/server/mergeMessage";
+import { isCommitSha } from "@t2code/source-control-core/server/pullRequestUtils";
 import * as Context from "effect/Context";
 import * as Digest from "effect/crypto/Digest";
 import * as DateTime from "effect/DateTime";
@@ -8,8 +8,8 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
-import { resolvePullRequestAuthorFilter, VcsProcessExitError } from "@t3tools/contracts";
-import { quoteGitPatchPath } from "@t3tools/shared/gitPatchPath";
+import { resolvePullRequestAuthorFilter, VcsProcessExitError } from "@t2code/contracts";
+import { quoteGitPatchPath } from "@t2code/shared/gitPatchPath";
 import type {
   PullRequestAction,
   PullRequestActor,
@@ -32,7 +32,7 @@ import type {
   PullRequestConversationThread,
   PullRequestReviewVerdict,
   PullRequestReviewerCandidateList,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as GitLabCli from "./GitLabCli.ts";
 import {
@@ -91,7 +91,7 @@ import type {
   ProviderChangeRequestSummary,
   ProviderFileStats,
   ProviderListCursor,
-} from "@t3tools/source-control-core/server/PullRequestProvider";
+} from "@t2code/source-control-core/server/PullRequestProvider";
 
 export class GitLabMergeRequestReadError extends Schema.TaggedError<GitLabMergeRequestReadError>()(
   "GitLabMergeRequestReadError",

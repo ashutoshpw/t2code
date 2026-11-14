@@ -3,10 +3,10 @@ import {
   ChatAttachmentId,
   getProviderAttachmentLimitError,
   type ChatAttachment,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
-import { isSvgAttachment } from "@t3tools/shared/image";
+import { isSvgAttachment } from "@t2code/shared/image";
 
 import {
   parseThreadSegmentFromAttachmentId,

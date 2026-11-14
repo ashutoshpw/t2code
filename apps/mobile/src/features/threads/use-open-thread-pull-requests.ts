@@ -1,4 +1,4 @@
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
 import { useNavigation } from "@react-navigation/native";
 
 import * as Dialog from "../../components/ui/Dialog";

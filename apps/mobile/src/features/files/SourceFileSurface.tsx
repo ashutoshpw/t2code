@@ -1,5 +1,5 @@
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
-import { settlePromise } from "@t3tools/client-runtime/state/runtime";
+import { settlePromise } from "@t2code/client-runtime/state/runtime";
 import { useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
 import type { ComponentType } from "react";
@@ -36,7 +36,7 @@ import {
   NATIVE_SOURCE_CONTENT_WIDTH,
   nativeSourceRowId,
 } from "./nativeSourceFileAdapter";
-import { SourceText } from "@t3tools/mobile-source-text";
+import { SourceText } from "@t2code/mobile-source-text";
 
 import {
   boundedSelectableSourceTokens,

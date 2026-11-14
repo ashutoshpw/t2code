@@ -4,15 +4,15 @@ import * as Queue from "effect/Queue";
 import * as Schema from "effect/Schema";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import { TextGenerationError } from "@t3tools/contracts";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
-import { compareSemverVersions } from "@t3tools/shared/semver";
-import { parseGenericCliVersion } from "@t3tools/provider-core/server/snapshotProbe";
+import { TextGenerationError } from "@t2code/contracts";
+import { getModelSelectionStringOptionValue } from "@t2code/shared/model";
+import { compareSemverVersions } from "@t2code/shared/semver";
+import { parseGenericCliVersion } from "@t2code/provider-core/server/snapshotProbe";
 import type { PiSettings } from "../settings.ts";
 
 import { makePiRpcConnection, piRecordField, piRecordString, resolvePiModelSlug } from "./rpc.ts";
 import { buildPiRpcLaunch, resolvePiLaunchArgs } from "./mcpInjection.ts";
-import * as TextGenerationOperations from "@t3tools/provider-core/server/textGenerationOperations";
+import * as TextGenerationOperations from "@t2code/provider-core/server/textGenerationOperations";
 import { isPiThinkingLevel } from "./modelCapabilities.ts";
 import { MINIMUM_PI_VERSION, runPiVersionCommand } from "./status.ts";
 

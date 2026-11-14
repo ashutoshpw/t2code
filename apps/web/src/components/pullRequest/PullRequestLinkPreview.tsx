@@ -1,7 +1,7 @@
 import type { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card";
-import { isAtomCommandInterrupted } from "@t3tools/client-runtime/state/runtime";
-import { parsePullRequestAnchor, pullRequestLinkCommit } from "@t3tools/shared/pullRequestAnchor";
-import type { EnvironmentId, PullRequestRef } from "@t3tools/contracts";
+import { isAtomCommandInterrupted } from "@t2code/client-runtime/state/runtime";
+import { parsePullRequestAnchor, pullRequestLinkCommit } from "@t2code/shared/pullRequestAnchor";
+import type { EnvironmentId, PullRequestRef } from "@t2code/contracts";
 import {
   cloneElement,
   useRef,

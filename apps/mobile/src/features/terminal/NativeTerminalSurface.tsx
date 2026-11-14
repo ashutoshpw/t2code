@@ -2,7 +2,7 @@ import {
   terminalOutputText,
   type TerminalGrid,
   type TerminalOutputState,
-} from "@t3tools/client-runtime/state/terminal";
+} from "@t2code/client-runtime/state/terminal";
 import { memo, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import {
   Pressable,

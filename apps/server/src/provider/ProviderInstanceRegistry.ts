@@ -11,7 +11,7 @@ import {
   type ServerProvider,
   type SettingsSecretSlot,
   withSettingsSecrets,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Equal from "effect/Equal";
@@ -29,7 +29,7 @@ import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretReso
 
 import { buildUnavailableProviderSnapshot } from "./unavailableProviderSnapshot.ts";
 import * as ProviderInstanceRegistryMutator from "./ProviderInstanceRegistryMutator.ts";
-import type { AnyProviderDriver, ProviderInstance } from "@t3tools/provider-core/server/driver";
+import type { AnyProviderDriver, ProviderInstance } from "@t2code/provider-core/server/driver";
 
 export class ProviderInstanceRegistry extends Context.Service<
   ProviderInstanceRegistry,

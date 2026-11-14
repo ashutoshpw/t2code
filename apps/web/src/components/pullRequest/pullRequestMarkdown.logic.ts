@@ -1,15 +1,15 @@
 import {
   changeRequestReferenceAutolinker,
   resolveChangeRequestMediaUrl,
-} from "@t3tools/client-runtime/pull-request-markdown";
+} from "@t2code/client-runtime/pull-request-markdown";
 import {
   sourceControlClients,
   type ReferenceAutolink,
-} from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/source-control-clients";
 import {
   CHAT_MARKDOWN_REHYPE_PLUGINS,
   CHAT_MARKDOWN_REMARK_PLUGINS,
-} from "@t3tools/shared/markdownPipeline";
+} from "@t2code/shared/markdownPipeline";
 import type { Nodes } from "hast";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -18,7 +18,7 @@ import { unified, type PluggableList } from "unified";
 export {
   splitPullRequestBody,
   type PullRequestBodySegment,
-} from "@t3tools/client-runtime/pull-request-markdown";
+} from "@t2code/client-runtime/pull-request-markdown";
 
 type MarkdownNode = {
   type: string;

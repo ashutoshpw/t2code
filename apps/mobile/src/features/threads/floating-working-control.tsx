@@ -1,7 +1,7 @@
-import { toServerClock } from "@t3tools/client-runtime/clock";
-import type { SubagentPillSegment } from "@t3tools/client-runtime/state/thread-subagents";
-import type { EnvironmentId } from "@t3tools/contracts";
-import { formatDuration } from "@t3tools/shared/orchestrationTiming";
+import { toServerClock } from "@t2code/client-runtime/clock";
+import type { SubagentPillSegment } from "@t2code/client-runtime/state/thread-subagents";
+import type { EnvironmentId } from "@t2code/contracts";
+import { formatDuration } from "@t2code/shared/orchestrationTiming";
 import { GlassContainer, GlassView } from "expo-glass-effect";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {

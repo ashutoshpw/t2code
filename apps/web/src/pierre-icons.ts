@@ -3,8 +3,8 @@ import {
   getBuiltInSpriteSheet,
   type FileTreeIcons,
 } from "@pierre/trees";
-import { VIDEO_FILE_EXTENSIONS } from "@t3tools/shared/video";
-import { fileIconPathForMimeType } from "@t3tools/shared/mediaPreview";
+import { VIDEO_FILE_EXTENSIONS } from "@t2code/shared/video";
+import { fileIconPathForMimeType } from "@t2code/shared/mediaPreview";
 
 import type { ContextChipAccentKind } from "~/lib/contextChipAccents";
 
@@ -13,7 +13,7 @@ export interface PierreIconResolution {
   token?: string;
 }
 
-const PIERRE_ICON_SPRITE_ID = "t3code-pierre-file-icon-sprite";
+const PIERRE_ICON_SPRITE_ID = "t2code-pierre-file-icon-sprite";
 
 const DOCUMENT_ICON_COLORS: Readonly<Record<string, string>> = {
   "t3-file-icon-pdf": "light-dark(#d52c36, #ff6762)",

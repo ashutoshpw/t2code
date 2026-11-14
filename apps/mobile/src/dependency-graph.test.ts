@@ -2,7 +2,22 @@ import * as NodeFS from "node:fs";
 import * as NodePath from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 
-/** Dynamic imports cannot create Metro initialization cycles: they resolve after both modules initialize. */
+/**
+ *    Dynamic `import("...")` calls are excluded from this rule on purpose:
+ *    they are the deliberate async escape hatch (e.g. composer-draft cleanup
+ *    reaching `lib/attachmentUpload`), and Metro resolves them after both
+ *    modules have initialized, so they cannot create an initialization cycle.
+ *
+ * 2. Cross-layer edges are ceilinged, not yet banned. `state`, `lib`,
+ *    `native`, and `components` still reach upward into `features` at known
+ *    sites (the app composition root `lib/runtime.ts` legitimately wires
+ *    feature layers). Ceilings count unique `from -> to` module pairs across
+ *    all platforms, including dynamic imports, and may only shrink: when you
+ *    remove one of these imports, lower the constant in the same PR.
+ *
+ * Runs in CI as part of the `Test` job (`vp run --filter '!t3' test` picks up
+ * the `@t2code/mobile` package test task).
+ */
 
 const SOURCE_ROOT = __dirname;
 

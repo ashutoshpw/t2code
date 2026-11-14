@@ -93,7 +93,7 @@ export class DesktopIpc extends Context.Service<
       input: DesktopSyncIpcMethod<E, R>,
     ) => Effect.Effect<void, DesktopIpcRegistrationError, R | Scope.Scope>;
   }
->()("@t3tools/desktop/ipc/DesktopIpc") {}
+>()("@t2code/desktop/ipc/DesktopIpc") {}
 
 // ipcMain is shared by every webContents, including preview guests that load arbitrary pages.
 export const make = (

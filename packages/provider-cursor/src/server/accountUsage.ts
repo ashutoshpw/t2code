@@ -1,4 +1,4 @@
-import type { UsageRecord } from "@t3tools/provider-core/server/usage";
+import type { UsageRecord } from "@t2code/provider-core/server/usage";
 import * as Digest from "effect/crypto/Digest";
 import * as Cache from "effect/Cache";
 import * as Clock from "effect/Clock";

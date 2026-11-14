@@ -14,7 +14,7 @@ import {
   type ServerLifecycleWelcomePayload,
   type ServerSelfUpdateOutcome,
   WS_METHODS,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import { vi } from "vite-plus/test";
 import * as Cause from "effect/Cause";

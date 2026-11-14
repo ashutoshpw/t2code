@@ -1,5 +1,10 @@
-// Trust relay headers only with a mint-key-signed proof; otherwise handle the webhook as a direct request.
-import { RelayHookDeliveryProofPayload } from "@t3tools/contracts/relay";
+/**
+ * The relay's delivery id, receive time and trace context arrive as plain
+ * headers, and the webhook URL can also be called directly, so they are only
+ * trusted alongside a proof the relay signed with its mint key. A request
+ * without a valid proof is handled as a direct request.
+ */
+import { RelayHookDeliveryProofPayload } from "@t2code/contracts/relay";
 import {
   normalizeRelayIssuer,
   RELAY_HOOK_DELIVERY_HEADER,

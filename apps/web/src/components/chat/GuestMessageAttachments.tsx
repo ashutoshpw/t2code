@@ -1,5 +1,5 @@
-import type { ChatAttachment } from "@t3tools/contracts";
-import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
+import type { ChatAttachment } from "@t2code/contracts";
+import { formatAttachmentSize } from "@t2code/client-runtime/state/attachments";
 
 import { useTheme } from "~/hooks/useTheme";
 import { cn } from "~/lib/utils";

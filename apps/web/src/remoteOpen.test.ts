@@ -2,8 +2,8 @@ import {
   PrimaryConnectionTarget,
   RelayConnectionTarget,
   SshConnectionTarget,
-} from "@t3tools/client-runtime/connection";
-import { buildRemoteOpenUrl, EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/connection";
+import { buildRemoteOpenUrl, EnvironmentId } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { remoteFallbackEditors, resolveRemoteOpenState } from "./remoteOpen";
@@ -64,9 +64,9 @@ describe("resolveRemoteOpenState", () => {
     ).toEqual({ mode: "local-exec" });
   });
 
-  it("keeps exec behavior for the environment that owns the desktop's T3 home", () => {
+  it("keeps exec behavior for the environment that owns the desktop's T2 home", () => {
     // With Local environment off, a background service on this machine can own the
-    // desktop's home and still be reached through T3 Connect.
+    // desktop's home and still be reached through T2 Connect.
     expect(
       resolveRemoteOpenState({
         target: new RelayConnectionTarget({ environmentId, label: "sol" }),
