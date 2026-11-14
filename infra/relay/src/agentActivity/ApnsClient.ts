@@ -207,7 +207,7 @@ function buildLiveActivityRequest(input: MakeLiveActivityRequestInput): ApnsLive
 function notificationThreadId(notification: ApnsNotificationPayload): string {
   return notification.threadId.length > 0
     ? `${notification.environmentId}/${notification.threadId}`
-    : "t3-agent-alerts";
+    : "t2-agent-alerts";
 }
 
 function makePushNotificationRequest(input: {

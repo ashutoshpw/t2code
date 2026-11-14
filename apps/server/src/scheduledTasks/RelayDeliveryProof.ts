@@ -64,7 +64,7 @@ const make = Effect.gen(function* () {
         token: proof,
         typ: RELAY_HOOK_DELIVERY_TYP,
         issuer: normalizeRelayIssuer(relayIssuer.value),
-        audience: `t3-env:${environmentId}`,
+        audience: `t2-env:${environmentId}`,
         maxTokenAge: MAX_PROOF_AGE,
       }).pipe(Effect.provideService(Signature.Signature, signature), Effect.option);
       // The proof must name exactly this delivery, so it cannot be lifted onto another one.

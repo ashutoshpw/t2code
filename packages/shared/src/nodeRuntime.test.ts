@@ -31,11 +31,11 @@ describe("Self invocation", () => {
     Effect.gen(function* () {
       // Node repeats the binary at argv[1] for a single-executable; it is not a script.
       const invocation = yield* resolveSelfInvocation().pipe(
-        Effect.provideService(HostProcess.ExecutablePath, "/packaged/t3"),
+        Effect.provideService(HostProcess.ExecutablePath, "/packaged/t2"),
         Effect.provideService(HostProcess.IsExecutable, true),
-        Effect.provideService(HostProcess.Arguments, ["/packaged/t3", "/packaged/t3", "serve"]),
+        Effect.provideService(HostProcess.Arguments, ["/packaged/t2", "/packaged/t2", "serve"]),
       );
-      expect(invocation).toEqual({ command: "/packaged/t3", entrypoint: undefined });
+      expect(invocation).toEqual({ command: "/packaged/t2", entrypoint: undefined });
       expect(selfInvocationArgs(invocation, ["acp-mcp-bridge"])).toEqual(["acp-mcp-bridge"]);
     }).pipe(Effect.provide(NodeServices.layer)),
   );

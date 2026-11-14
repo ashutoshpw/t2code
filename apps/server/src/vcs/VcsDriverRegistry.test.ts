@@ -6,7 +6,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import { ChildProcessSpawner } from "effect/process";
-import { VcsProcessExitError } from "@t3tools/contracts";
+import { VcsProcessExitError } from "@t2code/contracts";
 
 import * as VcsProcess from "./VcsProcess.ts";
 import * as VcsProjectConfig from "./VcsProjectConfig.ts";
@@ -71,7 +71,7 @@ describe("VcsDriverRegistry", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const repoDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-vcs-registry-" });
+      const repoDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-vcs-registry-" });
       yield* fs.makeDirectory(path.join(repoDir, ".git"));
       const calls: string[] = [];
 
@@ -91,7 +91,7 @@ describe("VcsDriverRegistry", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const parentDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-vcs-registry-" });
+      const parentDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-vcs-registry-" });
       const projectDir = path.join(parentDir, "project");
       yield* fs.makeDirectory(path.join(parentDir, ".git"));
       yield* fs.makeDirectory(projectDir);
@@ -115,7 +115,7 @@ describe("VcsDriverRegistry", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const repoDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-vcs-registry-" });
+      const repoDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-vcs-registry-" });
       const calls: string[] = [];
 
       yield* Effect.gen(function* () {

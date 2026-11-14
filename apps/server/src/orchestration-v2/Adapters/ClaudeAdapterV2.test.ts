@@ -1143,69 +1143,56 @@ describe("ClaudeAdapterV2 session permissions", () => {
 
 describe("ClaudeAdapterV2 Auto-accept edits", () => {
   it.effect("asks before a command instead of allowing it", () =>
-    Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const idAllocator = yield* IdAllocator.IdAllocatorV2;
-      const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-claude-accept-edits-",
-      });
-      let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
-      const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
-        instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
-        settings: DEFAULT_CLAUDE_SETTINGS,
-        environment: {},
-        attachmentsDir,
-        fileSystem,
-        path: yield* Path.Path,
-        random: yield* SecureRandom.SecureRandom,
-        idAllocator,
-        queryRunner: {
-          allocateSessionId: Effect.succeed("native-thread-claude-accept-edits"),
-          open: (input) =>
-            Effect.sync(() => {
-              openedOptions = input.options;
-              return {
-                messages: Stream.never,
-                offer: () => Effect.void,
-                setModel: () => Effect.void,
-                applyFlagSettings: () => Effect.void,
-                setPermissionMode: () => Effect.void,
-                backgroundTasks: () => Effect.succeed(false),
-                mcpServerStatus: Effect.succeed([]),
-                readMcpResource: () => Effect.die("unexpected MCP resource read"),
-                callMcpTool: () => Effect.die("unexpected MCP tool call"),
-                listPermissionRules: Effect.die("unexpected permission rules read"),
-                stopTask: () => Effect.void,
-                interrupt: Effect.void,
-                close: Effect.void,
-              };
-            }),
-          forkSession: () => Effect.die("unused"),
-          subagentLaunchToolUseId: () => Effect.succeed(null),
-          subagentModel: () => Effect.succeed(null),
-          assertComplete: Effect.void,
-        },
-      });
-      const runtimePolicy = ProviderAdapter.ProviderAdapterV2RuntimePolicy.make({
-        runtimeMode: "auto-accept-edits",
-        interactionMode: "default",
-        cwd: "/workspace",
-      });
-      const threadId = ThreadId.make("thread-claude-accept-edits");
-      const runtime = yield* adapter.openSession({
-        threadId,
-        providerSessionId: ProviderSessionId.make("provider-session-claude-accept-edits"),
-        modelSelection: CLAUDE_TEST_MODEL_SELECTION,
-        runtimePolicy,
-      });
-      const providerThread = yield* runtime.ensureThread({
-        threadId,
-        modelSelection: CLAUDE_TEST_MODEL_SELECTION,
-        runtimePolicy,
-      });
-      const now = yield* DateTime.now;
-      yield* runtime.startTurn(
-        makeClaudeTestTurnInput({
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t2-claude-accept-edits-",
+        });
+        let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
+        const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
+          instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
+          settings: DEFAULT_CLAUDE_SETTINGS,
+          environment: {},
+          attachmentsDir,
+          fileSystem,
+          path: yield* Path.Path,
+          random: yield* SecureRandom.SecureRandom,
+          idAllocator,
+          queryRunner: {
+            allocateSessionId: Effect.succeed("native-thread-claude-accept-edits"),
+            open: (input) =>
+              Effect.sync(() => {
+                openedOptions = input.options;
+                return {
+                  messages: Stream.never,
+                  offer: () => Effect.void,
+                  setModel: () => Effect.void,
+                  applyFlagSettings: () => Effect.void,
+                  setPermissionMode: () => Effect.void,
+                  backgroundTasks: () => Effect.succeed(false),
+                  mcpServerStatus: Effect.succeed([]),
+                  readMcpResource: () => Effect.die("unexpected MCP resource read"),
+                  callMcpTool: () => Effect.die("unexpected MCP tool call"),
+                  listPermissionRules: Effect.die("unexpected permission rules read"),
+                  stopTask: () => Effect.void,
+                  interrupt: Effect.void,
+                  close: Effect.void,
+                };
+              }),
+            forkSession: () => Effect.die("unused"),
+            subagentLaunchToolUseId: () => Effect.succeed(null),
+            assertComplete: Effect.void,
+          },
+        });
+        const runtimePolicy = ProviderAdapter.ProviderAdapterV2RuntimePolicy.make({
+          runtimeMode: "auto-accept-edits",
+          interactionMode: "default",
+          cwd: "/workspace",
+        });
+        const threadId = ThreadId.make("thread-claude-accept-edits");
+        const runtime = yield* adapter.openSession({
           threadId,
           providerThread,
           now,
@@ -1722,7 +1709,7 @@ const captureSdkExecutablePaths = Effect.fn("captureSdkExecutablePaths")(functio
   ).pipe(
     Effect.provide(
       ServerConfig.layerTest(process.cwd(), {
-        prefix: "t3-claude-binary-path-",
+        prefix: "t2-claude-binary-path-",
       }),
     ),
     Effect.provideService(ClaudeAdapterV2.ClaudeAgentSdkQueryRunner, {
@@ -1903,64 +1890,51 @@ describe("ClaudeAdapterV2 resumeThread", () => {
 
 describe("ClaudeAdapterV2 resume compaction", () => {
   it.effect("resolves and cancels the SDK resume dialog through structured runtime input", () =>
-    Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const idAllocator = yield* IdAllocator.IdAllocatorV2;
-      const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-claude-resume-",
-      });
-      let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
-      const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
-        instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
-        settings: DEFAULT_CLAUDE_SETTINGS,
-        environment: {},
-        attachmentsDir,
-        fileSystem,
-        path: yield* Path.Path,
-        random: yield* SecureRandom.SecureRandom,
-        idAllocator,
-        queryRunner: {
-          allocateSessionId: Effect.succeed("native-thread-claude-resume"),
-          open: (input) =>
-            Effect.sync(() => {
-              openedOptions = input.options;
-              return {
-                messages: Stream.never,
-                offer: () => Effect.void,
-                setModel: () => Effect.void,
-                applyFlagSettings: () => Effect.void,
-                setPermissionMode: () => Effect.void,
-                backgroundTasks: () => Effect.succeed(false),
-                mcpServerStatus: Effect.succeed([]),
-                readMcpResource: () => Effect.die("unexpected MCP resource read"),
-                callMcpTool: () => Effect.die("unexpected MCP tool call"),
-                listPermissionRules: Effect.die("unexpected permission rules read"),
-                stopTask: () => Effect.void,
-                interrupt: Effect.void,
-                close: Effect.void,
-              };
-            }),
-          forkSession: () => Effect.die("unused"),
-          subagentLaunchToolUseId: () => Effect.succeed(null),
-          subagentModel: () => Effect.succeed(null),
-          assertComplete: Effect.void,
-        },
-      });
-      const threadId = ThreadId.make("thread-claude-resume");
-      const runtime = yield* adapter.openSession({
-        threadId,
-        providerSessionId: ProviderSessionId.make("provider-session-claude-resume"),
-        modelSelection: CLAUDE_TEST_MODEL_SELECTION,
-        runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
-      });
-      const providerThread = yield* runtime.ensureThread({
-        threadId,
-        modelSelection: CLAUDE_TEST_MODEL_SELECTION,
-        runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
-      });
-      const now = yield* DateTime.now;
-      yield* runtime.startTurn(
-        makeClaudeTestTurnInput({
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t2-claude-resume-",
+        });
+        let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
+        const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
+          instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
+          settings: DEFAULT_CLAUDE_SETTINGS,
+          environment: {},
+          attachmentsDir,
+          fileSystem,
+          path: yield* Path.Path,
+          random: yield* SecureRandom.SecureRandom,
+          idAllocator,
+          queryRunner: {
+            allocateSessionId: Effect.succeed("native-thread-claude-resume"),
+            open: (input) =>
+              Effect.sync(() => {
+                openedOptions = input.options;
+                return {
+                  messages: Stream.never,
+                  offer: () => Effect.void,
+                  setModel: () => Effect.void,
+                  applyFlagSettings: () => Effect.void,
+                  setPermissionMode: () => Effect.void,
+                  backgroundTasks: () => Effect.succeed(false),
+                  mcpServerStatus: Effect.succeed([]),
+                  readMcpResource: () => Effect.die("unexpected MCP resource read"),
+                  callMcpTool: () => Effect.die("unexpected MCP tool call"),
+                  listPermissionRules: Effect.die("unexpected permission rules read"),
+                  stopTask: () => Effect.void,
+                  interrupt: Effect.void,
+                  close: Effect.void,
+                };
+              }),
+            forkSession: () => Effect.die("unused"),
+            subagentLaunchToolUseId: () => Effect.succeed(null),
+            assertComplete: Effect.void,
+          },
+        });
+        const threadId = ThreadId.make("thread-claude-resume");
+        const runtime = yield* adapter.openSession({
           threadId,
           providerThread,
           now,
@@ -2240,12 +2214,568 @@ describe("ClaudeAdapterV2 attachments", () => {
   ])(
     "preserves $name with native PDFs, images, and paths on sends and steering",
     ({ prompt, expectedText, command, ultrathink, resumed, budget }) =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const idAllocator = yield* IdAllocator.IdAllocatorV2;
+          const path = yield* Path.Path;
+          const claudeHome = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "t2-claude-v2-skills-home-",
+          });
+          yield* fileSystem.makeDirectory(path.join(claudeHome, "skills", "implement"), {
+            recursive: true,
+          });
+          yield* fileSystem.writeFileString(
+            path.join(claudeHome, "skills", "implement", "SKILL.md"),
+            "---\ndescription: Implement the requested change\n---\nImplement it.\n",
+          );
+          const modelSelection = {
+            ...CLAUDE_TEST_MODEL_SELECTION,
+            options: ultrathink ? CLAUDE_TEST_MODEL_SELECTION.options : [],
+          };
+          const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "t2-claude-v2-attachments-",
+          });
+          const offeredMessages: Array<SDKUserMessage> = [];
+          let failOpen = false;
+          let failOffer = false;
+          let cancelAfterQueue = false;
+          const queued = yield* Deferred.make<void>();
+          const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
+            instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
+            settings: { ...DEFAULT_CLAUDE_SETTINGS, homePath: claudeHome },
+            environment: {},
+            attachmentsDir,
+            fileSystem,
+            path: yield* Path.Path,
+            random: yield* SecureRandom.SecureRandom,
+            idAllocator,
+            queryRunner: {
+              allocateSessionId: Effect.succeed("native-thread-claude-attachments"),
+              open: () =>
+                Effect.gen(function* () {
+                  if (failOpen) {
+                    failOpen = false;
+                    return yield* new ClaudeAdapterV2.ClaudeAgentSdkQueryRunnerError({
+                      method: "open",
+                      cause: "rejected open",
+                    });
+                  }
+                  const messages = yield* Queue.unbounded<SDKMessage>();
+                  return {
+                    messages: Stream.fromQueue(messages),
+                    offer: (message, onQueued) =>
+                      Effect.suspend(() => {
+                        if (failOffer) {
+                          failOffer = false;
+                          return Effect.fail(
+                            new ClaudeAdapterV2.ClaudeAgentSdkQueryRunnerError({
+                              method: "offer",
+                              cause: "rejected offer",
+                            }),
+                          );
+                        }
+                        return Effect.sync(() => {
+                          offeredMessages.push(message);
+                          onQueued?.();
+                        }).pipe(
+                          Effect.andThen(() =>
+                            cancelAfterQueue
+                              ? Deferred.succeed(queued, undefined).pipe(
+                                  Effect.andThen(Effect.never),
+                                )
+                              : Effect.void,
+                          ),
+                        );
+                      }),
+                    setModel: () => Effect.void,
+                    applyFlagSettings: () => Effect.void,
+                    setPermissionMode: () => Effect.void,
+                    backgroundTasks: () => Effect.succeed(false),
+                    mcpServerStatus: Effect.succeed([]),
+                    readMcpResource: () => Effect.die("unexpected MCP resource read"),
+                    callMcpTool: () => Effect.die("unexpected MCP tool call"),
+                    listPermissionRules: Effect.die("unexpected permission rules read"),
+                    stopTask: () => Effect.void,
+                    interrupt: Effect.void,
+                    close: Queue.shutdown(messages),
+                  };
+                }),
+              forkSession: () => Effect.die("unused forkSession"),
+              subagentLaunchToolUseId: () => Effect.succeed(null),
+              assertComplete: Effect.void,
+            },
+          });
+          const threadId = ThreadId.make("thread-claude-attachments");
+          const providerSessionId = ProviderSessionId.make("provider-session-claude-attachments");
+          const runtime = yield* adapter.openSession({
+            threadId,
+            providerSessionId,
+            modelSelection,
+            runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
+          });
+          const providerThread = yield* runtime.ensureThread({
+            threadId,
+            modelSelection,
+            runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
+          });
+          const attachment = ChatImageAttachment.make({
+            type: "image",
+            id: ChatAttachmentId.make(
+              "thread-claude-attachments-12345678-1234-1234-1234-123456789abc",
+            ),
+            name: "diagram.png",
+            mimeType: "image/png",
+            sizeBytes: 4,
+          });
+          const document = ChatFileAttachment.make({
+            type: "file",
+            id: ChatAttachmentId.make(
+              "thread-claude-attachments-abcdefab-1234-1234-1234-123456789abc",
+            ),
+            name: "requirements.pdf",
+            mimeType: "application/pdf",
+            sizeBytes: 4,
+          });
+          yield* fileSystem.writeFile(
+            path.join(attachmentsDir, attachmentRelativePath(attachment)!),
+            Uint8Array.from([1, 2, 3, 4]),
+          );
+          const pdfBytes = Buffer.from(
+            "%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Count 1 /Kids [3 0 R] >> endobj\n3 0 obj << /Type /Page /Parent 2 0 R >> endobj\n%%EOF",
+          );
+          yield* fileSystem.writeFile(
+            path.join(attachmentsDir, attachmentRelativePath(document)!),
+            pdfBytes,
+          );
+          const attemptId = RunAttemptId.make("attempt-claude-attachments");
+          const now = yield* DateTime.now;
+
+          const turnInput = {
+            ...makeClaudeTestTurnInput({
+              threadId,
+              providerThread,
+              now,
+              attemptId,
+              modelSelection,
+              text: prompt,
+              attachments: resumed ? [attachment] : [attachment, document],
+            }),
+            nativeThreadHasTurns: resumed,
+          };
+          if (budget === "cancelled-send" || budget === "cancelled-steer") {
+            const documentPath = path.join(attachmentsDir, attachmentRelativePath(document)!);
+            const pages = Buffer.from(
+              `%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Count 60 >> endobj\n${Array.from({ length: 60 }, (_, i) => `${i + 3} 0 obj << /Type /Page /Parent 2 0 R >> endobj`).join("\n")}\n`,
+            );
+            yield* fileSystem.writeFile(
+              documentPath,
+              Buffer.concat([
+                pages,
+                Buffer.alloc(19 * 1024 * 1024 - pages.length - 5, 32),
+                Buffer.from("%%EOF"),
+              ]),
+            );
+            const message = { ...turnInput.message, attachments: [document] };
+            if (budget === "cancelled-steer") {
+              yield* runtime.startTurn({ ...turnInput, message: { ...message, attachments: [] } });
+            }
+            const deliver =
+              budget === "cancelled-send"
+                ? runtime.startTurn({ ...turnInput, message })
+                : runtime.steerTurn({
+                    threadId,
+                    runId: turnInput.runId,
+                    providerThread,
+                    providerTurnId: idAllocator.derive.providerTurn({
+                      driver: ClaudeAdapterV2.CLAUDE_PROVIDER,
+                      nativeTurnId: `turn:${attemptId}`,
+                    }),
+                    message,
+                  });
+            cancelAfterQueue = true;
+            const delivering = yield* deliver.pipe(Effect.forkChild);
+            yield* Deferred.await(queued);
+            yield* Fiber.interrupt(delivering);
+            const delivered = offeredMessages.at(-1)!.message.content;
+            assert.include(JSON.stringify(delivered), '"type":"document"');
+            cancelAfterQueue = false;
+            if (budget === "cancelled-send") {
+              yield* runtime.interruptTurn({
+                providerThread,
+                providerTurnId: idAllocator.derive.providerTurn({
+                  driver: ClaudeAdapterV2.CLAUDE_PROVIDER,
+                  nativeTurnId: `turn:${attemptId}`,
+                }),
+              });
+            }
+            yield* deliver;
+            const retried = offeredMessages.at(-1)!.message.content;
+            assert.notInclude(JSON.stringify(retried), '"type":"document"');
+            assert.include(JSON.stringify(retried), JSON.stringify(documentPath).slice(1, -1));
+            assert.isBelow(Buffer.byteLength(JSON.stringify(offeredMessages)), 32_000_000);
+            return;
+          }
+          if (budget !== "none") {
+            const providerTurnId = idAllocator.derive.providerTurn({
+              driver: ClaudeAdapterV2.CLAUDE_PROVIDER,
+              nativeTurnId: `turn:${attemptId}`,
+            });
+            const imagePath = path.join(attachmentsDir, attachmentRelativePath(attachment)!);
+            // The on-disk length deliberately disagrees with sizeBytes.
+            yield* fileSystem.writeFile(imagePath, Buffer.alloc(4 * 1024 * 1024));
+            if (["later-images", "partial-images"].includes(budget)) {
+              const documentPath = path.join(attachmentsDir, attachmentRelativePath(document)!);
+              yield* fileSystem.writeFile(
+                documentPath,
+                Buffer.concat([
+                  pdfBytes.subarray(0, -5),
+                  Buffer.alloc(
+                    (budget === "later-images" ? 19 : 16) * 1024 * 1024 - pdfBytes.length,
+                    32,
+                  ),
+                  Buffer.from("%%EOF"),
+                ]),
+              );
+              yield* runtime.startTurn({
+                ...turnInput,
+                message: { ...turnInput.message, attachments: [document] },
+              });
+              assert.include(
+                JSON.stringify(offeredMessages[0]!.message.content),
+                '"type":"document"',
+              );
+              const message = { ...turnInput.message, attachments: [attachment, attachment] };
+              yield* runtime.interruptTurn({ providerThread, providerTurnId });
+              const laterAttemptId = RunAttemptId.make("attempt-claude-attachments-later");
+              yield* runtime.startTurn({
+                ...turnInput,
+                attemptId: laterAttemptId,
+                providerTurnOrdinal: 2,
+                nativeThreadHasTurns: true,
+                message,
+              });
+              const sent = offeredMessages.at(-1)!.message.content;
+              assert.isArray(sent);
+              assert.lengthOf(
+                typeof sent === "string" ? [] : sent.filter((block) => block.type === "image"),
+                budget === "partial-images" ? 1 : 0,
+              );
+              assert.include(JSON.stringify(sent), JSON.stringify(imagePath).slice(1, -1));
+              yield* runtime.steerTurn({
+                threadId,
+                runId: RunId.make("run-claude-attachments"),
+                providerThread,
+                providerTurnId: idAllocator.derive.providerTurn({
+                  driver: ClaudeAdapterV2.CLAUDE_PROVIDER,
+                  nativeTurnId: `turn:${laterAttemptId}`,
+                }),
+                message,
+              });
+              const steered = offeredMessages.at(-1)!.message.content;
+              assert.isArray(steered);
+              assert.lengthOf(
+                typeof steered === "string"
+                  ? []
+                  : steered.filter((block) => block.type === "image"),
+                0,
+              );
+              assert.include(JSON.stringify(steered), JSON.stringify(imagePath).slice(1, -1));
+              assert.isBelow(
+                Buffer.byteLength(
+                  JSON.stringify(offeredMessages.map((message) => message.message)),
+                ),
+                32_000_000,
+              );
+              return;
+            }
+            if (budget === "retained-documents") {
+              yield* fileSystem.writeFile(
+                path.join(attachmentsDir, attachmentRelativePath(document)!),
+                Buffer.concat([
+                  pdfBytes.subarray(0, pdfBytes.length - 5),
+                  Buffer.alloc(10 * 1024 * 1024, 32),
+                  Buffer.from("%%EOF"),
+                ]),
+              );
+            }
+            yield* runtime.startTurn({
+              ...turnInput,
+              message: {
+                ...turnInput.message,
+                text: budget === "retained-text" ? "x".repeat(10 * 1024 * 1024) : prompt,
+                attachments:
+                  budget === "retained-text"
+                    ? []
+                    : budget === "retained-documents"
+                      ? [document]
+                      : [attachment, attachment],
+              },
+            });
+            const largePdf = Buffer.concat([
+              pdfBytes.subarray(0, pdfBytes.length - 5),
+              Buffer.alloc(
+                (budget === "retained-documents" ? 20 : 19) * 1024 * 1024 - pdfBytes.length,
+                32,
+              ),
+              Buffer.from("%%EOF"),
+            ]);
+            const documentPath = path.join(attachmentsDir, attachmentRelativePath(document)!);
+            yield* fileSystem.writeFile(documentPath, largePdf);
+            yield* runtime.steerTurn({
+              threadId,
+              runId: RunId.make("run-claude-attachments"),
+              providerThread,
+              providerTurnId,
+              message: {
+                ...turnInput.message,
+                attachments:
+                  budget === "same-message-images"
+                    ? [document, attachment, attachment]
+                    : [document],
+              },
+            });
+            const sent = offeredMessages.at(-1)!.message.content;
+            assert.isArray(sent);
+            assert.lengthOf(
+              typeof sent === "string" ? [] : sent.filter((block) => block.type === "document"),
+              0,
+              budget,
+            );
+            assert.include(JSON.stringify(sent), JSON.stringify(documentPath).slice(1, -1));
+            return;
+          }
+          if (!resumed) {
+            const undelivered = Buffer.from(
+              `%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Count 60 >> endobj\n${Array.from({ length: 60 }, (_, i) => `${i + 3} 0 obj << /Type /Page /Parent 2 0 R >> endobj`).join("\n")}\n%%EOF`,
+            );
+            yield* fileSystem.writeFile(
+              path.join(attachmentsDir, attachmentRelativePath(document)!),
+              undelivered,
+            );
+            failOpen = true;
+            assert.isTrue(Exit.isFailure(yield* runtime.startTurn(turnInput).pipe(Effect.exit)));
+            assert.lengthOf(offeredMessages, 0);
+            yield* fileSystem.writeFile(
+              path.join(attachmentsDir, attachmentRelativePath(document)!),
+              pdfBytes,
+            );
+          }
+          yield* runtime.startTurn(turnInput);
+
+          const expectedImageBlock = {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: "image/png",
+              data: "AQIDBA==",
+            },
+          } as const;
+          const expectedDocumentBlock = {
+            type: "document",
+            source: {
+              type: "base64",
+              media_type: "application/pdf",
+              data: Buffer.from(pdfBytes).toString("base64"),
+            },
+          } as const;
+          const expectedAttachmentPath = path.join(
+            attachmentsDir,
+            attachmentRelativePath(attachment)!,
+          );
+          const expectedDocumentPath = path.join(attachmentsDir, attachmentRelativePath(document)!);
+          const attachmentNotes = `\n\n[Attached image "diagram.png" is saved at: ${expectedAttachmentPath}]${resumed ? "" : `\n\n[Attached file "requirements.pdf" is saved at: ${expectedDocumentPath}]`}`;
+          const requestBlock = { type: "text" as const, text: expectedText + attachmentNotes };
+          const expectedContent = command
+            ? [
+                requestBlock,
+                expectedImageBlock,
+                ...(!resumed ? [expectedDocumentBlock] : []),
+                { type: "text" as const, text: command + attachmentNotes },
+              ]
+            : [expectedImageBlock, ...(!resumed ? [expectedDocumentBlock] : []), requestBlock];
+          assert.deepEqual(offeredMessages[0]?.message.content, expectedContent);
+
+          const providerTurnId = idAllocator.derive.providerTurn({
+            driver: ClaudeAdapterV2.CLAUDE_PROVIDER,
+            nativeTurnId: `turn:${attemptId}`,
+          });
+          yield* runtime.steerTurn({
+            threadId,
+            runId: RunId.make("run-claude-attachments"),
+            providerThread,
+            providerTurnId,
+            message: {
+              createdBy: "user",
+              creationSource: "web",
+              messageId: MessageId.make("message-claude-attachments-steer"),
+              text: prompt,
+              attachments: resumed ? [attachment] : [attachment, document],
+            },
+          });
+
+          assert.equal(offeredMessages[1]?.priority, "now");
+          assert.deepEqual(offeredMessages[1]?.message.content, expectedContent);
+          const documentPath = path.join(attachmentsDir, attachmentRelativePath(document)!);
+          for (const scenario of [
+            "pages",
+            "bytes",
+            "invalid",
+            "invalid-page-tree",
+            "object-stream",
+            "encrypted",
+            "cyclic-tree",
+            "unterminated-string",
+            "missing-eof",
+            "escaped-name",
+            "incremental",
+            "indirect-count",
+            "indirect-type",
+            "indirect-kids",
+            "indirect-101-pages",
+            "aggregate-pages",
+            "retained-pages",
+            "delivery-failure",
+            "pasted-text",
+            "text-only",
+          ]) {
+            let attachments: ReadonlyArray<ChatAttachment> = [document];
+            if (
+              ["pages", "aggregate-pages", "retained-pages", "delivery-failure"].includes(scenario)
+            ) {
+              const pages = scenario === "pages" ? 101 : scenario === "delivery-failure" ? 30 : 60;
+              const large = Buffer.from(
+                `%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Count ${pages} >> endobj\n${Array.from({ length: pages }, (_, i) => `${i + 3} 0 obj << /Type /Page /Parent 2 0 R >> endobj`).join("\n")}\n%%EOF`,
+              );
+              yield* fileSystem.writeFile(documentPath, large);
+              if (scenario === "aggregate-pages") {
+                const second = {
+                  ...document,
+                  id: ChatAttachmentId.make("second-pdf"),
+                  name: "second.pdf",
+                };
+                yield* fileSystem.copyFile(
+                  documentPath,
+                  path.join(attachmentsDir, attachmentRelativePath(second)!),
+                );
+                attachments = [document, second];
+              }
+            } else if (scenario.startsWith("indirect-")) {
+              const raw =
+                scenario === "indirect-count" || scenario === "indirect-101-pages"
+                  ? `%PDF-1.7\n1 0 obj ${scenario === "indirect-count" ? 1 : 101} endobj\n2 0 obj << /Type /Catalog /Pages 3 0 R >> endobj\n3 0 obj << /Type /Pages /Count 1 0 R /Kids [${Array.from({ length: scenario === "indirect-count" ? 1 : 101 }, (_, i) => `${i + 4} 0 R`).join(" ")}] >> endobj\n4 0 obj << /Type /Page /Parent 3 0 R >> endobj\n${scenario === "indirect-count" ? "" : Array.from({ length: 100 }, (_, i) => `${i + 5} 0 obj << /Type 105 0 R /Parent 3 0 R >> endobj`).join("\n")}\n105 0 obj /Page endobj\n%%EOF`
+                  : scenario === "indirect-type"
+                    ? pdfBytes
+                        .toString()
+                        .replace(
+                          "%%EOF",
+                          "4 0 obj << /Type 5 0 R >> endobj\n5 0 obj /Annot endobj\n%%EOF",
+                        )
+                    : pdfBytes
+                        .toString()
+                        .replace("/Kids [3 0 R]", "/Kids 4 0 R")
+                        .replace("%%EOF", "4 0 obj [3 0 R] endobj\n%%EOF");
+              yield* fileSystem.writeFileString(documentPath, raw);
+            } else if (scenario === "bytes") {
+              yield* fileSystem.truncate(documentPath, 20 * 1024 * 1024 + 1);
+            } else if (scenario === "invalid") {
+              yield* fileSystem.writeFileString(documentPath, "This is not a PDF");
+            } else if (scenario === "invalid-page-tree") {
+              const malformedBytes = Buffer.from(
+                "%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 42 >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF",
+              );
+              yield* fileSystem.writeFile(documentPath, malformedBytes);
+            } else if (["object-stream", "encrypted", "cyclic-tree"].includes(scenario)) {
+              const suffix =
+                scenario === "encrypted"
+                  ? "/Encrypt 9 0 R"
+                  : scenario === "cyclic-tree"
+                    ? "/Count 0 /Kids [2 0 R]"
+                    : "/Type /ObjStm /Filter /FlateDecode /Length 1000000000";
+              yield* fileSystem.writeFile(
+                documentPath,
+                Buffer.concat([
+                  pdfBytes.subarray(0, pdfBytes.length - 5),
+                  Buffer.from(`\n4 0 obj << ${suffix} >> stream\nx\nendstream endobj\n%%EOF`),
+                ]),
+              );
+            } else if (
+              ["unterminated-string", "missing-eof", "escaped-name", "incremental"].includes(
+                scenario,
+              )
+            ) {
+              const raw = pdfBytes.toString();
+              yield* fileSystem.writeFileString(
+                documentPath,
+                scenario === "missing-eof"
+                  ? raw.slice(0, -5)
+                  : scenario === "escaped-name"
+                    ? raw.replace("/Type /Page ", "/Type /Pa#67e ")
+                    : raw.replace(
+                        "%%EOF",
+                        scenario === "incremental" ? "/Prev 42\n%%EOF" : "(unfinished\n%%EOF",
+                      ),
+              );
+            } else if (scenario === "pasted-text") {
+              yield* fileSystem.writeFile(documentPath, pdfBytes);
+              attachments = [{ ...document, source: { _tag: "pasted-text" } }];
+            } else {
+              attachments = [];
+              yield* fileSystem.remove(documentPath);
+            }
+            const steering = {
+              threadId,
+              runId: RunId.make("run-claude-attachments"),
+              providerThread,
+              providerTurnId,
+              message: {
+                createdBy: "user",
+                creationSource: "web",
+                messageId: MessageId.make(`message-${scenario}`),
+                text: "Continue.",
+                attachments,
+              },
+            } satisfies ProviderAdapter.ProviderAdapterV2SteerInput;
+            if (scenario === "delivery-failure") {
+              failOffer = true;
+              assert.isTrue(Exit.isFailure(yield* runtime.steerTurn(steering).pipe(Effect.exit)));
+            }
+            yield* runtime.steerTurn(steering);
+
+            const sent = offeredMessages.at(-1)!.message.content;
+            const documents =
+              typeof sent === "string" ? [] : sent.filter((block) => block.type === "document");
+            assert.lengthOf(
+              documents,
+              ["aggregate-pages", "delivery-failure"].includes(scenario) ? 1 : 0,
+              scenario,
+            );
+            if (scenario === "text-only")
+              assert.equal(sent, ultrathink ? "Ultrathink:\nContinue." : "Continue.");
+            else assert.include(JSON.stringify(sent), JSON.stringify(documentPath).slice(1, -1));
+          }
+        }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              IdAllocator.layer,
+              McpProviderSessions.layer,
+              NodeServices.layer,
+              NodeCrypto.layer,
+            ),
+          ),
+        ),
+      ),
+  );
+});
+
+describe("ClaudeAdapterV2 native fork", () => {
+  it.effect("forks a session from its original directory after the workspace root changes", () =>
+    Effect.scoped(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
-        const path = yield* Path.Path;
-        const claudeHome = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-skills-home-",
+        const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t2-claude-v2-fork-attachments-",
         });
         yield* fileSystem.makeDirectory(path.join(claudeHome, "skills", "implement"), {
           recursive: true,
@@ -3167,7 +3697,7 @@ describe("ClaudeAdapterV2 native session identity", () => {
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const path = yield* Path.Path;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-session-identity-",
+          prefix: "t2-claude-v2-session-identity-",
         });
         if (importedNativeThreadId !== undefined) {
           // An unreadable copy in another project must not hide the readable one.
@@ -3564,7 +4094,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const idAllocator = yield* IdAllocator.IdAllocatorV2;
       const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-claude-v2-wake-",
+        prefix: "t2-claude-v2-wake-",
       });
       const sdkMessages = yield* Queue.unbounded<SDKMessage>();
       const processQueues: Array<Queue.Queue<SDKMessage>> = [];
@@ -13284,29 +13814,78 @@ describe("ClaudeAdapterV2 background wake turns", () => {
   );
 
   it.effect("a settled Stop leaves a turn that replaced the closing process alone", () =>
-    Effect.gen(function* () {
-      const changes = yield* makeChangeSignal;
-      const fileSystem = yield* FileSystem.FileSystem;
-      const idAllocator = yield* IdAllocator.IdAllocatorV2;
-      const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-claude-v2-settled-stop-replaced-",
-      });
-      const processQueues: Array<Queue.Queue<SDKMessage>> = [];
-      const firstCloseRequested = yield* Deferred.make<void>();
-      const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
-      const continuationRequests: Array<ProviderContinuationRequests.ProviderContinuationRequest> =
-        [];
-      const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
-        instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
-        settings: DEFAULT_CLAUDE_SETTINGS,
-        environment: {},
-        attachmentsDir,
-        fileSystem,
-        path: yield* Path.Path,
-        random: yield* SecureRandom.SecureRandom,
-        idAllocator,
-        continuationRequests: {
-          offer: (request) =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const changes = yield* makeChangeSignal;
+        const fileSystem = yield* FileSystem.FileSystem;
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t2-claude-v2-settled-stop-replaced-",
+        });
+        const processQueues: Array<Queue.Queue<SDKMessage>> = [];
+        const firstCloseRequested = yield* Deferred.make<void>();
+        const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
+        const continuationRequests: Array<ProviderContinuationRequests.ProviderContinuationRequest> =
+          [];
+        const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
+          instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
+          settings: DEFAULT_CLAUDE_SETTINGS,
+          environment: {},
+          attachmentsDir,
+          fileSystem,
+          path: yield* Path.Path,
+          random: yield* SecureRandom.SecureRandom,
+          idAllocator,
+          continuationRequests: {
+            offer: (request) =>
+              Effect.sync(() => {
+                continuationRequests.push(request);
+              }).pipe(Effect.andThen(changes.notify)),
+          },
+          queryRunner: {
+            allocateSessionId: Effect.succeed(WAKE_NATIVE_SESSION),
+            open: () =>
+              Effect.gen(function* () {
+                const sdkMessages = yield* Queue.unbounded<SDKMessage>();
+                const isFirstProcess = processQueues.length === 0;
+                processQueues.push(sdkMessages);
+                return {
+                  messages: Stream.fromQueue(sdkMessages),
+                  offer: () => Effect.void,
+                  setModel: () => Effect.void,
+                  applyFlagSettings: () => Effect.void,
+                  setPermissionMode: () => Effect.void,
+                  backgroundTasks: () => Effect.succeed(false),
+                  mcpServerStatus: Effect.succeed([]),
+                  readMcpResource: () => Effect.die("unexpected MCP resource read"),
+                  callMcpTool: () => Effect.die("unexpected MCP tool call"),
+                  listPermissionRules: Effect.die("unexpected permission rules read"),
+                  stopTask: () => Effect.void,
+                  interrupt: Effect.void,
+                  close: isFirstProcess
+                    ? Deferred.succeed(firstCloseRequested, undefined).pipe(Effect.asVoid)
+                    : Queue.shutdown(sdkMessages),
+                };
+              }),
+            forkSession: () => Effect.die("unused forkSession"),
+            subagentLaunchToolUseId: () => Effect.succeed(null),
+            assertComplete: Effect.void,
+          },
+        });
+        const threadId = ThreadId.make("thread-claude-settled-stop-replaced");
+        const runtime = yield* adapter.openSession({
+          threadId,
+          providerSessionId: ProviderSessionId.make("provider-session-claude-settled-stop"),
+          modelSelection: CLAUDE_TEST_MODEL_SELECTION,
+          runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
+        });
+        const providerThread = yield* runtime.ensureThread({
+          threadId,
+          modelSelection: CLAUDE_TEST_MODEL_SELECTION,
+          runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
+        });
+        yield* runtime.events.pipe(
+          Stream.runForEach((event) =>
             Effect.sync(() => {
               continuationRequests.push(request);
             }).pipe(Effect.andThen(changes.notify)),
@@ -13601,63 +14180,40 @@ describe("ClaudeAdapterV2 background wake turns", () => {
   it.effect(
     "clears the replaced sibling native thread roster when openQuery switches processes",
     () =>
-      Effect.gen(function* () {
-        const changes = yield* makeChangeSignal;
-        const fileSystem = yield* FileSystem.FileSystem;
-        const idAllocator = yield* IdAllocator.IdAllocatorV2;
-        const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-sibling-replace-",
-        });
-        const nativeIds = ["native-thread-roster-a", "native-thread-roster-b"] as const;
-        let allocateIndex = 0;
-        // A shared queue would hide sibling process death on replacement.
-        const processQueues: Array<{
-          readonly nativeThreadId: string;
-          readonly queue: Queue.Queue<SDKMessage>;
-        }> = [];
-        const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
-        const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
-          instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
-          settings: DEFAULT_CLAUDE_SETTINGS,
-          environment: {},
-          attachmentsDir,
-          fileSystem,
-          path: yield* Path.Path,
-          random: yield* SecureRandom.SecureRandom,
-          idAllocator,
-          continuationRequests: {
-            offer: () => Effect.void,
-          },
-          queryRunner: {
-            allocateSessionId: Effect.sync(() => {
-              const next =
-                nativeIds[allocateIndex] ?? `native-thread-roster-extra-${allocateIndex}`;
-              allocateIndex += 1;
-              return next;
-            }),
-            open: (openInput) =>
-              Effect.gen(function* () {
-                const nativeThreadId = openInput.options.sessionId ?? openInput.options.resume;
-                if (typeof nativeThreadId !== "string" || nativeThreadId.length === 0) {
-                  return yield* Effect.die("openQuery must supply a native session id");
-                }
-                const queue = yield* Queue.unbounded<SDKMessage>();
-                processQueues.push({ nativeThreadId, queue });
-                return {
-                  messages: Stream.fromQueue(queue),
-                  offer: () => Effect.void,
-                  setModel: () => Effect.void,
-                  applyFlagSettings: () => Effect.void,
-                  setPermissionMode: () => Effect.void,
-                  backgroundTasks: () => Effect.succeed(false),
-                  mcpServerStatus: Effect.succeed([]),
-                  readMcpResource: () => Effect.die("unexpected MCP resource read"),
-                  callMcpTool: () => Effect.die("unexpected MCP tool call"),
-                  listPermissionRules: Effect.die("unexpected permission rules read"),
-                  stopTask: () => Effect.void,
-                  interrupt: Effect.void,
-                  close: Queue.shutdown(queue),
-                };
+      Effect.scoped(
+        Effect.gen(function* () {
+          const changes = yield* makeChangeSignal;
+          const fileSystem = yield* FileSystem.FileSystem;
+          const idAllocator = yield* IdAllocator.IdAllocatorV2;
+          const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "t2-claude-v2-sibling-replace-",
+          });
+          const nativeIds = ["native-thread-roster-a", "native-thread-roster-b"] as const;
+          let allocateIndex = 0;
+          // A shared queue would hide sibling process death on replacement.
+          const processQueues: Array<{
+            readonly nativeThreadId: string;
+            readonly queue: Queue.Queue<SDKMessage>;
+          }> = [];
+          const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
+          const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
+            instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
+            settings: DEFAULT_CLAUDE_SETTINGS,
+            environment: {},
+            attachmentsDir,
+            fileSystem,
+            path: yield* Path.Path,
+            random: yield* SecureRandom.SecureRandom,
+            idAllocator,
+            continuationRequests: {
+              offer: () => Effect.void,
+            },
+            queryRunner: {
+              allocateSessionId: Effect.sync(() => {
+                const next =
+                  nativeIds[allocateIndex] ?? `native-thread-roster-extra-${allocateIndex}`;
+                allocateIndex += 1;
+                return next;
               }),
             forkSession: () => Effect.die("unused forkSession"),
             subagentLaunchToolUseId: () => Effect.succeed(null),
@@ -20251,7 +20807,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-buffer-replace-",
+          prefix: "t2-claude-v2-process-reset-",
         });
         const processQueues: Array<Queue.Queue<SDKMessage>> = [];
         const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
@@ -20762,12 +21318,199 @@ describe("ClaudeAdapterV2 background wake turns", () => {
   it.effect(
     "keeps the process and its roster when a model change meets a running background shell",
     () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const changes = yield* makeChangeSignal;
+          const fileSystem = yield* FileSystem.FileSystem;
+          const idAllocator = yield* IdAllocator.IdAllocatorV2;
+          const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "t2-claude-v2-buffer-replace-",
+          });
+          const processQueues: Array<Queue.Queue<SDKMessage>> = [];
+          const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
+          const continuationRequests: Array<ProviderContinuationRequests.ProviderContinuationRequest> =
+            [];
+          const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
+            instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
+            settings: DEFAULT_CLAUDE_SETTINGS,
+            environment: {},
+            attachmentsDir,
+            fileSystem,
+            path: yield* Path.Path,
+            random: yield* SecureRandom.SecureRandom,
+            idAllocator,
+            continuationRequests: {
+              offer: (request) =>
+                Effect.sync(() => {
+                  continuationRequests.push(request);
+                }).pipe(Effect.andThen(changes.notify)),
+            },
+            queryRunner: {
+              allocateSessionId: Effect.succeed(WAKE_NATIVE_SESSION),
+              open: () =>
+                Effect.gen(function* () {
+                  const sdkMessages = yield* Queue.unbounded<SDKMessage>();
+                  processQueues.push(sdkMessages);
+                  return {
+                    messages: Stream.fromQueue(sdkMessages),
+                    offer: () => Effect.void,
+                    setModel: () => Effect.void,
+                    applyFlagSettings: () => Effect.void,
+                    setPermissionMode: () => Effect.void,
+                    backgroundTasks: () => Effect.succeed(false),
+                    mcpServerStatus: Effect.succeed([]),
+                    readMcpResource: () => Effect.die("unexpected MCP resource read"),
+                    callMcpTool: () => Effect.die("unexpected MCP tool call"),
+                    listPermissionRules: Effect.die("unexpected permission rules read"),
+                    stopTask: () => Effect.void,
+                    interrupt: Effect.void,
+                    close: Queue.shutdown(sdkMessages),
+                  };
+                }),
+              forkSession: () => Effect.die("unused forkSession"),
+              subagentLaunchToolUseId: () => Effect.succeed(null),
+              assertComplete: Effect.void,
+            },
+          });
+          const threadId = ThreadId.make("thread-claude-buffer-replace");
+          const runtime = yield* adapter.openSession({
+            threadId,
+            providerSessionId: ProviderSessionId.make("provider-session-claude-buffer-replace"),
+            modelSelection: CLAUDE_TEST_MODEL_SELECTION,
+            runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
+          });
+          const providerThread = yield* runtime.ensureThread({
+            threadId,
+            modelSelection: CLAUDE_TEST_MODEL_SELECTION,
+            runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
+          });
+          yield* runtime.events.pipe(
+            Stream.runForEach((event) =>
+              Effect.sync(() => {
+                events.push(event);
+              }).pipe(Effect.andThen(changes.notify)),
+            ),
+            Effect.forkScoped,
+          );
+          if (runtime.hasPendingBackgroundWork === undefined) {
+            return yield* Effect.die(
+              "Claude adapter runtime must expose hasPendingBackgroundWork.",
+            );
+          }
+          const hasPendingBackgroundWork = runtime.hasPendingBackgroundWork;
+          const now = yield* DateTime.now;
+
+          yield* runtime.startTurn(
+            makeClaudeTestTurnInput({
+              threadId,
+              providerThread,
+              now,
+              attemptId: RunAttemptId.make("attempt-claude-buffer-replace-a"),
+              text: "Run the build in the background.",
+              attachments: [],
+            }),
+          );
+          assert.equal(processQueues.length, 1);
+          const firstProcess = processQueues[0]!;
+          yield* Queue.offer(firstProcess, wakeTaskStarted);
+          yield* Queue.offer(firstProcess, turnOneResult);
+          yield* changes.until(() => events.some((event) => event.type === "turn.terminal"));
+          assert.isTrue(yield* hasPendingBackgroundWork);
+
+          yield* Queue.offer(firstProcess, wakeNotification);
+          yield* yieldTicks(50);
+          assert.lengthOf(continuationRequests, 0);
+
+          const alternateModel = CLAUDE_TEST_RESTART_MODEL_SELECTION;
+          yield* runtime.startTurn(
+            makeClaudeTestTurnInput({
+              threadId,
+              providerThread: { ...providerThread, status: "active" },
+              now,
+              attemptId: RunAttemptId.make("attempt-claude-buffer-replace-user"),
+              text: "Switch model while background work completes.",
+              attachments: [],
+              providerTurnOrdinal: 2,
+              modelSelection: alternateModel,
+            }),
+          );
+          assert.equal(processQueues.length, 2);
+          const secondProcess = processQueues[1]!;
+          yield* Queue.offer(
+            secondProcess,
+            makeResultFrame({
+              uuid: "00000000-0000-4000-8000-000000000701",
+              result: "User turn finished after model switch.",
+            }),
+          );
+          yield* changes.until(
+            () => events.filter((event) => event.type === "turn.terminal").length === 2,
+          );
+          assert.isFalse(yield* hasPendingBackgroundWork);
+          assert.lengthOf(continuationRequests, 0);
+
+          yield* Queue.offer(secondProcess, wakeResult);
+          yield* changes.until(() => continuationRequests.length === 1);
+          assert.equal(continuationRequests[0]?.detail, WAKE_SUMMARY);
+          yield* runtime.startTurn(
+            makeClaudeTestTurnInput({
+              threadId,
+              providerThread: { ...providerThread, status: "active" },
+              now,
+              attemptId: RunAttemptId.make("attempt-claude-buffer-replace-cont"),
+              text: "Background task completed.",
+              attachments: [],
+              providerTurnOrdinal: 3,
+              modelSelection: alternateModel,
+              messageCreatedBy: "agent",
+              messageCreationSource: "provider",
+            }),
+          );
+          yield* changes.until(
+            () => events.filter((event) => event.type === "turn.terminal").length === 3,
+          );
+          assert.isTrue(
+            events.some(
+              (event) =>
+                event.type === "message.updated" && event.message.text === WAKE_RESULT_TEXT,
+            ),
+          );
+          assert.isFalse(
+            events.some(
+              (event) =>
+                event.type === "subagent.updated" ||
+                (event.type === "node.updated" && event.node.kind === "subagent"),
+            ),
+          );
+          assert.isFalse(
+            events.some(
+              (event) =>
+                event.type !== "provider_thread.updated" &&
+                JSON.stringify(event).includes(WAKE_TASK_ID),
+            ),
+          );
+          assert.isFalse(yield* hasPendingBackgroundWork);
+        }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              IdAllocator.layer,
+              McpProviderSessions.layer,
+              NodeServices.layer,
+              NodeCrypto.layer,
+            ),
+          ),
+        ),
+      ),
+  );
+
+  it.effect("refuses a thinking change that would kill a running background subagent", () =>
+    Effect.scoped(
       Effect.gen(function* () {
         const changes = yield* makeChangeSignal;
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-replace-open-fail-",
+          prefix: "t2-claude-v2-model-change-running-subagent-",
         });
         let openCount = 0;
         const processQueues: Array<Queue.Queue<SDKMessage>> = [];
@@ -20889,6 +21632,145 @@ describe("ClaudeAdapterV2 background wake turns", () => {
             McpProviderSessions.layer,
             NodeServices.layer,
             NodeCrypto.layer,
+          ),
+        ),
+      ),
+    ),
+  );
+
+  it.effect(
+    "keeps the process and its roster when a model change meets a running background shell",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const changes = yield* makeChangeSignal;
+          const fileSystem = yield* FileSystem.FileSystem;
+          const idAllocator = yield* IdAllocator.IdAllocatorV2;
+          const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "t2-claude-v2-replace-open-fail-",
+          });
+          let openCount = 0;
+          const processQueues: Array<Queue.Queue<SDKMessage>> = [];
+          const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
+          const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
+            instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
+            settings: DEFAULT_CLAUDE_SETTINGS,
+            environment: {},
+            attachmentsDir,
+            fileSystem,
+            path: yield* Path.Path,
+            random: yield* SecureRandom.SecureRandom,
+            idAllocator,
+            continuationRequests: {
+              offer: () => Effect.void,
+            },
+            queryRunner: {
+              allocateSessionId: Effect.succeed(WAKE_NATIVE_SESSION),
+              open: () => {
+                openCount += 1;
+                if (openCount === 2) {
+                  return Effect.fail(
+                    new ClaudeAdapterV2.ClaudeAgentSdkQueryRunnerError({
+                      method: "open",
+                      cause: "forced replacement open failure",
+                    }),
+                  );
+                }
+                return Effect.gen(function* () {
+                  const sdkMessages = yield* Queue.unbounded<SDKMessage>();
+                  processQueues.push(sdkMessages);
+                  return {
+                    messages: Stream.fromQueue(sdkMessages),
+                    offer: () => Effect.void,
+                    setModel: () => Effect.void,
+                    applyFlagSettings: () => Effect.void,
+                    setPermissionMode: () => Effect.void,
+                    backgroundTasks: () => Effect.succeed(false),
+                    mcpServerStatus: Effect.succeed([]),
+                    readMcpResource: () => Effect.die("unexpected MCP resource read"),
+                    callMcpTool: () => Effect.die("unexpected MCP tool call"),
+                    listPermissionRules: Effect.die("unexpected permission rules read"),
+                    stopTask: () => Effect.void,
+                    interrupt: Effect.void,
+                    close: Queue.shutdown(sdkMessages),
+                  };
+                });
+              },
+              forkSession: () => Effect.die("unused forkSession"),
+              subagentLaunchToolUseId: () => Effect.succeed(null),
+              assertComplete: Effect.void,
+            },
+          });
+          const threadId = ThreadId.make("thread-claude-replace-open-fail");
+          const runtime = yield* adapter.openSession({
+            threadId,
+            providerSessionId: ProviderSessionId.make("provider-session-claude-replace-open-fail"),
+            modelSelection: CLAUDE_TEST_MODEL_SELECTION,
+            runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
+          });
+          const providerThread = yield* runtime.ensureThread({
+            threadId,
+            modelSelection: CLAUDE_TEST_MODEL_SELECTION,
+            runtimePolicy: CLAUDE_TEST_RUNTIME_POLICY,
+          });
+          yield* runtime.events.pipe(
+            Stream.runForEach((event) =>
+              Effect.sync(() => {
+                events.push(event);
+              }).pipe(Effect.andThen(changes.notify)),
+            ),
+            Effect.forkScoped,
+          );
+          if (runtime.hasPendingBackgroundWork === undefined) {
+            return yield* Effect.die(
+              "Claude adapter runtime must expose hasPendingBackgroundWork.",
+            );
+          }
+          const hasPendingBackgroundWork = runtime.hasPendingBackgroundWork;
+          const now = yield* DateTime.now;
+
+          yield* runtime.startTurn(
+            makeClaudeTestTurnInput({
+              threadId,
+              providerThread,
+              now,
+              attemptId: RunAttemptId.make("attempt-claude-replace-open-fail-a"),
+              text: "Run the build in the background.",
+              attachments: [],
+            }),
+          );
+          assert.equal(processQueues.length, 1);
+          yield* Queue.offer(processQueues[0]!, wakeTaskStarted);
+          yield* Queue.offer(processQueues[0]!, turnOneResult);
+          yield* changes.until(() => events.some((event) => event.type === "turn.terminal"));
+          assert.isTrue(yield* hasPendingBackgroundWork);
+
+          const alternateModel = CLAUDE_TEST_RESTART_MODEL_SELECTION;
+          const failedStart = yield* runtime
+            .startTurn(
+              makeClaudeTestTurnInput({
+                threadId,
+                providerThread: { ...providerThread, status: "active" },
+                now,
+                attemptId: RunAttemptId.make("attempt-claude-replace-open-fail-b"),
+                text: "Replace process but fail open.",
+                attachments: [],
+                providerTurnOrdinal: 2,
+                modelSelection: alternateModel,
+              }),
+            )
+            .pipe(Effect.exit);
+          assert.isTrue(Exit.isFailure(failedStart));
+          assert.equal(openCount, 1);
+          assert.isTrue(yield* hasPendingBackgroundWork);
+        }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              IdAllocator.layer,
+              McpProviderSessions.layer,
+              NodeServices.layer,
+              NodeCrypto.layer,
+            ),
           ),
         ),
       ),
@@ -21023,7 +21905,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
   ) =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
-      const configDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-wf-" });
+      const configDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-claude-wf-" });
       const transcriptDir = NodePath.join(configDir, "projects", "workflow");
       yield* fileSystem.makeDirectory(transcriptDir, { recursive: true });
       yield* fileSystem.writeFileString(

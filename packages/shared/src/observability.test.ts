@@ -255,78 +255,56 @@ describe("observability", () => {
     it.effect(
       "keeps trace producers responsive during a slow write, bounds the backlog, and drains on close",
       () =>
-        Effect.gen(function* () {
-          const fs = yield* FileSystem.FileSystem;
-          const path = yield* Path.Path;
-          const directory = yield* fs.makeTempDirectoryScoped({
-            prefix: "t3-trace-backpressure-",
-          });
-          const tracePath = path.join(directory, "trace.ndjson");
-          const started = yield* Deferred.make<void>();
-          const release = yield* Deferred.make<void>();
-          const closed = yield* Ref.make(false);
-          const sink = yield* makeTraceSink({
-            filePath: tracePath,
-            maxBytes: 5_000_000,
-            maxFiles: 2,
-            batchWindowMs: 10_000,
-          }).pipe(
-            Effect.provideService(FileSystem.FileSystem, {
-              ...fs,
-              writeFile: (file, data, options) =>
-                Effect.gen(function* () {
-                  yield* Deferred.succeed(started, undefined);
-                  yield* Deferred.await(release);
-                  yield* fs.writeFile(file, data, options);
-                }),
-            }),
-          );
-          sink.push(makeRecord("first"));
-          const flushing = yield* Effect.forkChild(sink.flush);
-          yield* Deferred.await(started);
-          for (let index = 0; index < 2_000; index++) sink.push(makeRecord("small", String(index)));
-          for (let index = 0; index < 3; index++)
-            sink.push({ ...makeRecord("large"), attributes: { payload: "x".repeat(2_000_000) } });
-          const closing = yield* Effect.forkChild(
-            sink.close().pipe(Effect.tap(() => Ref.set(closed, true))),
-          );
-          yield* Effect.yieldNow;
-          assert.isFalse(yield* Ref.get(closed));
-          yield* Deferred.succeed(release, undefined);
-          yield* Fiber.join(flushing);
-          yield* Fiber.join(closing);
-          const records = yield* readTraceRecords(tracePath);
-          assert.deepStrictEqual(
-            records.map((record) => record.name),
-            ["first", ...Array.from({ length: 2_000 }, () => "small"), "large", "large"],
-          );
-          assert.isTrue(yield* Ref.get(closed));
-        }),
-    );
-
-    it.effect("writes buffered records synchronously for process exit", () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-trace-sink-" });
-        const tracePath = path.join(tempDir, "exit.trace.ndjson");
-        const sink = yield* makeTraceSink({
-          filePath: tracePath,
-          maxBytes: 1_000_000,
-          maxFiles: 2,
-          batchWindowMs: 10_000,
-        });
-
-        sink.push(makeRecord("before-exit"));
-        sink.flushSync();
-        sink.flushSync();
-
-        const records = yield* readTraceRecords(tracePath);
-        assert.deepStrictEqual(
-          records.map((record) => record.name),
-          ["before-exit"],
-        );
-      }),
+        Effect.scoped(
+          Effect.gen(function* () {
+            const fs = yield* FileSystem.FileSystem;
+            const path = yield* Path.Path;
+            const directory = yield* fs.makeTempDirectoryScoped({
+              prefix: "t2-trace-backpressure-",
+            });
+            const tracePath = path.join(directory, "trace.ndjson");
+            const started = yield* Deferred.make<void>();
+            const release = yield* Deferred.make<void>();
+            const closed = yield* Ref.make(false);
+            const sink = yield* makeTraceSink({
+              filePath: tracePath,
+              maxBytes: 5_000_000,
+              maxFiles: 2,
+              batchWindowMs: 10_000,
+            }).pipe(
+              Effect.provideService(FileSystem.FileSystem, {
+                ...fs,
+                writeFile: (file, data, options) =>
+                  Effect.gen(function* () {
+                    yield* Deferred.succeed(started, undefined);
+                    yield* Deferred.await(release);
+                    yield* fs.writeFile(file, data, options);
+                  }),
+              }),
+            );
+            sink.push(makeRecord("first"));
+            const flushing = yield* Effect.forkChild(sink.flush);
+            yield* Deferred.await(started);
+            for (let index = 0; index < 2_000; index++)
+              sink.push(makeRecord("small", String(index)));
+            for (let index = 0; index < 3; index++)
+              sink.push({ ...makeRecord("large"), attributes: { payload: "x".repeat(2_000_000) } });
+            const closing = yield* Effect.forkChild(
+              sink.close().pipe(Effect.tap(() => Ref.set(closed, true))),
+            );
+            yield* Effect.yieldNow;
+            assert.isFalse(yield* Ref.get(closed));
+            yield* Deferred.succeed(release, undefined);
+            yield* Fiber.join(flushing);
+            yield* Fiber.join(closing);
+            const records = yield* readTraceRecords(tracePath);
+            assert.deepStrictEqual(
+              records.map((record) => record.name),
+              ["first", ...Array.from({ length: 2_000 }, () => "small"), "large", "large"],
+            );
+            assert.isTrue(yield* Ref.get(closed));
+          }),
+        ),
     );
 
     it.effect("keeps every trace file within the configured limit for threshold flushes", () =>

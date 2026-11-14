@@ -1443,12 +1443,13 @@ export const CODEX_THREAD_CONFIG = {
   "features.concurrent_reasoning_summaries": true,
 } as const;
 
-// T3 waits can block for an hour; keep Codex's MCP timeout above that.
-const CODEX_T3_MCP_TOOL_TIMEOUT_SEC = 65 * 60;
-// Holds T3 tools Codex must call directly, never from Code Mode. Calls arrive as
-// `t3-code-direct.<tool>`; t2McpToolPresentation.ts must keep resolving that form.
-const CODEX_T3_DIRECT_MCP_SERVER = "t3-code-direct";
-const CODEX_DIRECT_ONLY_T3_TOOL = "t2_thread_wait";
+// T2 wait tools can block for up to an hour. Keep Codex's MCP timeout above
+// that limit so the server's own wait timeout ends a long call.
+const CODEX_T2_MCP_TOOL_TIMEOUT_SEC = 65 * 60;
+// Holds T2 tools Codex must call directly, never from Code Mode. Calls arrive as
+// `t2-code-direct.<tool>`; t2McpToolPresentation.ts must keep resolving that form.
+const CODEX_T2_DIRECT_MCP_SERVER = "t2-code-direct";
+const CODEX_DIRECT_ONLY_T2_TOOL = "t2_thread_wait";
 
 function codexThreadRuntimeParams(input: {
   readonly threadId: ThreadId | null;

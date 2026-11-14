@@ -66,7 +66,7 @@ const withFakeSystemd = <A, E>(
   } = {},
 ) =>
   Effect.gen(function* () {
-    const bin = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-agent-scope-"));
+    const bin = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-agent-scope-"));
     for (const name of ["systemd-run", "systemctl", "agent"]) {
       NodeFS.writeFileSync(NodePath.join(bin, name), "", { mode: 0o755 });
     }
@@ -133,7 +133,7 @@ const withFakeSystemd = <A, E>(
   }).pipe(
     Effect.scoped,
     Effect.provide(
-      ServerConfig.layerTest(process.cwd(), { prefix: "t3-agent-scope-" }).pipe(
+      ServerConfig.layerTest(process.cwd(), { prefix: "t2-agent-scope-" }).pipe(
         Layer.provideMerge(NodeServices.layer),
       ),
     ),
@@ -320,24 +320,24 @@ describe("AgentScope service", () => {
     ),
   );
 
-  it.effect("stops agents a killed server left before startup completes", () =>
-    withFakeSystemd(
-      ({ scope, calls, stateDir }) =>
-        Effect.gen(function* () {
-          expect(stopsOf(calls)).toEqual([["--user", "stop", ownedAgentSlice(stateDir)]]);
-          const agent = yield* scope.wrap({ command: "agent", args: [], name: "t", threadId: "a" });
-          expect(sliceOf(agent)).toBe(ownedAgentSlice(stateDir));
-          expect(agent.args).toContain("--property=TimeoutStopSec=10s");
-          const terminal = yield* scope.wrap({
-            command: "agent",
-            args: [],
-            name: "terminal",
-            survivesRestart: true,
-          });
-          expect(sliceOf(terminal)).toBe("app-t3code-agents.slice");
-          expect(stopsOf(calls)).toHaveLength(1);
-        }),
-      { leftovers: true },
+  it.effect("stops agents a killed server left before the first launch", () =>
+    withFakeSystemd(({ scope, units, calls, stateDir }) =>
+      Effect.gen(function* () {
+        units.set(ownedAgentSlice(stateDir), { activeState: "active", result: "success" });
+        const agent = yield* scope.wrap({ command: "agent", args: [], name: "t", threadId: "a" });
+        const stops = calls.filter(([, verb]) => verb === "stop");
+        expect(stops).toEqual([["--user", "stop", ownedAgentSlice(stateDir)]]);
+        expect(sliceOf(agent)).toBe(ownedAgentSlice(stateDir));
+        expect(agent.args).toContain("--property=TimeoutStopSec=10s");
+        const terminal = yield* scope.wrap({
+          command: "agent",
+          args: [],
+          name: "terminal",
+          survivesRestart: true,
+        });
+        expect(sliceOf(terminal)).toBe("app-t2code-agents.slice");
+        expect(calls.filter(([, verb]) => verb === "stop")).toHaveLength(1);
+      }),
     ),
   );
 

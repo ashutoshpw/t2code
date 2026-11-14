@@ -31,19 +31,19 @@ describe("mergeLegacyLocalStorage", () => {
   it("copies V1 keys into an empty profile, except the per-install client id", () => {
     const storage = memoryStorage();
     mergeLegacyLocalStorage(storage, {
-      "t3code:theme": "dark",
+      "t2code:theme": "dark",
       "t3code:prompt-stash:v2": stash("a"),
       "t3.backgroundActivity.clientId": "v1-client",
     });
-    assert.equal(storage.getItem("t3code:theme"), "dark");
+    assert.equal(storage.getItem("t2code:theme"), "dark");
     assert.equal(storage.getItem("t3code:prompt-stash:v2"), stash("a"));
     assert.equal(storage.getItem("t3.backgroundActivity.clientId"), null);
   });
 
   it("keeps V2 values for plain keys", () => {
-    const storage = memoryStorage({ "t3code:theme": "light" });
-    mergeLegacyLocalStorage(storage, { "t3code:theme": "dark" });
-    assert.equal(storage.getItem("t3code:theme"), "light");
+    const storage = memoryStorage({ "t2code:theme": "light" });
+    mergeLegacyLocalStorage(storage, { "t2code:theme": "dark" });
+    assert.equal(storage.getItem("t2code:theme"), "light");
   });
 
   it("appends V1 stash entries after V2's without duplicating ids", () => {
@@ -89,14 +89,14 @@ describe("mergeLegacyLocalStorage", () => {
     const storage = memoryStorage();
     const setItem = storage.setItem;
     storage.setItem = (key, value) => {
-      if (key === "t3code:theme") throw new DOMException("full", "QuotaExceededError");
+      if (key === "t2code:theme") throw new DOMException("full", "QuotaExceededError");
       setItem(key, value);
     };
     const complete = mergeLegacyLocalStorage(storage, {
-      "t3code:theme": "dark",
-      "t3code:last-editor": "zed",
+      "t2code:theme": "dark",
+      "t2code:last-editor": "zed",
     });
-    assert.equal(storage.getItem("t3code:last-editor"), "zed");
+    assert.equal(storage.getItem("t2code:last-editor"), "zed");
     assert.isFalse(complete);
   });
 });
