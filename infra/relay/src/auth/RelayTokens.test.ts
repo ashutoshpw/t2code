@@ -96,7 +96,7 @@ describe("RelayTokens", () => {
         jti: "access-token-1",
         issuedAtEpochSeconds: 100,
         expiresAtEpochSeconds: 1_900,
-        clientId: "t3-mobile",
+        clientId: "t2-mobile",
         scopes: ["environment:connect", "environment:status", "mobile:registration"],
       });
 
@@ -104,7 +104,7 @@ describe("RelayTokens", () => {
       expect(yield* relayTokens.verifyDpopAccessToken({ token })).toMatchObject({
         sub: "user_123",
         cnf: { jkt: "proof-key-thumbprint" },
-        client_id: "t3-mobile",
+        client_id: "t2-mobile",
         scope: ["environment:connect", "environment:status", "mobile:registration"],
       });
       yield* TestClock.setTime(1_961_000);
@@ -121,13 +121,13 @@ describe("RelayTokens", () => {
         jti: "web-access-token-1",
         issuedAtEpochSeconds: 100,
         expiresAtEpochSeconds: 200,
-        clientId: "t3-web",
+        clientId: "t2-web",
         scopes: ["environment:connect", "environment:status"],
       });
 
       yield* TestClock.setTime(150_000);
       expect(yield* relayTokens.verifyDpopAccessToken({ token })).toMatchObject({
-        client_id: "t3-web",
+        client_id: "t2-web",
         scope: ["environment:connect", "environment:status"],
         cnf: { jkt: "web-proof-key-thumbprint" },
       });
@@ -147,7 +147,7 @@ describe("RelayTokens", () => {
           jti: "access-token-invalid-scope",
           iat: 100,
           exp: 200,
-          client_id: "t3-mobile",
+          client_id: "t2-mobile",
           scope: "environment:admin",
           cnf: { jkt: "proof-key-thumbprint" },
         },
@@ -171,7 +171,7 @@ describe("RelayTokens", () => {
           jti: "web-token-invalid-mobile-scope",
           iat: 100,
           exp: 200,
-          client_id: "t3-web",
+          client_id: "t2-web",
           scope: "environment:connect mobile:registration",
           cnf: { jkt: "proof-key-thumbprint" },
         },

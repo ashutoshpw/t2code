@@ -647,7 +647,7 @@ function makeManager(input?: {
   );
   const textGeneration = createTextGeneration(input?.textGeneration);
   const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-    prefix: "t3-git-manager-test-",
+    prefix: "t2-git-manager-test-",
   });
 
   const layerServerSettings = ServerSettings.ServerSettingsService.layerTest(input?.serverSettings);
@@ -769,7 +769,7 @@ const asThreadId = (threadId: string) => threadId as ThreadId;
 
 const layerGitManagerTest = layerGitFixtureTemplates.pipe(
   Layer.provideMerge(GitVcsDriver.layer),
-  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-git-manager-test-" })),
+  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-git-manager-test-" })),
   Layer.provideMerge(VcsProcess.layer),
   Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
 );

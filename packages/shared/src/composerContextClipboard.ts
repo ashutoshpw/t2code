@@ -35,14 +35,9 @@ export function decodeComposerContextClipboardHtml(
 ): ComposerContextClipboardFragment | null {
   // Percent encoding can expand each UTF-16 code unit to nine characters.
   if (!html || html.length > MAX_FRAGMENT_CHARS * 9 + HTML_WRAPPER_SLACK_CHARS) return null;
-  // Clipboard HTML from pre-rename builds carries the old data-t3-context-fragment
-  // attribute; both spellings are accepted on read.
   // `encodeURIComponent` leaves `'` as is, so each quote style must end only at its own quote.
-  const match =
-    /data-t2-context-fragment=(?:"([^"]+)"|'([^']+)')/.exec(html) ??
-    /data-t3-context-fragment=(?:"([^"]+)"|'([^']+)')/.exec(html);
-  const encoded = match?.[1] ?? match?.[2];
-  if (!encoded) return null;
+  const match = /data-t2-context-fragment=(?:"([^"]+)"|'([^']+)')/.exec(html);
+  const encoded = match?.[1] ?? match?.[2];  if (!encoded) return null;
   try {
     return decodeComposerContextFragment(decodeURIComponent(encoded));
   } catch {

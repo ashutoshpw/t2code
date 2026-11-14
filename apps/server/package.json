@@ -9,8 +9,7 @@
   },
   "bin": {
     "t2": "dist/bin.mjs",
-    "t2code": "dist/bin.mjs",
-    "t3": "dist/bin.mjs"
+    "t2code": "dist/bin.mjs"
   },
   "files": [
     "dist"

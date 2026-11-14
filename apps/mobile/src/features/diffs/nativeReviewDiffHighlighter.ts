@@ -32,6 +32,272 @@ export interface NativeReviewDiffHighlightChunk {
 
 const NATIVE_REVIEW_DIFF_VISIBLE_OVERSCAN_ROWS = 160;
 const NATIVE_REVIEW_DIFF_VISIBLE_MAX_ROWS = 360;
+const NATIVE_REVIEW_DIFF_TOKENIZE_MAX_LINE_LENGTH = 1_000;
+const NATIVE_REVIEW_DIFF_TOKENIZE_MAX_CHARACTERS = 8_000;
+
+const NATIVE_REVIEW_DIFF_THEME_NAME_BY_SCHEME = {
+  dark: "t2-pierre-dark",
+  light: "t2-pierre-light",
+} as const;
+
+const PIERRE_LIGHT_SHIKI_THEME = {
+  name: NATIVE_REVIEW_DIFF_THEME_NAME_BY_SCHEME.light,
+  type: "light" as const,
+  fg: "#070707",
+  bg: "#ffffff",
+  settings: [
+    { settings: { foreground: "#070707", background: "#ffffff" } },
+    { scope: "comment, punctuation.definition.comment", settings: { foreground: "#84848A" } },
+    {
+      scope: "keyword, storage, storage.type, keyword.operator.expression",
+      settings: { foreground: "#FC2B73" },
+    },
+    {
+      scope: "entity.name.function, support.function, meta.function-call",
+      settings: { foreground: "#7B43F8" },
+    },
+    {
+      scope: "entity.name.type, support.type, support.class",
+      settings: { foreground: "#C635E4" },
+    },
+    {
+      scope: "string, constant.character, punctuation.definition.string",
+      settings: { foreground: "#199F43" },
+    },
+    {
+      scope: "constant.numeric, constant.language, constant.other",
+      settings: { foreground: "#1CA1C7" },
+    },
+    {
+      scope: "variable.parameter, variable.other.readwrite, meta.object-literal.key",
+      settings: { foreground: "#D47628" },
+    },
+    {
+      scope: "entity.name.tag, support.class.component",
+      settings: { foreground: "#199F43" },
+    },
+    {
+      scope: "punctuation, meta.brace, meta.delimiter",
+      settings: { foreground: "#79797F" },
+    },
+    { scope: "invalid", settings: { foreground: "#D52C36" } },
+  ],
+};
+
+const PIERRE_DARK_SHIKI_THEME = {
+  name: NATIVE_REVIEW_DIFF_THEME_NAME_BY_SCHEME.dark,
+  type: "dark" as const,
+  fg: "#adadb1",
+  bg: "#0a0a0a",
+  settings: [
+    { settings: { foreground: "#adadb1", background: "#0a0a0a" } },
+    { scope: "comment, punctuation.definition.comment", settings: { foreground: "#84848A" } },
+    {
+      scope: "keyword, storage, storage.type, keyword.operator.expression",
+      settings: { foreground: "#FF678D" },
+    },
+    {
+      scope: "entity.name.function, support.function, meta.function-call",
+      settings: { foreground: "#9D6AFB" },
+    },
+    {
+      scope: "entity.name.type, support.type, support.class",
+      settings: { foreground: "#D568EA" },
+    },
+    {
+      scope: "string, constant.character, punctuation.definition.string",
+      settings: { foreground: "#5ECC71" },
+    },
+    {
+      scope: "constant.numeric, constant.language, constant.other",
+      settings: { foreground: "#68CDF2" },
+    },
+    {
+      scope: "variable.parameter, variable.other.readwrite, meta.object-literal.key",
+      settings: { foreground: "#FFA359" },
+    },
+    {
+      scope: "entity.name.tag, support.class.component",
+      settings: { foreground: "#5ECC71" },
+    },
+    {
+      scope: "punctuation, meta.brace, meta.delimiter",
+      settings: { foreground: "#79797F" },
+    },
+    { scope: "invalid", settings: { foreground: "#FF6762" } },
+  ],
+};
+
+const NATIVE_REVIEW_DIFF_SHIKI_THEMES = [
+  PIERRE_LIGHT_SHIKI_THEME,
+  PIERRE_DARK_SHIKI_THEME,
+] satisfies Parameters<typeof createHighlighterCore>[0]["themes"];
+
+const NATIVE_REVIEW_DIFF_LANGUAGES = [
+  bashLanguage,
+  diffLanguage,
+  javascriptLanguage,
+  jsonLanguage,
+  jsxLanguage,
+  tsxLanguage,
+  typescriptLanguage,
+  yamlLanguage,
+] satisfies Parameters<typeof createHighlighterCore>[0]["langs"];
+
+let nativeHighlighterPromise: Promise<NativeReviewDiffHighlighterHandle> | null = null;
+let javascriptHighlighterPromise: Promise<NativeReviewDiffHighlighterHandle> | null = null;
+
+function waitForNextFrame(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function normalizeTokens(
+  tokenLines: ReadonlyArray<ReadonlyArray<{ content: string; color?: string; fontStyle?: number }>>,
+): ReadonlyArray<ReadonlyArray<NativeReviewDiffToken>> {
+  return tokenLines.map((line) =>
+    line.map((token) => ({
+      content: token.content,
+      color: token.color ?? null,
+      fontStyle: token.fontStyle ?? null,
+    })),
+  );
+}
+
+function createHighlighterHandle(
+  highlighter: HighlighterCore,
+  engine: NativeReviewDiffHighlightEngine,
+): NativeReviewDiffHighlighterHandle {
+  return {
+    engine,
+    async tokenize(code, { lang, theme, signal }) {
+      const lines = code.split("\n");
+      const highlighted: Array<ReadonlyArray<NativeReviewDiffToken>> = [];
+      let grammarState: GrammarState | undefined;
+      let start = 0;
+
+      while (start < lines.length) {
+        if (signal?.aborted) return [];
+
+        // Skipping this line leaves its ending grammar state unknown. Resume
+        // from a fresh state rather than leaving the rest of the segment plain:
+        // highlighted rows are cached for the sheet's lifetime, so a plain tail
+        // would stick, and which rows it covered would depend on where the
+        // first visible window happened to start.
+        if (lines[start]!.length > NATIVE_REVIEW_DIFF_TOKENIZE_MAX_LINE_LENGTH) {
+          highlighted.push([{ content: lines[start] || " ", color: null, fontStyle: null }]);
+          grammarState = undefined;
+          start += 1;
+          continue;
+        }
+
+        let end = start;
+        let characters = 0;
+        while (end < lines.length) {
+          const length = lines[end]!.length;
+          const nextCharacters = characters + length + (end > start ? 1 : 0);
+          if (
+            length > NATIVE_REVIEW_DIFF_TOKENIZE_MAX_LINE_LENGTH ||
+            nextCharacters > NATIVE_REVIEW_DIFF_TOKENIZE_MAX_CHARACTERS
+          ) {
+            break;
+          }
+          characters = nextCharacters;
+          end += 1;
+        }
+
+        const tokens = highlighter.codeToTokensBase(lines.slice(start, end).join("\n"), {
+          lang,
+          theme,
+          grammarState,
+        });
+        grammarState = highlighter.getLastGrammarState(tokens);
+        highlighted.push(...normalizeTokens(tokens));
+        start = end;
+        if (start < lines.length) await waitForNextFrame();
+      }
+
+      return signal?.aborted ? [] : highlighted;
+    },
+  };
+}
+
+async function createNativeReviewDiffHighlighter(): Promise<NativeReviewDiffHighlighterHandle> {
+  const nativeEngineModule = await import("react-native-shiki-engine");
+  if (!nativeEngineModule.isNativeEngineAvailable()) {
+    throw new NativeReviewDiffHighlighterUnavailableError();
+  }
+
+  const highlighter = await createHighlighterCore({
+    langs: NATIVE_REVIEW_DIFF_LANGUAGES,
+    themes: NATIVE_REVIEW_DIFF_SHIKI_THEMES,
+    engine: nativeEngineModule.createNativeEngine(),
+  });
+
+  return createHighlighterHandle(highlighter, "native");
+}
+
+async function createJavascriptReviewDiffHighlighter(): Promise<NativeReviewDiffHighlighterHandle> {
+  const highlighter: HighlighterCore = await createHighlighterCore({
+    langs: NATIVE_REVIEW_DIFF_LANGUAGES,
+    themes: NATIVE_REVIEW_DIFF_SHIKI_THEMES,
+    engine: createJavaScriptRegexEngine(),
+  });
+
+  return createHighlighterHandle(highlighter, "javascript");
+}
+
+export async function getNativeReviewDiffHighlighter(
+  engine: NativeReviewDiffHighlightEngine = "native",
+): Promise<NativeReviewDiffHighlighterHandle> {
+  if (engine === "javascript") {
+    try {
+      javascriptHighlighterPromise ??= createJavascriptReviewDiffHighlighter();
+      return await javascriptHighlighterPromise;
+    } catch (cause) {
+      javascriptHighlighterPromise = null;
+      throw new NativeReviewDiffHighlighterInitializationError({
+        requestedEngine: engine,
+        attemptedEngine: "javascript",
+        cause,
+      });
+    }
+  }
+
+  nativeHighlighterPromise ??= createNativeReviewDiffHighlighter()
+    .catch(async (cause: unknown) => {
+      const nativeError = isNativeReviewDiffHighlighterUnavailableError(cause)
+        ? cause
+        : new NativeReviewDiffHighlighterInitializationError({
+            requestedEngine: engine,
+            attemptedEngine: "native",
+            cause,
+          });
+      console.warn("[debug-native-diff] native highlighter unavailable", {
+        error: nativeError,
+      });
+      try {
+        javascriptHighlighterPromise ??= createJavascriptReviewDiffHighlighter();
+        return await javascriptHighlighterPromise;
+      } catch (fallbackCause) {
+        javascriptHighlighterPromise = null;
+        throw new NativeReviewDiffHighlighterInitializationError({
+          requestedEngine: engine,
+          attemptedEngine: "javascript",
+          cause: new AggregateError(
+            [nativeError, fallbackCause],
+            "Native and JavaScript review diff highlighter initialization failed.",
+            { cause: nativeError },
+          ),
+        });
+      }
+    })
+    .catch((error) => {
+      nativeHighlighterPromise = null;
+      throw error;
+    });
+  return await nativeHighlighterPromise;
+}
+
 function isHighlightableLineRow(row: NativeReviewDiffRow): row is NativeReviewDiffLineRow {
   return row.kind === "line" && typeof row.fileId === "string" && typeof row.content === "string";
 }

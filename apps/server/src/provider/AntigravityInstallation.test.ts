@@ -143,7 +143,7 @@ const makeHarness = Effect.fn("test.makeAntigravityInstallation")(function* (
   const path = yield* Path.Path;
   const digest = yield* Digest.Digest;
   const baseDir =
-    options.baseDir ?? (yield* fs.makeTempDirectoryScoped({ prefix: "t3-agy-test-" }));
+    options.baseDir ?? (yield* fs.makeTempDirectoryScoped({ prefix: "t2-agy-test-" }));
   const platform = options.platform ?? hostPlatform;
   const arch = options.arch ?? "x64";
   const archive = options.archive ?? completeArchive;
