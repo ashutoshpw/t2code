@@ -36,7 +36,7 @@ import { useRowCells } from "./useRowCells";
 
 const VIEWER_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const NO_OPEN_CONTROL = [null, () => {}] as const;
-const NO_BLOCK = { setViews: () => false, remove: () => false };
+const NO_BLOCK = { setViews: () => false, remove: () => false, setTitleHidden: () => false };
 const ROW_VIEW_ID = SpaceViewId.make("row-page");
 const ROW_BLOCK_ID = SpaceBlockId.make("row-page");
 

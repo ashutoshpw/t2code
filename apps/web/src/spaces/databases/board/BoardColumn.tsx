@@ -7,7 +7,11 @@ import type { SpaceGroupBucket, SpaceGroupKey, SpacePageId } from "@t2code/contr
 
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
 import { cn } from "~/lib/utils";
-import { OPTION_COLOR_CLASS, isDatabaseColor } from "../primitives/colors";
+import {
+  OPTION_COLUMN_CLASS,
+  OPTION_COLUMN_TEXT_CLASS,
+  isDatabaseColor,
+} from "../primitives/colors";
 import { OptionChip } from "../primitives/OptionChip";
 import { BoardCard, sameLines, type CardLine } from "./BoardCard";
 import type { SpaceRelatedPage } from "@t2code/contracts/spaces";
@@ -53,7 +57,7 @@ export interface BoardColumnProps {
 }
 
 const BUTTON =
-  "inline-flex items-center justify-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50";
+  "inline-flex items-center justify-center gap-1 rounded-sm text-xs outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50";
 
 function ColumnLabel({
   text,
@@ -111,10 +115,13 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
     data: { type: "column", key: bucket.key, labelText, labelColor },
     disabled: !props.canMove,
   });
-  const tinted =
-    props.tint && labelColor !== undefined && isDatabaseColor(labelColor)
-      ? OPTION_COLOR_CLASS[labelColor]
-      : "bg-muted/40";
+  const tintColor =
+    props.tint && labelColor !== undefined && isDatabaseColor(labelColor) ? labelColor : undefined;
+  const tinted = tintColor === undefined ? "bg-muted/40" : OPTION_COLUMN_CLASS[tintColor];
+  const muted = cn(
+    tintColor === undefined ? "text-muted-foreground" : OPTION_COLUMN_TEXT_CLASS[tintColor],
+    tintColor === undefined ? "hover:bg-accent" : "hover:bg-foreground/5",
+  );
   return (
     <section
       ref={setNodeRef}
@@ -146,9 +153,9 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
           >
             <ColumnLabel text={labelText} color={labelColor} />
           </div>
-          <span className="text-xs text-muted-foreground">{bucket.count}</span>
+          <span className={cn("text-xs", muted)}>{bucket.count}</span>
           {props.headerAggregates === "" ? null : (
-            <span className="truncate text-xs text-muted-foreground">{props.headerAggregates}</span>
+            <span className={cn("truncate text-xs", muted)}>{props.headerAggregates}</span>
           )}
           <span className="ms-auto flex items-center gap-0.5">
             {props.canAdd ? (
@@ -156,7 +163,7 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
                 type="button"
                 aria-label={`Add a card to ${labelText}`}
                 disabled={props.adding}
-                className={cn(BUTTON, "size-6")}
+                className={cn(BUTTON, muted, "size-6")}
                 onClick={() => handlers.addCard(bucket.key, props.lane)}
               >
                 <PlusIcon className="size-3.5" />
@@ -169,7 +176,7 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
                     <button
                       type="button"
                       aria-label={`${labelText} options`}
-                      className={cn(BUTTON, "size-6")}
+                      className={cn(BUTTON, muted, "size-6")}
                     />
                   }
                 >
@@ -216,7 +223,7 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
           <button
             type="button"
             disabled={props.loadingMore}
-            className={cn(BUTTON, "h-7 w-full")}
+            className={cn(BUTTON, muted, "h-7 w-full")}
             onClick={() => handlers.loadBucket(bucket.key, props.lane)}
           >
             {props.loadingMore ? "Loading…" : "Load more"}
@@ -226,11 +233,11 @@ export const BoardColumn = memo(function BoardColumn(props: BoardColumnProps) {
           <button
             type="button"
             disabled={props.adding}
-            className={cn(BUTTON, "h-7 w-full justify-start px-1.5")}
+            className={cn(BUTTON, muted, "h-7 w-full justify-start px-1.5")}
             onClick={() => handlers.addCard(bucket.key, props.lane)}
           >
             <PlusIcon className="size-3.5" />
-            New
+            New page
           </button>
         ) : null}
       </div>

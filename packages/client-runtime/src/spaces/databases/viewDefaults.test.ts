@@ -55,7 +55,7 @@ describe("view defaults", () => {
     expect(defaultViewDraft("table", withDates)).toEqual({ name: "Table", layout: {} });
     expect(defaultViewDraft("board", withDates)).toEqual({
       name: "Board",
-      layout: {},
+      layout: { colorColumns: true },
       group: { property: "state" },
     });
     expect(defaultViewDraft("calendar", withDates).layout).toEqual({ datePropertyId: "due" });
@@ -85,6 +85,16 @@ describe("view defaults", () => {
     expect(layoutForTypeChange("calendar", noDates, previous, pid("fresh"))).toEqual({
       openPagesIn: "full_page",
       datePropertyId: "fresh",
+    });
+  });
+
+  it("tints a board converted from a type that never stored the flag, never one that did", () => {
+    expect(layoutForTypeChange("board", withDates, { cardSize: "large" })).toEqual({
+      cardSize: "large",
+      colorColumns: true,
+    });
+    expect(layoutForTypeChange("board", withDates, { colorColumns: false })).toEqual({
+      colorColumns: false,
     });
   });
 

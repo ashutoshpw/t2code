@@ -6,10 +6,12 @@ import {
   knownView,
   layoutForTypeChange,
   needsDateProperty,
+  nextOptionColor,
   templateForNewRow,
   type ViewPatch,
 } from "@t2code/client-runtime/spaces";
 import {
+  SPACE_TITLE_PROPERTY_ID,
   SpaceOptionId,
   SpacePropertyId,
   type SpaceCellValue,
@@ -30,8 +32,7 @@ import type { AtomRegistry } from "effect/reactivity";
 import { toastManager } from "../../../components/ui/toast";
 import { randomUUID } from "../../../lib/utils";
 import type { DatabaseBlockActions } from "../blocks/actions";
-import type { DatabaseBlockHost } from "../blocks/DatabaseBlockHost";
-import { nextOptionColor } from "../primitives/colors";
+import type { DatabaseSurfaceHost } from "../blocks/DatabaseBlockHost";
 import { databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { databasePorts } from "./ports";
 import { databaseStores } from "./stores";
@@ -84,12 +85,15 @@ export interface DatabaseActions {
   ): Promise<SpaceOptionId | null>;
   editView(patch: ViewPatch): void;
   createView(type: SpaceViewType, dataSourceId?: SpaceDataSourceId): Promise<void>;
+  /** A new data source with one table view on it, which becomes the active tab. */
+  createDataSource(): Promise<void>;
   duplicateView(viewId: SpaceViewId): Promise<void>;
   renameView(viewId: SpaceViewId, name: string): void;
   changeViewType(viewId: SpaceViewId, type: SpaceViewType): Promise<void>;
   deleteView(viewId: SpaceViewId): Promise<void>;
   reorderViews(viewIds: ReadonlyArray<SpaceViewId>): void;
   renameDatabase(title: string): void;
+  setDatabaseIcon(icon: string | null): void;
   openRow(pageId: SpacePageId, mode?: RowOpenMode): void;
 }
 
@@ -101,7 +105,7 @@ export interface ActionsState {
   readonly view: SpaceDatabaseView;
   readonly viewIds: ReadonlyArray<SpaceViewId>;
   readonly block: DatabaseBlockActions;
-  readonly host: DatabaseBlockHost | null;
+  readonly host: DatabaseSurfaceHost | null;
   readonly peek: ((pageId: SpacePageId) => void) | null;
 }
 
@@ -163,6 +167,14 @@ export function createDatabaseActions(deps: ActionsDeps): DatabaseActions {
       dataSource.id,
     );
     return added === null ? null : id;
+  };
+
+  /** Puts a new view's tab on the block (or leaves it to the server on the full page) and opens it. */
+  const placeView = (viewId: SpaceViewId, failure: string) => {
+    const { viewIds, block } = deps.state();
+    if (block.remote === undefined && !block.setViews([...viewIds, viewId]))
+      toastManager.add({ type: "error", title: failure });
+    deps.activate(viewId);
   };
 
   const actions: DatabaseActions = {
@@ -424,7 +436,7 @@ export function createDatabaseActions(deps: ActionsDeps): DatabaseActions {
     editView: (patch) => sendViewEdit(deps.state().view.id, patch),
     createView: async (type, dataSourceId) => {
       const state = deps.state();
-      const { model, viewIds, block } = state;
+      const { model, block } = state;
       const dataSource =
         model.dataSources.find((source) => source.id === dataSourceId) ?? state.dataSource;
       try {
@@ -444,12 +456,35 @@ export function createDatabaseActions(deps: ActionsDeps): DatabaseActions {
               : [...properties, { propertyId: dateId, visible: true }],
           layout: draft.layout,
           ...(draft.group === undefined ? {} : { group: draft.group }),
+          ...(block.remote === undefined ? {} : { block: block.remote }),
         });
-        if (!block.setViews([...viewIds, result.viewId]))
-          toastManager.add({ type: "error", title: "Couldn't add the view to this page" });
-        deps.activate(result.viewId);
+        placeView(result.viewId, "Couldn't add the view to this page");
       } catch (failure) {
         fail("Couldn't add the view", failure);
+      }
+    },
+    createDataSource: async () => {
+      const { model, block } = deps.state();
+      try {
+        const source = await databasePorts.run.createDataSource(registry, model.environmentId, {
+          databaseId: model.database.id,
+          name: `Data source ${model.dataSources.length + 1}`,
+        });
+        // The model has not refetched the new source yet, so the view is not drafted from it.
+        const result = await databasePorts.run.createView(registry, model.environmentId, {
+          dataSourceId: source.dataSourceId,
+          name: "Table",
+          type: "table",
+          properties: [
+            { propertyId: SpacePropertyId.make(SPACE_TITLE_PROPERTY_ID), visible: true },
+          ],
+          layout: {},
+          beforeViewId: null,
+          ...(block.remote === undefined ? {} : { block: block.remote }),
+        });
+        placeView(result.viewId, "Couldn't add the view to this page");
+      } catch (failure) {
+        fail("Couldn't add the data source", failure);
       }
     },
     duplicateView: async (viewId) => {
@@ -472,11 +507,14 @@ export function createDatabaseActions(deps: ActionsDeps): DatabaseActions {
           properties: known.properties,
           layout: known.layout,
           beforeViewId: null,
+          ...(block.remote === undefined ? {} : { block: block.remote }),
         });
-        const at = viewIds.indexOf(viewId);
-        const next = [...viewIds];
-        next.splice(at < 0 ? next.length : at + 1, 0, result.viewId);
-        block.setViews(next);
+        if (block.remote === undefined) {
+          const at = viewIds.indexOf(viewId);
+          const next = [...viewIds];
+          next.splice(at < 0 ? next.length : at + 1, 0, result.viewId);
+          block.setViews(next);
+        }
         deps.activate(result.viewId);
       } catch (failure) {
         fail("Couldn't duplicate the view", failure);
@@ -503,9 +541,12 @@ export function createDatabaseActions(deps: ActionsDeps): DatabaseActions {
     deleteView: async (viewId) => {
       const { model, viewIds, block } = deps.state();
       try {
-        await databasePorts.run.deleteView(registry, model.environmentId, { viewId });
+        await databasePorts.run.deleteView(registry, model.environmentId, {
+          viewId,
+          ...(block.remote === undefined ? {} : { block: block.remote }),
+        });
         const next = viewIds.filter((id) => id !== viewId);
-        block.setViews(next);
+        if (block.remote === undefined) block.setViews(next);
         const fallback = next[Math.max(0, viewIds.indexOf(viewId) - 1)];
         if (fallback !== undefined) deps.activate(fallback);
       } catch (failure) {
@@ -513,13 +554,20 @@ export function createDatabaseActions(deps: ActionsDeps): DatabaseActions {
       }
     },
     reorderViews: (viewIds) => {
-      deps.state().block.setViews(viewIds);
+      const { block } = deps.state();
+      if (block.remote === undefined) block.setViews(viewIds);
     },
     renameDatabase: (title) => {
       const { model } = deps.state();
       void databasePorts.run
         .update(registry, model.environmentId, { databaseId: model.database.id, title })
         .catch((failure: unknown) => fail("Couldn't rename the database", failure));
+    },
+    setDatabaseIcon: (icon) => {
+      const { model } = deps.state();
+      void databasePorts.run
+        .update(registry, model.environmentId, { databaseId: model.database.id, icon })
+        .catch((failure: unknown) => fail("Couldn't change the icon", failure));
     },
     openRow: (pageId, mode) => {
       const { view, host, peek, model } = deps.state();

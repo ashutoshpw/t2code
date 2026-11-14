@@ -69,7 +69,10 @@ export function defaultViewDraft(
   const groupId = type === "board" ? firstOfType(dataSource, "status", "select") : undefined;
   return {
     name: VIEW_TYPE_NAMES[type],
-    layout: requiredLayout(type, dateId ?? datePropertyCandidates(dataSource)[0]?.id),
+    layout: {
+      ...(type === "board" ? { colorColumns: true } : {}),
+      ...requiredLayout(type, dateId ?? datePropertyCandidates(dataSource)[0]?.id),
+    },
     ...(groupId === undefined ? {} : { group: { property: groupId } }),
   };
 }
@@ -104,7 +107,9 @@ export function layoutForTypeChange(
     (carried === undefined ? undefined : SpacePropertyId.make(carried)) ??
     dateId ??
     datePropertyCandidates(dataSource)[0]?.id;
-  return { ...kept, ...requiredLayout(type, id) };
+  const tint: ViewLayout =
+    type === "board" && !("colorColumns" in old) ? { colorColumns: true } : {};
+  return { ...kept, ...tint, ...requiredLayout(type, id) };
 }
 
 /** Cells a toolbar "New" adds so the row shows up in a calendar or timeline. */

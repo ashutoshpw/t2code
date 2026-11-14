@@ -759,6 +759,20 @@ describe("Spaces ProseMirror adapter database blocks", () => {
     expect((editor.blocks()[0]!.content as { databaseId: string }).databaseId).toBe("database-1");
   });
 
+  it("hides and shows the database title without touching the views", () => {
+    const editor = setup([database("d"), paragraph("a", "x")]);
+    expect(editor.run(editor.adapter.setDatabaseTitleHidden(id("d"), true))).toBe(true);
+    expect(editor.blocks()[0]?.content).toEqual({
+      databaseId: "database-1",
+      viewIds: ["view-1"],
+      hideTitle: true,
+    });
+    expect(editor.run(editor.adapter.setDatabaseTitleHidden(id("d"), false))).toBe(true);
+    expect(editor.blocks()[0]?.content).toEqual({ databaseId: "database-1", viewIds: ["view-1"] });
+    const locked = setup([database("d")], { canChangeStructure: () => false });
+    expect(locked.adapter.setDatabaseTitleHidden(id("d"), true)(locked.state)).toBe(false);
+  });
+
   it("moves with the block commands and refuses generic removal, range deletes and duplicates", () => {
     const editor = setup([paragraph("a", "x"), database("d"), paragraph("b", "y")]);
     expect(editor.run(editor.adapter.shift(-1, id("d")))).toBe(true);

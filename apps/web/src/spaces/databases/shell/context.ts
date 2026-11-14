@@ -13,7 +13,16 @@ import type { DatabaseActions } from "../data/actions";
 import type { DatabaseModel } from "../data/useDatabaseModel";
 import type { DatabaseLayout } from "../blocks/DatabaseBlockHost";
 
-export type OpenControl = "layout" | "filter" | "sort" | "group" | "properties" | null;
+/** "filter" and "sort" open their toolbar popovers; the others open View settings on that page. */
+export type OpenControl =
+  | "settings"
+  | "layout"
+  | "properties"
+  | "group"
+  | "subItems"
+  | "filter"
+  | "sort"
+  | null;
 
 export interface DatabaseContextValue {
   readonly model: DatabaseModel;

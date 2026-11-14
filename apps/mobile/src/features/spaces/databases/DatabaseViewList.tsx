@@ -1,7 +1,9 @@
 import type { CellTextContext } from "@t2code/client-runtime/spaces";
 import type { SpaceDatabaseRow, SpaceGroupKey } from "@t2code/contracts/spaces";
+import type { ReactNode } from "react";
 import { View, useColorScheme } from "react-native";
 
+import { cn } from "../../../lib/cn";
 import { AppText as Text } from "../../../components/ui/AppText";
 import { ControlPill } from "../../../components/ui/ControlPill";
 import { optionColor } from "./optionColors";
@@ -25,10 +27,26 @@ export function DatabaseListItem(props: {
 }) {
   const scheme = useColorScheme() === "dark" ? "dark" : "light";
   const { item } = props;
+  const tinted = (node: ReactNode) => {
+    if (!("tint" in item) || item.tint === undefined) return node;
+    const header = item.kind === "header";
+    return (
+      <View
+        className={cn(
+          "mx-3 px-1",
+          header && "mt-2 rounded-t-xl pt-2",
+          item.last && "rounded-b-xl pb-2",
+        )}
+        style={{ backgroundColor: optionColor(item.tint, scheme).column }}
+      >
+        {node}
+      </View>
+    );
+  };
   switch (item.kind) {
     case "header": {
       const color = item.label.color === undefined ? null : optionColor(item.label.color, scheme);
-      return (
+      return tinted(
         <View className="flex-row items-center gap-2 px-4 pb-1 pt-3">
           <View
             className={color === null ? "" : "rounded-md px-2 py-0.5"}
@@ -57,18 +75,18 @@ export function DatabaseListItem(props: {
               }}
             />
           ) : null}
-        </View>
+        </View>,
       );
     }
     case "row":
-      return (
+      return tinted(
         <RowCard
           row={item.row}
           form={props.form}
           context={props.context}
           span={item.span}
           onOpen={props.handlers.onOpenRow}
-        />
+        />,
       );
     case "more":
       return (

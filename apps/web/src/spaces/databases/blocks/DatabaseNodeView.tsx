@@ -20,6 +20,11 @@ export function DatabaseNodeView({ node, editor }: NodeViewProps) {
           setViews: (viewIds) =>
             host.adapter.setDatabaseViews(block.id, viewIds)(editor.state, editor.view.dispatch),
           remove: () => host.adapter.removeDatabase(block.id)(editor.state, editor.view.dispatch),
+          setTitleHidden: (hidden) =>
+            host.adapter.setDatabaseTitleHidden(block.id, hidden)(
+              editor.state,
+              editor.view.dispatch,
+            ),
         }
       : null,
   );
@@ -46,6 +51,7 @@ export function DatabaseNodeView({ node, editor }: NodeViewProps) {
             blockId={block.id}
             databaseId={block.content.databaseId}
             viewIds={block.content.viewIds}
+            hideTitle={block.content.hideTitle === true}
             actions={actions}
           />
         ) : null}

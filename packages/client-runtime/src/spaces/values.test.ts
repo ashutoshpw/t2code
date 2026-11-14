@@ -13,6 +13,7 @@ import {
   editSpaceMobileText,
   isKnownSpaceBlock,
   canEditSpaceBlock,
+  isSpaceDatabaseBlock,
   isSpaceListItem,
   isSpaceSyncedBlock,
   isSpaceSyncedRef,
@@ -267,6 +268,17 @@ describe("shared Spaces editing", () => {
     const [copied] = copySpaceBlocks([copy], key, () => SpaceBlockId.make("fresh"));
     expect(copied).toMatchObject({ id: "fresh", content: { sourceBlockId: "o" } });
     expect(() => copySpaceBlocks([original], key, () => SpaceBlockId.make("fresh"))).toThrow();
+  });
+
+  it("accepts hideTitle only as true on a database block", () => {
+    const database = (extra: object) => ({
+      ...paragraph(""),
+      type: "database",
+      content: { databaseId: "d", viewIds: [], ...extra },
+    });
+    expect(
+      [{ hideTitle: true }, {}, { hideTitle: false }].map((e) => isSpaceDatabaseBlock(database(e))),
+    ).toEqual([true, true, false]);
   });
 
   it.each([

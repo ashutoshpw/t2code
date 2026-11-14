@@ -8,6 +8,7 @@ import {
   SPACE_PROPERTY_TYPES,
   SPACE_VIEW_TYPES,
   SpaceCapability,
+  SpaceDatabase,
   SpaceDatabaseBlock,
   SpaceDatabaseError,
   SpaceDatabaseProperty,
@@ -341,6 +342,23 @@ describe("Spaces databases strict known shapes", () => {
     expect(decodes(SpaceDatabaseBlock, { ...block, content: { ...block.content, extra: 1 } })).toBe(
       false,
     );
+    const withContent = (extra: object) => ({ ...block, content: { ...block.content, ...extra } });
+    expect(decodes(SpaceDatabaseBlock, withContent({ hideTitle: true }))).toBe(true);
+    expect(decodes(SpaceDatabaseBlock, withContent({ hideTitle: false }))).toBe(false);
+    expect(decodes(SpaceDatabaseBlock, withContent({ hideTitle: "yes" }))).toBe(false);
+    const database = {
+      id: "d",
+      spaceId: "s",
+      title: "t",
+      revision: 0,
+      live: true,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    expect(decodes(SpaceDatabase, { ...database, home: { pageId: "p", blockId: "b" } })).toBe(true);
+    expect(
+      decodes(SpaceDatabase, { ...database, home: { pageId: "p", blockId: "b", viewIds: ["v"] } }),
+    ).toBe(true);
   });
 
   it("covers every property type in the operator and aggregate tables", () => {

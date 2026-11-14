@@ -66,6 +66,7 @@ export const make = (rt: Runtime) => {
               tabs: true,
               syncedBlocks: true,
               comments: true,
+              databaseHideTitle: true,
             },
           } satisfies C.SpaceCapability;
         }),

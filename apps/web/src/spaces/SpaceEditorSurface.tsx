@@ -111,6 +111,8 @@ export function EditorSurface({
         handleType: handle?.type ?? null,
         handleDatabase: !!handle && isSpaceDatabaseBlock(handle),
         handleDatabaseId: handle && isSpaceDatabaseBlock(handle) ? handle.content.databaseId : null,
+        handleDatabaseTitleHidden:
+          handle !== null && isSpaceDatabaseBlock(handle) && handle.content.hideTitle === true,
         dragExists: !dragId || !!findBlock(doc, dragId),
       };
     },
@@ -280,6 +282,7 @@ export function EditorSurface({
                 adapter={adapter}
                 blockId={handleId}
                 databaseId={info.handleDatabaseId}
+                titleHidden={info.handleDatabaseTitleHidden}
                 can={can}
                 run={run}
                 onDelete={(id) => setDeleteId({ id, open: false })}

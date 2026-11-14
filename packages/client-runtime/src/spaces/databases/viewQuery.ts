@@ -31,6 +31,27 @@ export interface ViewQueryOptions {
   readonly cover?: boolean;
 }
 
+const LOAD_LIMITED_TYPES = new Set(["table", "board", "list", "gallery"]);
+
+/** Caps a window and a board's rows per group at the view's chosen load limit; other types ignore it. */
+export function applyLoadLimit(
+  view: SpaceDatabaseView,
+  sizes: { readonly limit: number; readonly rowsPerGroup?: number },
+): { readonly limit: number; readonly rowsPerGroup?: number } {
+  const loadLimit: unknown = (view.layout as { loadLimit?: unknown }).loadLimit;
+  if (
+    !LOAD_LIMITED_TYPES.has(view.type) ||
+    (loadLimit !== 10 && loadLimit !== 25 && loadLimit !== 50 && loadLimit !== 100)
+  )
+    return sizes;
+  return {
+    limit: Math.min(sizes.limit, loadLimit),
+    ...(sizes.rowsPerGroup === undefined
+      ? {}
+      : { rowsPerGroup: Math.min(sizes.rowsPerGroup, loadLimit) }),
+  };
+}
+
 /** Presentation fields never reach the query, so toggling one is not a new query. */
 function queryGroup(group: SpaceGroup | undefined): SpaceGroup | null {
   if (group === undefined) return null;

@@ -1,15 +1,19 @@
 import {
   buildDateValue,
+  nextOptionColor,
   EMPTY_DATE_DRAFT,
   knownProperty,
   numberToText,
   parseLocalizedNumber,
   parseTypedDay,
 } from "@t2code/client-runtime/spaces";
-import type {
-  SpaceCellValue,
-  SpaceDatabaseOption,
-  SpaceDatabaseProperty,
+import {
+  SpaceOptionId,
+  type SpaceCellValue,
+  type SpaceDatabaseOption,
+  type SpaceDatabaseProperty,
+  type SpacePropertyId,
+  type SpaceSchemaOperation,
 } from "@t2code/contracts/spaces";
 
 export const FORMATTED_TEXT_NOTE = "Formatted text · edit on desktop";
@@ -230,3 +234,45 @@ export function commitValue(
 
 /** Checkbox cells are true or empty, never false. */
 export const commitCheckbox = (checked: boolean): SpaceCellValue | null => (checked ? true : null);
+
+/** The options matching a typed query, and the name a new option would get (null when none fits). */
+export function choiceRows(
+  options: ReadonlyArray<SpaceDatabaseOption>,
+  query: string,
+  canCreate: boolean,
+): { readonly options: ReadonlyArray<SpaceDatabaseOption>; readonly create: string | null } {
+  const name = query.trim();
+  const needle = name.toLowerCase();
+  const matching =
+    needle === ""
+      ? options
+      : options.filter((option) => option.name.toLowerCase().includes(needle));
+  const taken = options.some((option) => option.name.trim().toLowerCase() === needle);
+  return { options: matching, create: canCreate && name !== "" && !taken ? name : null };
+}
+
+/** The schema operation that adds an option, colored with the next palette color. */
+export function newOptionOperation(
+  property: {
+    readonly id: SpacePropertyId;
+    readonly type: string;
+    readonly options: ReadonlyArray<SpaceDatabaseOption>;
+  },
+  name: string,
+  newId: () => string,
+): { readonly optionId: SpaceOptionId; readonly operation: SpaceSchemaOperation } {
+  const optionId = SpaceOptionId.make(newId());
+  return {
+    optionId,
+    operation: {
+      op: "addOption",
+      propertyId: property.id,
+      option: {
+        id: optionId,
+        name: name.trim(),
+        color: nextOptionColor(property.options.map((option) => option.color)),
+        ...(property.type === "status" ? { group: "todo" as const } : {}),
+      },
+    },
+  };
+}

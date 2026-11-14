@@ -292,7 +292,7 @@ describe("read-only", () => {
     expect(cell("row-1", "title")!.getAttribute("aria-readonly")).toBe("true");
     await userEvent.click(locate(cell("row-1", "title")));
     await userEvent.keyboard("{Enter}abc");
-    expect(screen.container.querySelectorAll("input")).toHaveLength(1);
+    expect(screen.container.querySelectorAll("input")).toHaveLength(0);
     await expect
       .element(inGrid(grid()).getByRole("button", { name: "New" }))
       .not.toBeInTheDocument();

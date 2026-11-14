@@ -2,6 +2,12 @@ import type { SpaceGroupBucket, SpaceKnownDatabaseProperty } from "@t2code/contr
 
 import type { OptionHint } from "./format.ts";
 
+const STATUS_GROUP_COLOR: Record<string, string> = {
+  todo: "gray",
+  in_progress: "blue",
+  complete: "green",
+};
+
 const STATUS_GROUP_LABEL: Record<string, string> = {
   todo: "To-do",
   in_progress: "In progress",
@@ -37,8 +43,14 @@ export function groupLabel(
         color: option?.color ?? hint?.color ?? "default",
       };
     }
-    case "status_group":
-      return { text: STATUS_GROUP_LABEL[String(key.group)] ?? bucket.label ?? String(key.group) };
+    case "status_group": {
+      const group = String(key.group);
+      const color = STATUS_GROUP_COLOR[group];
+      return {
+        text: STATUS_GROUP_LABEL[group] ?? bucket.label ?? group,
+        ...(color === undefined ? {} : { color }),
+      };
+    }
     case "checkbox":
       return { text: key.value === true ? "Checked" : "Unchecked" };
     case "text":

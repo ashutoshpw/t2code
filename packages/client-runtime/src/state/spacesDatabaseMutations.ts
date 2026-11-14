@@ -103,6 +103,7 @@ export function createDatabaseMutations(db: SpacesDatabaseAtoms, options: Databa
     create: mutation(db.create, (input, fields) => ({ ...input, ...fields })),
     update: mutation(db.update, (input, fields) => ({ ...input, ...fields })),
     updateSchema: mutation(db.updateSchema, (input, fields) => ({ ...input, ...fields })),
+    createDataSource: mutation(db.createDataSource, (input, fields) => ({ ...input, ...fields })),
     updateDataSource: mutation(db.updateDataSource, (input, fields) => ({ ...input, ...fields })),
     createView: mutation(db.createView, (input, fields) => ({ ...input, ...fields })),
     updateView: mutation(db.updateView, (input, fields) => ({ ...input, ...fields })),

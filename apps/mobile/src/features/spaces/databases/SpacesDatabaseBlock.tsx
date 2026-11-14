@@ -90,7 +90,7 @@ function BlockViews(props: Parameters<typeof SpacesDatabaseBlock>[0] & { model: 
     });
   return (
     <View className="gap-1 py-2">
-      {props.fullPage ? null : (
+      {props.fullPage || block.content.hideTitle === true ? null : (
         <Text accessibilityRole="header" className="px-4 text-lg font-bold text-foreground">
           {model.database.icon ? `${model.database.icon} ` : ""}
           {model.database.title || "Untitled database"}

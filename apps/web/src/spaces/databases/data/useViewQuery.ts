@@ -5,6 +5,7 @@ import {
   queryKey,
   viewDependencies,
   viewQueryInput,
+  applyLoadLimit,
   type PendingCellEdits,
   type RowPlacement,
   type ViewColumn,
@@ -88,12 +89,15 @@ export function viewInputOf(
   columns: ReadonlyArray<ViewColumn>,
   options: ViewQueryOptions,
 ) {
+  const sizes = applyLoadLimit(view, {
+    limit: Math.min(100, model.limits.maxQueryRows),
+    ...(options.rowsPerGroup === undefined ? {} : { rowsPerGroup: options.rowsPerGroup }),
+  });
   return viewQueryInput(view, {
     environmentId: model.environmentId,
     mode: options.mode,
     timeZone: viewerZone(),
-    limit: Math.min(100, model.limits.maxQueryRows),
-    ...(options.rowsPerGroup === undefined ? {} : { rowsPerGroup: options.rowsPerGroup }),
+    ...sizes,
     search: options.search,
     visiblePropertyIds: columns
       .filter((column) => column.visible)

@@ -53,7 +53,7 @@ describe("view tabs", () => {
       { router: false },
     );
     await userEvent.click(screen.getByRole("button", { name: "Add a view" }));
-    await userEvent.click(page.getByRole("menuitem", { name: "Board" }));
+    await userEvent.click(page.getByRole("button", { name: "Board" }));
     await vi.waitFor(() => expect(onSetViews).toHaveBeenCalled());
     expect(fake.callsOf("createView")[0]?.input).toMatchObject({
       type: "board",
@@ -78,7 +78,7 @@ describe("view tabs", () => {
       { router: false },
     );
     await userEvent.click(screen.getByRole("button", { name: "Add a view" }));
-    await userEvent.click(page.getByRole("menuitem", { name: label }));
+    await userEvent.click(page.getByRole("button", { name: label }));
     await vi.waitFor(() => expect(fake.callsOf("createView")).toHaveLength(1));
     expect(fake.callsOf("createView")[0]?.input).toMatchObject({ type, name: label, layout });
     await expect
@@ -95,7 +95,7 @@ describe("view tabs", () => {
       { router: false },
     );
     await userEvent.click(screen.getByRole("button", { name: "Add a view" }));
-    await userEvent.click(page.getByRole("menuitem", { name: "Calendar" }));
+    await userEvent.click(page.getByRole("button", { name: "Calendar" }));
     await vi.waitFor(() => expect(fake.callsOf("createView")).toHaveLength(1));
     const added = fake.callsOf("updateSchema")[0]?.input as {
       operations: { property: { id: string; name: string; type: string } }[];
@@ -113,8 +113,9 @@ describe("view tabs", () => {
       <DatabaseHarness host={host} initialViewIds={["view-table"]} />,
       { router: false },
     );
-    await userEvent.click(screen.getByRole("tab", { name: "Table" }));
-    await userEvent.click(page.getByRole("menuitemradio", { name: "Timeline" }));
+    await userEvent.click(screen.getByRole("button", { name: "View settings" }));
+    await userEvent.click(page.getByRole("button", { name: /^Layout/ }));
+    await userEvent.click(page.getByRole("radio", { name: "Timeline" }));
     await vi.waitFor(() => expect(fake.callsOf("updateView")).toHaveLength(1));
     expect(fake.callsOf("updateView")[0]?.input).toMatchObject({
       type: "timeline",
@@ -224,9 +225,10 @@ describe("view tabs", () => {
       .not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: "Table" }));
     await expect.element(page.getByRole("menuitem", { name: "Rename" })).not.toBeInTheDocument();
+    await expect.element(screen.getByRole("heading", { name: "Tasks" })).toBeVisible();
     await expect
       .element(screen.getByRole("textbox", { name: "Database title" }))
-      .toHaveAttribute("readonly");
+      .not.toBeInTheDocument();
   });
 
   it("hides management when the page itself is not editable", async () => {

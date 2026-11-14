@@ -109,6 +109,7 @@ describe("table sub-items", () => {
   it("is flat while searching and when the view flattens sub-items", async () => {
     const searching = await setup();
     await using _searching = searching.screen;
+    await userEvent.click(searching.screen.getByRole("button", { name: "Search" }));
     await userEvent.fill(searching.screen.getByRole("searchbox", { name: "Search rows" }), "Task");
     await vi.waitFor(() =>
       expect(searching.fake.callsOf("query").at(-1)?.input.search).toBe("Task"),

@@ -94,6 +94,8 @@ export function DatabaseHarness({
   layout = "inline",
   editable = true,
   onSetViews,
+  hideTitle: initialHideTitle = false,
+  onSetTitleHidden,
 }: {
   readonly host: DatabaseBlockHost;
   readonly initialViewIds: ReadonlyArray<string>;
@@ -102,7 +104,10 @@ export function DatabaseHarness({
   readonly layout?: DatabaseLayout;
   readonly editable?: boolean;
   readonly onSetViews?: (viewIds: ReadonlyArray<string>) => void;
+  readonly hideTitle?: boolean;
+  readonly onSetTitleHidden?: (hidden: boolean) => void;
 }) {
+  const [hideTitle, setHideTitle] = useState(initialHideTitle);
   const [viewIds, setViewIds] = useState(initialViewIds.map((id) => SpaceViewId.make(id)));
   const [actions] = useState<DatabaseBlockActions>(() => ({
     setViews: (next) => {
@@ -111,6 +116,11 @@ export function DatabaseHarness({
       return true;
     },
     remove: () => true,
+    setTitleHidden: (hidden) => {
+      onSetTitleHidden?.(hidden);
+      setHideTitle(hidden);
+      return true;
+    },
   }));
   return (
     <TestHostProvider host={host} layout={layout} editable={editable}>
@@ -119,6 +129,7 @@ export function DatabaseHarness({
         databaseId={SpaceDatabaseId.make(FIXTURE_IDS.database)}
         viewIds={viewIds}
         actions={actions}
+        hideTitle={hideTitle}
       />
     </TestHostProvider>
   );

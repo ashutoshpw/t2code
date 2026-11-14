@@ -111,6 +111,15 @@ describe("viewForm", () => {
     });
   });
 
+  it("tints a board only when its layout asks for colored columns", () => {
+    const group = { property: "status" };
+    const tinted = (type: string, layout: Record<string, unknown>) =>
+      viewForm(view(type, { group, layout }), source, limits).tint;
+    expect(tinted("board", { colorColumns: true })).toBe(true);
+    expect(tinted("board", {})).toBe(false);
+    expect(tinted("table", { colorColumns: true })).toBe(false);
+  });
+
   it("treats a group on a property that is gone as no group", () => {
     const saved = view("table", { group: { property: "missing" } });
     expect(viewForm(saved, source, limits)).toMatchObject({ mode: "rows", group: undefined });
@@ -279,6 +288,39 @@ describe("listItems", () => {
       bucket: { kind: "option" },
     });
     expect(new Set(items.map((item) => item.key)).size).toBe(items.length);
+  });
+
+  it("gives a tinted section its color on header and rows and closes it on its last item", () => {
+    const saved = view("board", { group: { property: "status" }, layout: { colorColumns: true } });
+    const form = viewForm(saved, source, limits);
+    const items = listItems(form, {
+      ...base,
+      rows: [],
+      groups: [
+        {
+          key: { kind: "option", optionId: "todo1" },
+          count: 2,
+          rows: rows(2, "t"),
+          nextCursor: null,
+        },
+        { key: { kind: "empty" }, count: 1, rows: rows(1, "e"), nextCursor: null },
+      ] as never,
+      hasMore: false,
+    });
+    expect(items.map((item) => ("tint" in item ? item.tint : undefined))).toEqual([
+      undefined,
+      undefined,
+      "red",
+      "red",
+      "red",
+    ]);
+    expect(items.map((item) => ("last" in item ? item.last : undefined))).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    ]);
   });
 
   it("drops empty sections outside a board and caps a section with a note", () => {

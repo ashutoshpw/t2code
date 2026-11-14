@@ -15,6 +15,8 @@ export interface DatabaseBlockHost {
   openPage(target: SpacePageNavigationTarget): void;
 }
 
+export type DatabaseSurfaceHost = Pick<DatabaseBlockHost, "environmentId" | "openPage">;
+
 export type DatabaseLayout = "inline" | "page";
 
 const DatabaseBlockHostContext = createContext<DatabaseBlockHost | null>(null);
@@ -27,7 +29,7 @@ export function DatabaseBlockHostProvider({
   editable,
   children,
 }: {
-  readonly host: DatabaseBlockHost;
+  readonly host: DatabaseBlockHost | null;
   readonly layout: DatabaseLayout;
   readonly editable: boolean;
   readonly children: ReactNode;

@@ -24,3 +24,4 @@ export * from "./dateValue.ts";
 export * from "./errors.ts";
 export * from "./rowCells.ts";
 export * from "./remoteChanges.ts";
+export * from "./optionColor.ts";

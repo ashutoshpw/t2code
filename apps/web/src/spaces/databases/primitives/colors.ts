@@ -28,15 +28,34 @@ export const OPTION_DOT_CLASS: Record<SpaceDatabaseColor, string> = {
   red: "bg-red-500",
 };
 
+/** Column backgrounds: much lighter than the pill so cards and text stay readable. */
+export const OPTION_COLUMN_CLASS: Record<SpaceDatabaseColor, string> = {
+  default: "bg-foreground/3",
+  gray: "bg-zinc-500/6 dark:bg-zinc-400/8",
+  brown: "bg-amber-900/6 dark:bg-amber-700/10",
+  orange: "bg-orange-500/7 dark:bg-orange-500/10",
+  yellow: "bg-yellow-500/8 dark:bg-yellow-500/10",
+  green: "bg-green-500/7 dark:bg-green-500/10",
+  blue: "bg-blue-500/7 dark:bg-blue-500/10",
+  purple: "bg-purple-500/7 dark:bg-purple-500/10",
+  pink: "bg-pink-500/7 dark:bg-pink-500/10",
+  red: "bg-red-500/7 dark:bg-red-500/10",
+};
+
+/** Count, add buttons and "New page" inside a tinted column. */
+export const OPTION_COLUMN_TEXT_CLASS: Record<SpaceDatabaseColor, string> = {
+  default: "text-muted-foreground",
+  gray: "text-zinc-600 dark:text-zinc-400",
+  brown: "text-amber-800/80 dark:text-amber-300/80",
+  orange: "text-orange-700/80 dark:text-orange-300/80",
+  yellow: "text-yellow-700/90 dark:text-yellow-300/80",
+  green: "text-green-700/80 dark:text-green-300/80",
+  blue: "text-blue-700/80 dark:text-blue-300/80",
+  purple: "text-purple-700/80 dark:text-purple-300/80",
+  pink: "text-pink-700/80 dark:text-pink-300/80",
+  red: "text-red-700/80 dark:text-red-300/80",
+};
+
 export function isDatabaseColor(value: string): value is SpaceDatabaseColor {
   return SPACE_DATABASE_COLORS.some((color) => color === value);
-}
-
-/** The next palette color not used yet; wraps once all are taken. */
-export function nextOptionColor(used: ReadonlyArray<SpaceDatabaseColor>): SpaceDatabaseColor {
-  const palette = SPACE_DATABASE_COLORS.filter((color) => color !== "default");
-  const counts = new Map<SpaceDatabaseColor, number>(palette.map((color) => [color, 0]));
-  for (const color of used) if (counts.has(color)) counts.set(color, counts.get(color)! + 1);
-  const least = Math.min(...counts.values());
-  return palette.find((color) => counts.get(color) === least) ?? "gray";
 }
