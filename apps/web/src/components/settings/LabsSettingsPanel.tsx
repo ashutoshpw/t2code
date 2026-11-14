@@ -6,6 +6,7 @@ import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useT2ConnectAuthPrompt } from "../clerk/useT2ConnectAuthPrompt";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
+import { useSettingsScope } from "./SettingsScopeContext";
 import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
@@ -19,6 +20,7 @@ export function LabsSettingsPanel() {
     <SettingsPageContainer>
       <SettingsSection id="beta" title="Beta">
         <BoringSidebarRow />
+        <SpacesRow />
         {/* Clerk is only mounted when this build has T2 Connect. */}
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
         <LinkedEnvironmentsRow />
@@ -213,7 +215,7 @@ function SimlockHostsRow() {
           <Link to="/settings/devices" className="underline underline-offset-2">
             Devices
           </Link>
-          . An alpha that may change or break. T3 Code never installs Simlock.
+          . An alpha that may change or break. T2 Code never installs Simlock.
         </>
       }
       control={
@@ -250,13 +252,45 @@ function FastWorktreeCheckoutRow() {
       serverScoped
       {...searchableSetting("worktree-fast-checkout")}
       settingKeys={["fastWorktreeCheckout"]}
-      description="On a Mac, clone new worktrees from a checkout cached in the T3 home folder instead of writing every file. Uses Git’s normal checkout when it can’t. Turning it off deletes the cache."
+      description="On a Mac, clone new worktrees from a checkout cached in the T2 home folder instead of writing every file. Uses Git’s normal checkout when it can’t. Turning it off deletes the cache."
       control={
         <ScopedSwitch
           settingKeys={["fastWorktreeCheckout"]}
           checked={settings.fastWorktreeCheckout}
           onCheckedChange={(checked) => updateSettings({ fastWorktreeCheckout: Boolean(checked) })}
           aria-label="Fast worktree checkout"
+        />
+      }
+    />
+  );
+}
+
+function SpacesRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  const { connectedEnvironments } = useSettingsScope();
+  const supported =
+    connectedEnvironments.length > 0 &&
+    connectedEnvironments.every(
+      (environment) => environment.serverConfig?.environment.capabilities.spacesSettings === true,
+    );
+  return (
+    <SettingsRow
+      serverScoped
+      {...searchableSetting("spaces")}
+      settingKeys={["spacesEnabled"]}
+      description={
+        supported
+          ? "Browse pages in this environment. Turning Spaces off keeps its data."
+          : "Update every selected environment to enable Spaces."
+      }
+      control={
+        <ScopedSwitch
+          settingKeys={["spacesEnabled"]}
+          checked={settings.spacesEnabled}
+          disabled={!supported}
+          aria-label="Spaces"
+          onCheckedChange={(checked) => updateSettings({ spacesEnabled: Boolean(checked) })}
         />
       }
     />

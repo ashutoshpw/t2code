@@ -36,6 +36,12 @@ interface ScopedSettingsEnvironment {
   readonly connection: { readonly phase: EnvironmentConnectionPhase };
   readonly serverConfig: {
     readonly settings: ServerSettings;
+    readonly environment?: {
+      readonly capabilities: {
+        readonly projectSettingsOverrides?: boolean | undefined;
+        readonly spacesSettings?: true | undefined;
+      };
+    };
   } | null;
 }
 
@@ -308,6 +314,19 @@ export function planScopedSettingsPatch(
   const clientPatch = Object.fromEntries(
     refusesClientKeys ? [] : Object.entries(patch).filter(([key]) => clientKeys.includes(key)),
   ) as ClientSettingsPatch;
+  if (
+    serverPatch.spacesEnabled !== undefined &&
+    connectedEnvironments.some(
+      (environment) => environment.serverConfig?.environment?.capabilities.spacesSettings !== true,
+    )
+  ) {
+    return {
+      clientPatch,
+      hasClientWrite: false,
+      serverWrites: [],
+      unavailableReason: "Update every selected environment to change Spaces settings.",
+    };
+  }
   const serverWrites: ScopedServerWrite[] =
     serverKeys.length === 0
       ? []
