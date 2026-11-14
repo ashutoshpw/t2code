@@ -257,6 +257,49 @@ it.layer(NodeServices.layer)("Spaces database query groups", (it) => {
     ),
   );
 
+  it.effect(
+    "answers a chart: one bucket per option with the count and the y aggregate, no rows",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { query } = yield* seed(dbPath);
+          const group = { property: ids.prio };
+          const sum = [{ property: ids.points, function: "sum" }];
+          const chart = yield* query({
+            mode: "groups",
+            group,
+            rowsPerGroup: 0,
+            aggregates: sum,
+            include: { aggregates: true },
+          });
+          for (const bucket of chart.groups ?? []) {
+            assert.deepEqual(bucket.rows, []);
+            const scoped = yield* query({ group, scope: { group: bucket.key } });
+            const expected = scoped.rows
+              .map((row) => row.cells[ids.points])
+              .filter((value): value is number => typeof value === "number");
+            assert.equal(bucket.count, scoped.rows.length);
+            assert.equal(
+              bucket.aggregates?.[0]?.number,
+              expected.reduce((a, b) => a + b, 0),
+              label(bucket.key),
+            );
+          }
+          const average = yield* query({
+            mode: "groups",
+            group: { property: ids.prio },
+            rowsPerGroup: 0,
+            aggregates: [{ property: ids.points, function: "average" }],
+            include: { aggregates: true },
+            filter: { property: ids.points, operator: "is_empty" },
+          });
+          assert.isTrue(
+            (average.groups ?? []).every((bucket) => bucket.aggregates?.[0]?.number === undefined),
+          );
+        }),
+      ),
+  );
+
   it.effect("keeps fractional number ranges consistent between counts and scopes", () =>
     fixture((dbPath) =>
       Effect.gen(function* () {

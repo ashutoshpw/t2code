@@ -120,6 +120,14 @@ export function createSpacesEnvironmentAtoms<R, E>(
           registry.set(pageShare(target.environmentId, target.input.pageId), result),
         ),
     }),
+    setPageShareResponses: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.shares.setResponses",
+      tag: WS_METHODS.spacesSharesSetResponses,
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() =>
+          registry.set(pageShare(target.environmentId, target.input.pageId), result),
+        ),
+    }),
     stopPageShare: createEnvironmentRpcCommand(runtime, {
       label: "spaces.shares.stop",
       tag: WS_METHODS.spacesSharesStop,

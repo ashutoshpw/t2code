@@ -14,6 +14,9 @@ const ALLOWED_DATABASE_IMPORTS = new Set([
   "~/spaces/databases/primitives/TextRuns",
   "~/spaces/databases/primitives/colors",
   "~/spaces/databases/primitives/coverSource",
+  "~/spaces/databases/chart/ChartSvg",
+  "~/spaces/databases/chart/chartColors",
+  "~/spaces/databases/form/FormFields",
 ]);
 const FORBIDDEN = [
   /\/rpc\//,

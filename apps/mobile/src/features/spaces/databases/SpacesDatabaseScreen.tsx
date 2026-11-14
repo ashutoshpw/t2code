@@ -34,6 +34,7 @@ import { NewRowSheet } from "./NewRowSheet";
 import { WriteNotices } from "./WriteNotices";
 import { DEAD_DATABASE_MESSAGE } from "./SpacesDatabaseBlock";
 import { readSpacesDatabaseTarget, type SpacesDatabaseTarget } from "./navigation";
+import { SpecialScreenView, isSpecialView } from "./SpecialView";
 import { useDatabaseModel, type DatabaseModel } from "./useDatabaseModel";
 import { useViewContent } from "./useViewContent";
 import { ViewSwitcher } from "./ViewSwitcher";
@@ -184,6 +185,19 @@ function ScreenViews(props: {
   const dataSource = model.dataSources.find((entry) => entry.id === active?.dataSourceId);
   if (active === undefined) return <Notice>This database has no views.</Notice>;
   if (dataSource === undefined) return <Notice>This view is not available.</Notice>;
+  if (isSpecialView(active))
+    return (
+      <SpecialScreen
+        key={active.id}
+        target={target}
+        model={model}
+        access={props.access}
+        views={views}
+        view={active}
+        dataSource={dataSource}
+        onSelect={(view) => setActiveId(view.id)}
+      />
+    );
   return (
     <ViewList
       key={active.id}
@@ -196,6 +210,47 @@ function ScreenViews(props: {
       month={month}
       onSelect={(view) => setActiveId(view.id)}
       onMonth={setMonth}
+    />
+  );
+}
+
+function SpecialScreen(props: {
+  target: SpacesDatabaseTarget;
+  model: DatabaseModel;
+  access: SpacesReadAccess;
+  views: ReturnType<typeof resolveBlockViews>;
+  view: ReturnType<typeof resolveBlockViews>[number];
+  dataSource: DatabaseModel["dataSources"][number];
+  onSelect: (view: ReturnType<typeof resolveBlockViews>[number]) => void;
+}) {
+  const { target, model, view } = props;
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  return (
+    <SpecialScreenView
+      environmentId={target.environmentId}
+      model={model}
+      view={view}
+      dataSource={props.dataSource}
+      onOpenRow={(row) => {
+        if (!props.access.current()) return;
+        navigation.push("SpacesPage", {
+          environmentId: target.environmentId,
+          spaceId: model.database.spaceId,
+          pageId: row.page.id,
+        });
+      }}
+      header={
+        <View className="gap-1 pb-2">
+          <Text accessibilityRole="header" className="px-4 pt-3 text-xl font-bold text-foreground">
+            {model.database.icon ? `${model.database.icon} ` : ""}
+            {model.database.title || "Untitled database"}
+          </Text>
+          <ViewSwitcher views={props.views} activeId={view.id} onSelect={props.onSelect} />
+          <View className="px-4">
+            <WriteNotices environmentId={target.environmentId} />
+          </View>
+        </View>
+      }
     />
   );
 }

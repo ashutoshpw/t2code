@@ -383,6 +383,15 @@ const dropLayoutReferences = (
   if (rules.column && isObject(preview) && preview.propertyId === rules.propertyId)
     delete next.cardPreview;
   if (type === "timeline" && next.endPropertyId === rules.propertyId) delete next.endPropertyId;
+  if (rules.column) {
+    const y = next.y;
+    if (type === "chart" && isObject(y) && y.property === rules.propertyId) delete next.y;
+    const questions = next.questions;
+    if (type === "form" && Array.isArray(questions))
+      next.questions = questions.filter(
+        (question) => !(isObject(question) && question.propertyId === rules.propertyId),
+      );
+  }
   if (rules.column || rules.dateReference === true) {
     if (type === "calendar" && next.datePropertyId === rules.propertyId) delete next.datePropertyId;
     if (type === "timeline") {

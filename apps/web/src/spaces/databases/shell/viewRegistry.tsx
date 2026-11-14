@@ -1,9 +1,12 @@
 import {
   CalendarIcon,
+  ChartColumnIcon,
+  ClipboardListIcon,
   ColumnsIcon,
   GalleryVerticalIcon,
   GanttChartIcon,
   ListIcon,
+  NewspaperIcon,
   TableIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -51,9 +54,24 @@ export const VIEW_REGISTRY: Readonly<Record<SpaceViewType, ViewEntry>> = {
     icon: GanttChartIcon,
     Body: lazy(() => import("../timeline/TimelineView")),
   },
+  chart: {
+    label: VIEW_TYPE_NAMES.chart,
+    icon: ChartColumnIcon,
+    Body: lazy(() => import("../chart/ChartView")),
+  },
+  form: {
+    label: VIEW_TYPE_NAMES.form,
+    icon: ClipboardListIcon,
+    Body: lazy(() => import("../form/FormView")),
+  },
+  feed: {
+    label: VIEW_TYPE_NAMES.feed,
+    icon: NewspaperIcon,
+    Body: lazy(() => import("../feed/FeedView")),
+  },
 };
 
-export const VIEW_TYPES: ReadonlyArray<SpaceViewType> = SPACE_VIEW_TYPES;
+const VIEW_TYPES: ReadonlyArray<SpaceViewType> = SPACE_VIEW_TYPES;
 
 /** The registry entry for a type this client knows; undefined for a future type. */
 export const viewEntry = (type: string): ViewEntry | undefined => {

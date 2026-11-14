@@ -1,4 +1,4 @@
-import { filterShape } from "@t2code/client-runtime/spaces";
+import { filterShape, viewTraits } from "@t2code/client-runtime/spaces";
 import {
   ArrowDownUpIcon,
   ChevronRightIcon,
@@ -85,6 +85,7 @@ export function MainPage({
   const { model, view, known, columns, dataSource, actions, canEditView } = useViewControls();
   const copyLink = useCopyViewLink(model);
   const type = known?.type;
+  const traits = viewTraits(view.type);
   const grouped = columns.find((column) => column.property.id === known?.group?.property);
   const loadLimit = String(known?.layout.loadLimit ?? 100);
   return (
@@ -108,31 +109,39 @@ export function MainPage({
           value={type === undefined ? "" : VIEW_REGISTRY[type].label}
           onClick={() => go("layout")}
         />
-        <SettingsRow
-          icon={SlidersHorizontalIcon}
-          label="Property visibility"
-          value={String(columns.filter((column) => column.visible).length)}
-          onClick={() => go("properties")}
-        />
-        <SettingsRow
-          icon={ListFilterIcon}
-          label="Filter"
-          value={count(filterShape(known?.filter).conditions, "filter")}
-          onClick={() => go("filter")}
-        />
-        <SettingsRow
-          icon={ArrowDownUpIcon}
-          label="Sort"
-          value={count(known?.sorts.length ?? 0, "sort")}
-          onClick={() => go("sort")}
-        />
-        <SettingsRow
-          icon={GroupIcon}
-          label="Group"
-          value={grouped?.property.name ?? "None"}
-          onClick={() => go("group")}
-        />
-        {type === "table" || type === "list" ? (
+        {traits.properties ? (
+          <SettingsRow
+            icon={SlidersHorizontalIcon}
+            label="Property visibility"
+            value={String(columns.filter((column) => column.visible).length)}
+            onClick={() => go("properties")}
+          />
+        ) : null}
+        {traits.filter ? (
+          <SettingsRow
+            icon={ListFilterIcon}
+            label="Filter"
+            value={count(filterShape(known?.filter).conditions, "filter")}
+            onClick={() => go("filter")}
+          />
+        ) : null}
+        {traits.sort ? (
+          <SettingsRow
+            icon={ArrowDownUpIcon}
+            label="Sort"
+            value={count(known?.sorts.length ?? 0, "sort")}
+            onClick={() => go("sort")}
+          />
+        ) : null}
+        {traits.group === null ? null : (
+          <SettingsRow
+            icon={GroupIcon}
+            label={traits.group === "x_axis" ? "X axis" : "Group"}
+            value={grouped?.property.name ?? "None"}
+            onClick={() => go("group")}
+          />
+        )}
+        {traits.subItems ? (
           <SettingsRow
             icon={ListTreeIcon}
             label="Sub-items"
@@ -140,7 +149,7 @@ export function MainPage({
             onClick={() => go("subItems")}
           />
         ) : null}
-        {type === "table" || type === "board" || type === "list" || type === "gallery" ? (
+        {traits.loadLimit ? (
           <div className="flex h-7 items-center gap-2 px-2 text-sm">
             <RowsIcon className="size-4 shrink-0 text-muted-foreground" />
             Load limit
@@ -159,12 +168,14 @@ export function MainPage({
             </span>
           </div>
         ) : null}
-        <div className="flex items-center gap-2 px-2 text-sm">
-          <PanelRightIcon className="size-4 shrink-0 text-muted-foreground" />
-          <span className="min-w-0 flex-1">
-            <OpenPagesInRow />
-          </span>
-        </div>
+        {traits.openPagesIn ? (
+          <div className="flex items-center gap-2 px-2 text-sm">
+            <PanelRightIcon className="size-4 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1">
+              <OpenPagesInRow />
+            </span>
+          </div>
+        ) : null}
       </div>
       <Separator />
       <div className="p-1">

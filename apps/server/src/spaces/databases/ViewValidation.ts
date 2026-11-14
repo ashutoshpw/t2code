@@ -186,6 +186,9 @@ export const layoutDecoders = {
   gallery: strictOption(C.SpaceKnownViewLayout.gallery),
   calendar: strictOption(C.SpaceKnownViewLayout.calendar),
   timeline: strictOption(C.SpaceKnownViewLayout.timeline),
+  chart: strictOption(C.SpaceKnownViewLayout.chart),
+  form: strictOption(C.SpaceKnownViewLayout.form),
+  feed: strictOption(C.SpaceKnownViewLayout.feed),
 } as const;
 
 /** Decodes `layout` strictly for the view type and checks every property it names. */
@@ -215,6 +218,22 @@ export const validateLayout = Effect.fn("SpacesDatabases.validateLayout")(functi
   if (type === "timeline") {
     if ("startPropertyId" in decoded) yield* named(String(decoded.startPropertyId), true);
     if ("endPropertyId" in decoded) yield* named(String(decoded.endPropertyId), true);
+  }
+  if (type === "chart" && "y" in decoded && isObject(decoded.y)) {
+    const id = String(decoded.y.property);
+    const property = yield* liveProperty(snapshot, id);
+    if (property.type !== "number") return yield* dbError("invalid_view", id);
+  }
+  if (type === "form" && "questions" in decoded && Array.isArray(decoded.questions)) {
+    const seen = new Set<string>();
+    for (const question of decoded.questions) {
+      if (!isObject(question)) continue;
+      const id = String(question.propertyId);
+      const property = yield* liveProperty(snapshot, id);
+      if (!C.isFormAnswerType(property.type) || seen.has(id))
+        return yield* dbError("invalid_view", id);
+      seen.add(id);
+    }
   }
   const preview = "cardPreview" in decoded ? decoded.cardPreview : undefined;
   if (isObject(preview) && preview.kind === "property")

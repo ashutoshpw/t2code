@@ -1,3 +1,4 @@
+import { viewTraits } from "@t2code/client-runtime/spaces";
 import { ChevronDownIcon, ChevronsLeftIcon, ChevronsRightIcon, Maximize2Icon } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
@@ -61,6 +62,7 @@ export function DatabaseToolbar({
 }) {
   const { model, view, layout } = useDatabase();
   const navigation = useDatabasePageNavigation();
+  const traits = viewTraits(view.type);
   if (collapsed)
     return (
       <>
@@ -80,7 +82,7 @@ export function DatabaseToolbar({
             <ChevronsRightIcon className="size-4" />
           </IconAction>
           <WriterStatus />
-          <NewRowMenu />
+          {traits.newRow ? <NewRowMenu /> : null}
         </div>
       </>
     );
@@ -88,7 +90,7 @@ export function DatabaseToolbar({
     <div className="flex shrink-0 items-center gap-1">
       <div className="flex items-center gap-0.5">
         <ViewControls />
-        <ToolbarSearch search={search} onSearch={onSearch} />
+        {traits.search ? <ToolbarSearch search={search} onSearch={onSearch} /> : null}
         {layout === "page" ? null : (
           <IconAction
             label="Open as full page"
@@ -110,7 +112,7 @@ export function DatabaseToolbar({
         </IconAction>
       </div>
       <WriterStatus />
-      <NewRowMenu />
+      {traits.newRow ? <NewRowMenu /> : null}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   SPACE_FILTER_OPERATORS,
   SPACE_PROPERTY_TYPES,
   SPACE_VIEW_TYPES,
+  formAnswerProblem,
   SpaceCapability,
   SpaceDatabase,
   SpaceDatabaseBlock,
@@ -285,6 +286,28 @@ describe("Spaces databases strict known shapes", () => {
     expect(decodes(SpaceKnownDatabaseView, view("timeline", {}))).toBe(false);
     expect(decodes(SpaceKnownDatabaseView, view("table", { loadLimit: 7 }))).toBe(false);
     expect(decodes(SpaceKnownDatabaseView, view("future_map", {}))).toBe(false);
+    expect(
+      decodes(
+        SpaceKnownDatabaseView,
+        view("chart", { chartType: "donut", y: { property: "n1xx", function: "sum" } }),
+      ),
+    ).toBe(true);
+    expect(
+      decodes(
+        SpaceKnownDatabaseView,
+        view("chart", { y: { property: "n1xx", function: "count" } }),
+      ),
+    ).toBe(false);
+    expect(
+      decodes(
+        SpaceKnownDatabaseView,
+        view("form", { questions: [{ propertyId: "title", required: true }] }),
+      ),
+    ).toBe(true);
+    const tooMany = Array.from({ length: 51 }, () => ({ propertyId: "title" }));
+    expect(decodes(SpaceKnownDatabaseView, view("form", { questions: tooMany }))).toBe(false);
+    expect(decodes(SpaceKnownDatabaseView, view("feed", { previewBlocks: 5 }))).toBe(true);
+    expect(decodes(SpaceKnownDatabaseView, view("feed", { previewBlocks: 4 }))).toBe(false);
   });
 
   it("rejects unknown content in view mutation inputs and known views", () => {
@@ -368,6 +391,31 @@ describe("Spaces databases strict known shapes", () => {
     }
     expect(SPACE_FILTER_OPERATORS.formula).toEqual([]);
     expect(SPACE_FILTER_OPERATORS.created_time).not.toContain("is_empty");
+  });
+});
+
+describe("Spaces form answers", () => {
+  const options = new Set(["a", "b"]);
+  it.each([
+    ["title", "x".repeat(501), "too_long"],
+    ["text", "x".repeat(2001), "too_long"],
+    ["text", 4, "invalid"],
+    ["number", "3", "invalid"],
+    ["number", Number.NaN, "invalid"],
+    ["checkbox", "yes", "invalid"],
+    ["date", "2026-02-30", "invalid"],
+    ["date", "2028-02-29", null],
+    ["url", "ftp://example.com", "invalid"],
+    ["url", "https://example.com", null],
+    ["email", "a@b", "invalid"],
+    ["phone", "call me", "invalid"],
+    ["select", "zz", "unknown_option"],
+    ["status", "a", null],
+    ["multi_select", ["a", "a"], "invalid"],
+    ["multi_select", ["a", "zz"], "unknown_option"],
+    ["multi_select", ["a", "b"], null],
+  ] as const)("checks %s %j", (type, value, expected) => {
+    expect(formAnswerProblem(type, value, options)).toBe(expected);
   });
 });
 

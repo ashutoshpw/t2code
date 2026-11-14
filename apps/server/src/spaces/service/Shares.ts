@@ -23,6 +23,13 @@ export const make = (rt: Runtime, { openAssetFile }: Pick<Assets.Assets, "openAs
     const environmentId = yield* admit();
     yield* run(environmentId, () => PageShares.remove(pageId));
   });
+  const setPageShareResponses = Effect.fn("SpacesService.setPageShareResponses")(function* (
+    pageId: C.SpacePageId,
+    on: boolean,
+  ) {
+    const environmentId = yield* admit();
+    return yield* run(environmentId, () => PageShares.setResponses(pageId, on));
+  });
   const findPageShare = Effect.fn("SpacesService.findPageShare")(function* (by: {
     readonly pageId: C.SpacePageId;
   }) {
@@ -70,6 +77,7 @@ export const make = (rt: Runtime, { openAssetFile }: Pick<Assets.Assets, "openAs
   return {
     replacePageShare,
     stopPageShare,
+    setPageShareResponses,
     findPageShare,
     resolvePageShare,
     readSharedPage,

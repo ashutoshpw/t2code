@@ -107,6 +107,16 @@ export const SpaceSharedGroupBucket = Schema.Struct({
   count: NonNegativeInt,
   rows: Schema.Array(SpaceSharedDatabaseRow),
   nextCursor: Schema.NullOr(Schema.String),
+  /** Chart views: the y aggregate of this bucket. */
+  aggregates: optional(
+    Schema.Array(
+      Schema.Struct({
+        property: SpacePropertyId,
+        function: Schema.String,
+        number: optional(Schema.Number),
+      }),
+    ),
+  ),
 });
 export type SpaceSharedGroupBucket = typeof SpaceSharedGroupBucket.Type;
 

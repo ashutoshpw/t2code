@@ -7,13 +7,18 @@ import {
   type SpacePageShareCreateResult,
   type SpacePageShareGetInput,
   type SpacePageShareGetResult,
+  type SpacePageShareResponsesInput,
+  type SpacePageShareResponsesResult,
   type SpacePageShareStopInput,
   type SpaceSharedDatabase,
   type SpaceSharedDatabaseRowPage,
   type SpaceSharedDatabaseWindow,
+  type SpaceSharedForm,
+  type SpaceSharedFormSubmission,
   type SpaceSharedPage,
 } from "@t2code/contracts";
 import type * as C from "@t2code/contracts/spaces";
+import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as DateTime from "effect/DateTime";
@@ -30,6 +35,7 @@ import { CloudManagedEndpointRuntime } from "../cloud/ManagedEndpointRuntime.ts"
 import * as ServerSettings from "../serverSettings.ts";
 import * as AnalyticsService from "../telemetry/AnalyticsService.ts";
 import * as PageShareCursor from "./PageShareCursor.ts";
+import { makeRateLimiter } from "./sharedDatabases/FormRateLimit.ts";
 import * as SpacesService from "./SpacesService.ts";
 
 const SIGNING_SECRET_NAME = "space-page-share-signing-key";
@@ -44,12 +50,15 @@ const ACCESS_MESSAGES = {
   unavailable: "This page is not available.",
   busy: "Too many requests. Try again shortly.",
   failed: "This page could not be loaded. Try again shortly.",
+  closed: "This form is not accepting responses.",
 } as const;
 
 /** What a viewer is told. The message comes from `reason`, never from a cause. */
 export class SpacePageShareAccessError extends Schema.TaggedError<SpacePageShareAccessError>()(
   "SpacePageShareAccessError",
-  { reason: Schema.Literals(["invalid", "inactive", "unavailable", "busy", "failed"]) },
+  {
+    reason: Schema.Literals(["invalid", "inactive", "unavailable", "busy", "failed", "closed"]),
+  },
 ) {
   override get message(): string {
     return ACCESS_MESSAGES[this.reason];
@@ -60,12 +69,28 @@ const inactive = new SpacePageShareAccessError({ reason: "inactive" });
 const unavailable = new SpacePageShareAccessError({ reason: "unavailable" });
 const busy = new SpacePageShareAccessError({ reason: "busy" });
 const failed = new SpacePageShareAccessError({ reason: "failed" });
+const closed = new SpacePageShareAccessError({ reason: "closed" });
 const MAX_CONCURRENT_VIEWER_REQUESTS = 32;
 /** Database work gets its own pool, so anonymous queries can never starve page reads. */
 const MAX_CONCURRENT_DATABASE_REQUESTS = 8;
 const MAX_CONCURRENT_ROW_ASSETS = 8;
 /** Row assets queue for their pool, but only this many: past it an anonymous flood is refused. */
 const MAX_QUEUED_ROW_ASSETS = 256;
+
+/** The answers did not pass the form's questions: the route answers 422. */
+export class SharedFormRejectedError extends Schema.TaggedError<SharedFormRejectedError>()(
+  "SharedFormRejectedError",
+  {
+    propertyId: Schema.optionalKey(Schema.String),
+    problem: Schema.Literals([
+      "required",
+      "invalid",
+      "too_long",
+      "unknown_option",
+      "unknown_question",
+    ]),
+  },
+) {}
 
 /** The request is well formed but does not fit the view it names: the route answers 400. */
 export class SharedDatabaseRequestError extends Schema.TaggedError<SharedDatabaseRequestError>()(
@@ -136,6 +161,10 @@ export class SpacePageShareService extends Context.Service<
       input: SpacePageShareCreateInput,
     ) => Effect.Effect<SpacePageShareCreateResult, SpacePageShareError>;
     readonly stop: (input: SpacePageShareStopInput) => Effect.Effect<void, SpacePageShareError>;
+    /** Turns anonymous form responses on or off for the page's current link. */
+    readonly setResponses: (
+      input: SpacePageShareResponsesInput,
+    ) => Effect.Effect<SpacePageShareResponsesResult, SpacePageShareError>;
     readonly get: (
       input: SpacePageShareGetInput,
     ) => Effect.Effect<SpacePageShareGetResult, SpacePageShareError>;
@@ -197,6 +226,20 @@ export class SpacePageShareService extends Context.Service<
         readonly timeZone?: string;
       },
     ) => Effect.Effect<SpaceSharedDatabaseRowPage, SpacePageShareAccessError>;
+    /** The questions of a form view; only while the share accepts responses. */
+    readonly form: (
+      token: string,
+      input: {
+        readonly pageId?: C.SpacePageId;
+        readonly blockId: C.SpaceBlockId;
+        readonly viewId: C.SpaceViewId;
+      },
+    ) => Effect.Effect<SpaceSharedForm, SpacePageShareAccessError>;
+    /** One anonymous submission: rate limited per link, validated, and written as one row. */
+    readonly submitForm: (
+      token: string,
+      submission: SpaceSharedFormSubmission,
+    ) => Effect.Effect<void, SpacePageShareAccessError | SharedFormRejectedError>;
   }
 >()("@t2code/cli/spaces/PageShareService/SpacePageShareService") {}
 
@@ -289,6 +332,20 @@ const make = Effect.gen(function* () {
 
   const stop = Effect.fn("SpacePageShareService.stop")(function* (input: SpacePageShareStopInput) {
     yield* spaces.stopPageShare(input.pageId).pipe(Effect.mapError(shareError));
+  });
+
+  const setResponses = Effect.fn("SpacePageShareService.setResponses")(function* (
+    input: SpacePageShareResponsesInput,
+  ) {
+    if (!(yield* sharingEnabled)) return yield* new SpacePageShareError({ reason: "disabled" });
+    const share = yield* spaces
+      .setPageShareResponses(input.pageId, input.acceptResponses)
+      .pipe(Effect.mapError(shareError));
+    if (share === null) return yield* new SpacePageShareError({ reason: "page_unavailable" });
+    return {
+      url: `https://${share.host}${SPACE_PAGE_SHARE_PAGE_PATH}#${yield* credential(share.id)}`,
+      share,
+    };
   });
 
   const get = Effect.fn("SpacePageShareService.get")(function* (input: SpacePageShareGetInput) {
@@ -451,6 +508,54 @@ const make = Effect.gen(function* () {
     } satisfies SpaceSharedDatabaseWindow;
   }, databaseBounded);
 
+  const formLimiter = makeRateLimiter();
+
+  const form = Effect.fn("SpacePageShareService.form")(function* (
+    token: string,
+    input: {
+      readonly pageId?: C.SpacePageId;
+      readonly blockId: C.SpaceBlockId;
+      readonly viewId: C.SpaceViewId;
+    },
+  ) {
+    const { share, pageId } = yield* authorize(token, input.pageId);
+    if (share.acceptResponses !== true) return yield* closed;
+    return yield* spaces
+      .describeSharedForm({
+        rootPageId: share.pageId,
+        pageId,
+        blockId: input.blockId,
+        viewId: input.viewId,
+      })
+      .pipe(Effect.catch((error) => Effect.flatMap(databaseFailure(error), Effect.fail)));
+  }, databaseBounded);
+
+  // Every authorized attempt counts, valid or not, so probing answers costs what submitting does.
+  const submitForm = Effect.fn("SpacePageShareService.submitForm")(function* (
+    token: string,
+    submission: SpaceSharedFormSubmission,
+  ) {
+    const { share, pageId } = yield* authorize(token, submission.page);
+    if (share.acceptResponses !== true) return yield* closed;
+    if (!formLimiter.admit(share.id, yield* Clock.currentTimeMillis)) return yield* busy;
+    const outcome = yield* spaces
+      .submitSharedForm({
+        rootPageId: share.pageId,
+        pageId,
+        blockId: submission.block,
+        viewId: submission.view,
+        shareId: share.id,
+        submissionId: submission.submissionId,
+        answers: submission.answers,
+      })
+      .pipe(Effect.catch((error) => Effect.flatMap(databaseFailure(error), Effect.fail)));
+    if (outcome._tag === "Rejected")
+      return yield* new SharedFormRejectedError({
+        problem: outcome.problem,
+        ...(outcome.propertyId === undefined ? {} : { propertyId: outcome.propertyId }),
+      });
+  }, databaseBounded);
+
   const databaseRow = Effect.fn("SpacePageShareService.databaseRow")(function* (
     token: string,
     input: {
@@ -479,12 +584,15 @@ const make = Effect.gen(function* () {
   return SpacePageShareService.of({
     create,
     stop,
+    setResponses,
     get,
     page,
     asset,
     database,
     databaseQuery,
     databaseRow,
+    form,
+    submitForm,
   });
 });
 
