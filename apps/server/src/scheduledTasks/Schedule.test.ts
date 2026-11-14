@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 
-import { isSameSchedule, nextScheduledRunAt } from "./Schedule.ts";
+import { isMissedFixedTimeRun, isSameSchedule, nextScheduledRunAt } from "./Schedule.ts";
 
 describe("scheduled task schedule calculation", () => {
   it("skips to the next matching fixed-time weekday", () => {
@@ -119,7 +119,9 @@ describe("scheduled task schedule calculation", () => {
       ),
     ).toBe(false);
     expect(isSameSchedule(schedule, { type: "once", runAt: "2026-07-01T16:00:00Z" })).toBe(true);
-    expect(isSameSchedule(schedule, { type: "once", runAt: "2026-07-01T17:00:00.000Z" })).toBe(false);
+    expect(isSameSchedule(schedule, { type: "once", runAt: "2026-07-01T17:00:00.000Z" })).toBe(
+      false,
+    );
     expect(isSameSchedule(schedule, { type: "interval", everyMs: 60_000 })).toBe(false);
   });
 });

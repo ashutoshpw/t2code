@@ -35,7 +35,7 @@ export class ProjectionReplay extends Context.Service<
     readonly verify: Effect.Effect<ProjectionReplayVerification, ProjectionReplayError>;
     readonly rebuild: Effect.Effect<ProjectionReplayVerification, ProjectionReplayError>;
   }
->()("t3/orchestration-v2/testkit/ProjectionReplay") {}
+>()("@t2code/cli/orchestration-v2/testkit/ProjectionReplay") {}
 
 type ProjectionMetadataRow = {
   readonly schema_version: number;

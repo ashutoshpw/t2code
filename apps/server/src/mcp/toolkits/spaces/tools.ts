@@ -6,7 +6,8 @@ import {
   EnvironmentId,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
-import * as Crypto from "effect/Crypto";
+import * as Digest from "effect/crypto/Digest";
+import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Secrets from "../../../auth/ServerSecretStore.ts";
@@ -32,7 +33,8 @@ const dependencies = [
   SpacesService.SpacesService,
   ThreadManagement.ThreadManagementService,
   Secrets.ServerSecretStore,
-  Crypto.Crypto,
+  SecureRandom.SecureRandom,
+  Digest.Digest,
   FileSystem.FileSystem,
   Path.Path,
   Config.ServerConfig,

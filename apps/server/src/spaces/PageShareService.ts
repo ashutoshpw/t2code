@@ -12,7 +12,7 @@ import {
 } from "@t2code/contracts";
 import type * as C from "@t2code/contracts/spaces";
 import * as Context from "effect/Context";
-import * as Crypto from "effect/Crypto";
+import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -101,7 +101,7 @@ const make = Effect.gen(function* () {
   const spaces = yield* SpacesService.SpacesService;
   const serverSettings = yield* ServerSettings.ServerSettingsService;
   const managedEndpoint = yield* CloudManagedEndpointRuntime;
-  const crypto = yield* Crypto.Crypto;
+  const random = yield* SecureRandom.SecureRandom;
   const secretStore = yield* ServerSecretStore.ServerSecretStore;
   const signingKey = yield* Effect.cached(
     secretStore.getOrCreateRandom(SIGNING_SECRET_NAME, 32).pipe(Effect.orDie),
@@ -133,7 +133,7 @@ const make = Effect.gen(function* () {
     const host = yield* connectHostname;
     if (host === null) return yield* new SpacePageShareError({ reason: "connect_unavailable" });
     const id = SpacePageShareId.make(
-      base64UrlEncode(yield* crypto.randomBytes(SHARE_ID_BYTES).pipe(Effect.orDie)),
+      base64UrlEncode(yield* random.randomBytes(SHARE_ID_BYTES).pipe(Effect.orDie)),
     );
     const now = yield* DateTime.now;
     const share = {

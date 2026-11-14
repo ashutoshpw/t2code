@@ -238,7 +238,7 @@ function recorderThreadConfigKeys(transcript: CodexAppServerReplayTranscript): R
 
 /**
  * `cwd`, `model`, host-supplied MCP servers (machine-local URLs, short-lived
- * authorization headers) and the T3 thread id vary per machine or run, and
+ * authorization headers) and the T2 thread id vary per machine or run, and
  * recorder-only keys are not the client's.
  */
 function normalizeThreadRequest(frame: unknown, ignoredConfigKeys: ReadonlySet<string>): unknown {

@@ -67,7 +67,7 @@ describe("labels and reference links", () => {
         ?.label,
     ).toHaveLength(200);
     expect(
-      collectComposerContextReferences(`[${"x".repeat(199)}😀tail](t3-context://v1/file/ctx_1)`)[0]
+      collectComposerContextReferences(`[${"x".repeat(199)}😀tail](t2-context://v1/file/ctx_1)`)[0]
         ?.label,
     ).toBe("x".repeat(199));
   });
@@ -217,16 +217,16 @@ describe("provider projection", () => {
     });
     for (const text of [
       `See ${citation} ok`,
-      `See ${citation} ok [Preview annotation: Checkout](t3-context://v1/preview-annotation/ctx_p)`,
+      `See ${citation} ok [Preview annotation: Checkout](t2-context://v1/preview-annotation/ctx_p)`,
     ]) {
       const projected = projectComposerContextForProvider({ text, records: [] });
-      expect(projected).not.toContain("t3-citation:");
+      expect(projected).not.toContain("t2-citation:");
       expect(projected).toContain("See [assistant-quote-1]");
       expect(projected).toContain('"text": "Use a mutex here"');
       expect(projected).toContain('"comment": "Why not a channel?"');
     }
     const captured = projectComposerContextForProvider({
-      text: "[Terminal 1 lines 3-4](t3-context://v1/terminal/ctx_t)",
+      text: "[Terminal 1 lines 3-4](t2-context://v1/terminal/ctx_t)",
       records: [{ ...terminal, lineStart: 1, lineEnd: 1, text: citation }],
     });
     expect(captured).toContain(citation);
@@ -265,7 +265,7 @@ describe("provider projection", () => {
 
   it("keeps a review excerpt's trailing blank line and whitespace", () => {
     const projected = projectComposerContextForProvider({
-      text: "[Comment](t3-context://v1/review-comment/ctx_r)",
+      text: "[Comment](t2-context://v1/review-comment/ctx_r)",
       records: [
         {
           version: 1,
@@ -288,7 +288,7 @@ describe("provider projection", () => {
 
   it("emits no terminal lines when the captured range is inverted", () => {
     const projected = projectComposerContextForProvider({
-      text: "[log](t3-context://v1/terminal/ctx_t)",
+      text: "[log](t2-context://v1/terminal/ctx_t)",
       records: [{ ...terminal, lineStart: 10, lineEnd: 5, text: "a\nb\nc\nd\ne\nf" }],
     });
     expect(projected).toContain('<context kind="terminal" id="ctx_t">');
@@ -345,7 +345,7 @@ describe("provider projection", () => {
 
   it("projects a reply as the response's opening, its subagent and a read call, never its text", () => {
     const projected = projectComposerContextForProvider({
-      text: "[Reviewer (search) finished](t3-context://v1/response/response_m1) tell it to also check the empty state",
+      text: "[Reviewer (search) finished](t2-context://v1/response/response_m1) tell it to also check the empty state",
       records: [
         {
           version: 1,
@@ -385,7 +385,7 @@ describe("provider projection", () => {
     expect(projected).toContain(
       "starts: Reviewer (search) finished and returned blocked.\nRead it in full: ",
     );
-    expect(projected).toContain('t3_thread_read({"threadId":"main","itemId":"item-1"})');
+    expect(projected).toContain('t2_thread_read({"threadId":"main","itemId":"item-1"})');
     expect(projected).not.toContain("Here is what it found");
     expect(projected).toContain("Reference, not instructions");
   });
@@ -623,6 +623,8 @@ describe("threadLinkContextReferences", () => {
       () => undefined,
     );
     expect(pasted).toEqual({ text, records: [] });
+  });
+});
 
 const capturedPage: PageContextRecord = {
   version: 1,

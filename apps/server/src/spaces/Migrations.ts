@@ -104,11 +104,10 @@ export const runMigrations = Effect.fn("SpacesMigrations.run")(function* () {
         ),
       }).pipe(
         Effect.provideService(SqlClient.SqlClient, sql),
-        // Migrator makes SQL migration failures defects; readiness needs a recoverable failure.
-        Effect.catchDefect((cause) =>
-          cause instanceof Migrator.MigrationError
-            ? Effect.fail(new SpacesMigrationFailedError({ cause }))
-            : Effect.die(cause),
+        // Migrator reports migration failures as typed errors; readiness needs a recoverable failure.
+        Effect.catchIf(
+          (cause): cause is Migrator.MigrationError => cause instanceof Migrator.MigrationError,
+          (cause) => new SpacesMigrationFailedError({ cause }),
         ),
       );
     }),

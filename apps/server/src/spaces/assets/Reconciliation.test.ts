@@ -1,3 +1,4 @@
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import { expect, it } from "@effect/vitest";
@@ -23,34 +24,37 @@ import * as Service from "../SpacesService.ts";
 const environmentId = EnvironmentId.make("media-refs");
 const env = { environmentId };
 const pdf = new TextEncoder().encode("%PDF-1.7\n%%EOF\n");
-const fixture = Effect.fn("SpacesReconciliationTest.fixture")(function* <A, E, R>(
-  use: (input: {
-    readonly config: Config.ServerConfig["Service"];
-    readonly live: () => ReturnType<typeof Service.layerFromPath>;
-  }) => Effect.Effect<A, E, R>,
-) {
-  const context = yield* Layer.buildWithScope(
-    Config.ServerConfig.layerTest(process.cwd(), { prefix: "spaces-media-" }),
-    yield* Effect.scope,
-  );
-  const config = Context.get(context, Config.ServerConfig);
-  const live = () =>
-    Service.layerFromPath(config.spacesDbPath, {
-      assetsDir: config.spacesAssetsDir,
-      stagingDir: config.spacesStagingDir,
-    });
-  return yield* use({ config, live }).pipe(
-    Effect.provide(
-      Layer.mergeAll(
-        Secrets.layer.pipe(Layer.provide(Layer.succeedContext(context))),
-        Settings.layerTest({ spacesEnabled: true }),
-        Layer.succeed(Identity.ServerEnvironmentIdentity, {
-          getEnvironmentId: Effect.succeed(environmentId),
-        }),
+const fixture = Effect.fn("SpacesReconciliationTest.fixture")(
+  function* <A, E, R>(
+    use: (input: {
+      readonly config: Config.ServerConfig["Service"];
+      readonly live: () => ReturnType<typeof Service.layerFromPath>;
+    }) => Effect.Effect<A, E, R>,
+  ) {
+    const context = yield* Layer.buildWithScope(
+      Config.ServerConfig.layerTest(process.cwd(), { prefix: "spaces-media-" }),
+      yield* Effect.scope,
+    );
+    const config = Context.get(context, Config.ServerConfig);
+    const live = () =>
+      Service.layerFromPath(config.spacesDbPath, {
+        assetsDir: config.spacesAssetsDir,
+        stagingDir: config.spacesStagingDir,
+      });
+    return yield* use({ config, live }).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          Secrets.layer.pipe(Layer.provide(Layer.succeedContext(context))),
+          Settings.layerTest({ spacesEnabled: true }),
+          Layer.succeed(Identity.ServerEnvironmentIdentity, {
+            getEnvironmentId: Effect.succeed(environmentId),
+          }),
+        ),
       ),
-    ),
-  );
-}, Effect.provide(NodeServices.layer));
+    );
+  },
+  Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
+);
 
 const upload = Effect.fn("SpacesReconciliationTest.upload")(function* (
   requestId: string,

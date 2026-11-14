@@ -1273,7 +1273,7 @@ describe("KiroAdapterV2 MCP tools", () => {
   // Probed live on Kiro 2.33.1 against a stdio MCP server named t2-code, without
   // the permission round trip. Kiro titles the call "@t2-code/html_render", names
   // it in `tool_id`, and keeps only the result's text.
-  it.effect("shows T3's html_render as T3's tool with the page T3 published", () =>
+  it.effect("shows T2's html_render as T2's tool with the page T3 published", () =>
     Effect.gen(function* () {
       const mcpSessions = yield* McpProviderSessions.McpProviderSessions;
       const toolCallId = "tooluse_4N3LnlI9PRlphUtzdBQGDD";
@@ -1320,7 +1320,7 @@ describe("KiroAdapterV2 MCP tools", () => {
         ],
         drive: ({ events, startTurn }) =>
           Effect.gen(function* () {
-            // T3's MCP server records the page when Kiro calls html_render.
+            // T2's MCP server records the page when Kiro calls html_render.
             yield* mcpSessions.recordHtmlRender(
               ThreadId.make("thread-kiro-mcp-html-render"),
               args,

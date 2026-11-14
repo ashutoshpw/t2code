@@ -19,6 +19,7 @@ import { useEffect } from "react";
 
 import { environmentCatalog } from "../connection/catalog";
 import { connectionAtomRuntime } from "../connection/runtime";
+import { appAtomRegistry } from "../rpc/atomRegistry";
 import { serverEnvironment } from "./server";
 import { environmentShell } from "./shell";
 

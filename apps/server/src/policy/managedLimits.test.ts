@@ -68,7 +68,7 @@ it.effect("binds only the loopback address it approved when remote clients are n
       tailscaleServeEnabled: false,
       privateNetworkOnly: true,
     }).pipe(Effect.flip);
-    assert.include(service.message, "set T3CODE_HOST=127.0.0.1 in its service.env");
+    assert.include(service.message, "set T2CODE_HOST=127.0.0.1 in its service.env");
     assert.equal(yield* bind("localhost", { document: undefined }), "localhost");
     assert.equal(yield* bind(undefined, { document: undefined }), "127.0.0.1");
   }),
@@ -157,13 +157,13 @@ it.effect(
     // (serve_v2.go removeWebServe), and `serve --tcp=<port> off` drops that port's forward.
     const close = (answers: Answers, offCalls: Array<ReadonlyArray<string>> = []) => {
       const web: Web = answers.web ?? {
-        "box.tailnet.ts.net:443": { "/": "http://127.0.0.1:3773" },
+        "box.tailnet.ts.net:443": { "/": "http://127.0.0.1:3772" },
       };
       const tcp = answers.tcp ?? {};
       const currentName = answers.currentName ?? "box.tailnet.ts.net";
       return ManagedLimits.closeTailscaleServeTo(desktopAndLocal, {
         host: "127.0.0.1",
-        port: 3773,
+        port: 3772,
       }).pipe(
         Effect.provideService(
           ChildProcessSpawner.ChildProcessSpawner,
@@ -259,18 +259,18 @@ it.effect(
       for (const mount of ["/t3", "/"]) {
         const web: Web = {
           "box.tailnet.ts.net:443": {
-            [mount]: "http://127.0.0.1:3773",
+            [mount]: "http://127.0.0.1:3772",
             "/dashboard": "http://127.0.0.1:9000",
-            "/other": "http://127.0.0.2:3773",
+            "/other": "http://127.0.0.2:3772",
           },
         };
-        const tcp: Record<string, string> = { "7000": "127.0.0.1:3773" };
+        const tcp: Record<string, string> = { "7000": "127.0.0.1:3772" };
         const offCalls: Array<ReadonlyArray<string>> = [];
         yield* close({ web, tcp }, offCalls);
         assert.deepEqual(web, {
           "box.tailnet.ts.net:443": {
             "/dashboard": "http://127.0.0.1:9000",
-            "/other": "http://127.0.0.2:3773",
+            "/other": "http://127.0.0.2:3772",
           },
         });
         assert.deepEqual(tcp, {});
@@ -282,7 +282,7 @@ it.effect(
       // `off` acts on the current name: a route under a former one is left, with how to clear it,
       // while one under the current name goes even if a former name has routes too.
       const renamed: Web = {
-        "old.tailnet.ts.net:443": { "/": "http://127.0.0.1:3773" },
+        "old.tailnet.ts.net:443": { "/": "http://127.0.0.1:3772" },
         "new.tailnet.ts.net:443": { "/": "http://127.0.0.1:9000" },
       };
       const renamedOffCalls: Array<ReadonlyArray<string>> = [];
@@ -298,7 +298,7 @@ it.effect(
       );
       const current: Web = {
         "old.tailnet.ts.net:443": { "/": "http://127.0.0.1:9000" },
-        "new.tailnet.ts.net:443": { "/": "http://127.0.0.1:3773" },
+        "new.tailnet.ts.net:443": { "/": "http://127.0.0.1:3772" },
       };
       yield* close({ web: current, currentName: "new.tailnet.ts.net" });
       assert.deepEqual(current, {
@@ -308,7 +308,7 @@ it.effect(
       // A `localhost` target might reach another service on the other loopback, so it stays.
       const localhostOffCalls: Array<ReadonlyArray<string>> = [];
       const localhost = yield* close(
-        { web: { "box.tailnet.ts.net:443": { "/": "http://localhost:3773" } } },
+        { web: { "box.tailnet.ts.net:443": { "/": "http://localhost:3772" } } },
         localhostOffCalls,
       ).pipe(Effect.flip);
       assert.deepEqual(localhostOffCalls, []);
@@ -326,12 +326,12 @@ it.effect(
         stdout: JSON.stringify({
           Foreground: {
             session1: {
-              Web: { "box:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3773" } } } },
+              Web: { "box:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3772" } } } },
             },
           },
           Services: {
             "svc:t3": {
-              Web: { "t3:443": { Handlers: { "/t3": { Proxy: "http://127.0.0.1:3773" } } } },
+              Web: { "t3:443": { Handlers: { "/t3": { Proxy: "http://127.0.0.1:3772" } } } },
             },
           },
         }),
@@ -372,7 +372,7 @@ it.effect(
       const spawnFailing = (tag: "NotFound" | "PermissionDenied") =>
         ManagedLimits.closeTailscaleServeTo(desktopAndLocal, {
           host: "127.0.0.1",
-          port: 3773,
+          port: 3772,
         }).pipe(
           Effect.provideService(
             ChildProcessSpawner.ChildProcessSpawner,
@@ -387,7 +387,7 @@ it.effect(
       // Node throws this instead when PATH ends in a file.
       yield* ManagedLimits.closeTailscaleServeTo(desktopAndLocal, {
         host: "127.0.0.1",
-        port: 3773,
+        port: 3772,
       }).pipe(
         Effect.provideService(
           ChildProcessSpawner.ChildProcessSpawner,
@@ -405,7 +405,7 @@ it.effect(
         Effect.flip,
       );
       assert.deepEqual(heldOffCalls, []);
-      assert.include(held.message, "while it cannot bind 127.0.0.1:3773");
+      assert.include(held.message, "while it cannot bind 127.0.0.1:3772");
     }).pipe(Effect.provideService(NetService.NetService, portFree));
   },
 );

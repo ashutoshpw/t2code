@@ -22,7 +22,7 @@ started on 1.x continue on 2.x.
 
 ## Compaction
 
-OpenCode compacts long conversations itself, and T3 Code has no setting for it. On
+OpenCode compacts long conversations itself, and T2 Code has no setting for it. On
 OpenCode 2, change it under `compaction` in an OpenCode configuration file, such as
 `opencode.json`: `auto` turns
 automatic compaction on or off, `buffer` sets the token headroom, and `keep.tokens`
@@ -43,7 +43,7 @@ fail, check the URL, credentials, and OpenCode version, then refresh provider st
 
 When **Server URL** points to a locally running server (such as `127.0.0.1`),
 the update button upgrades its installed CLI. If that server is this machine's
-OpenCode background service, T3 Code then restarts it on the new version. The URL
+OpenCode background service, T2 Code then restarts it on the new version. The URL
 must use the service's own protocol, host, and port. For a service listening on
 `0.0.0.0` use `127.0.0.1`, and for `[::]` use `[::1]`.
 
@@ -86,7 +86,7 @@ refreshes keep the helper alive. An external server may need its own reload or
 restart before T2 Code can see configuration changes.
 
 Models defined in a project's own `opencode.json` appear only in that project's
-model picker, after T3 Code reads the project's catalog the first time the picker
+model picker, after T2 Code reads the project's catalog the first time the picker
 opens there.
 
 Existing threads keep their selected model and options even when it disappears
