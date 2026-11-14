@@ -42,7 +42,7 @@ rg -no "(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+" -g '!node_modules' -g '!.t3' -g
 
 ## Known traps from past rebases
 
-- **Stored data spells the name too.** A rename must not touch a string that already exists on disk, because the migration that carries an existing install forward has to look for the spelling the old build wrote. Legacy theme ids, the desktop V1 profile names and storage keys, the legacy CLI home, and the `refs/t3/orchestration-v2/checkpoints` namespace are all load-bearing. Rename the _current_ spelling and rewrite the old one; renaming the old spelling in place silently strands the data (see `063_LegacyMcpIdentityRewrite`).
+- **Stored data spells the name too.** A rename must not touch a string that already exists on disk, because the migration that carries an existing install forward has to look for the spelling the old build wrote. Legacy theme ids, the desktop V1 profile names and storage keys, the legacy CLI home, and the `refs/t3/orchestration-v2/checkpoints` namespace are all load-bearing. Rename the _current_ spelling and rewrite the old one; renaming the old spelling in place silently strands the data (see `074_LegacyMcpIdentityRewrite`).
 - **Numeric literals with separators**: `3_773` and `13_773` do not match a `3773` grep. Search derived literals separately.
 - **Derived expectations**: tests that compute ports from a base constant shift by one when the base moves; exhaustion-boundary tests (e.g. `startOffset` where `base + offset > 65535`) must be recomputed, not string-replaced.
 - **Embedded copies that must stay byte-identical**: `apps/server/src/cli/triagePrompt.ts` (`TRIAGE_PLAYBOOK`) and `.github/triage/PLAYBOOK.md` must match exactly — rebrand both or neither.
@@ -54,7 +54,7 @@ rg -no "(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+" -g '!node_modules' -g '!.t3' -g
 
 `--audit` prints bare `T3` tokens no rule names, and the baseline lists what the rules do flag on purpose. These are the expected hits; anything else is a gap worth a rule or a rename:
 
-- Migration `063_LegacyMcpIdentityRewrite` and its test name the pre-rename MCP server and tool spellings, because stored transcripts carry them.
+- Migration `074_LegacyMcpIdentityRewrite` and its test name the pre-rename MCP server and tool spellings, because stored transcripts carry them.
 - Stored-data spellings the guard never flags: the `LEGACY_THEME_ID_ALIASES` keys and `LEGACY_T3_CHAT_DARK_THEME_ID` in `apps/web/src/themePalette.ts`, `V1_PROFILE_NAMES` in `apps/desktop/src/app/DesktopLegacyLocalStorage.ts`, the previous app-data directories in `apps/desktop/src/app/DesktopUserData.ts`, the imported key namespaces in `apps/desktop/src/legacyLocalStorageMerge.ts`, and the `refs/t3/orchestration-v2/checkpoints` namespace.
 - iOS has no store link: the fork has no App Store listing yet, so `apps/marketing`, `README.md`, and `docs/user/install.md` link Google Play only. Re-add an App Store link with the fork's own listing id when it publishes.
 - The baseline's two fixture entries: a `T3 home` test name in `apps/desktop/src/app/DesktopCliCommand.test.ts`, and a UUID in a recorded Claude transcript whose digits happen to contain `3773`.
