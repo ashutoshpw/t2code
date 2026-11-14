@@ -3,7 +3,7 @@ import {
   managedRuntimeModeDenial,
   type ManagedPolicySummary,
   type RuntimeMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { View } from "react-native";
 
 import { AppText } from "../../components/ui/AppText";

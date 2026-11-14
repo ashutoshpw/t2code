@@ -25,9 +25,9 @@ export function encodeComposerContextClipboardHtml(
   html?: string,
 ): string {
   if (html !== undefined)
-    return `<div data-t3-context-fragment="${encodeURIComponent(fragment)}">${html}</div>`;
+    return `<div data-t2-context-fragment="${encodeURIComponent(fragment)}">${html}</div>`;
   const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  return `<pre data-t3-context-fragment="${encodeURIComponent(fragment)}">${escaped}</pre>`;
+  return `<pre data-t2-context-fragment="${encodeURIComponent(fragment)}">${escaped}</pre>`;
 }
 
 export function decodeComposerContextClipboardHtml(
@@ -35,8 +35,12 @@ export function decodeComposerContextClipboardHtml(
 ): ComposerContextClipboardFragment | null {
   // Percent encoding can expand each UTF-16 code unit to nine characters.
   if (!html || html.length > MAX_FRAGMENT_CHARS * 9 + HTML_WRAPPER_SLACK_CHARS) return null;
+  // Clipboard HTML from pre-rename builds carries the old data-t3-context-fragment
+  // attribute; both spellings are accepted on read.
   // `encodeURIComponent` leaves `'` as is, so each quote style must end only at its own quote.
-  const match = /data-t3-context-fragment=(?:"([^"]+)"|'([^']+)')/.exec(html);
+  const match =
+    /data-t2-context-fragment=(?:"([^"]+)"|'([^']+)')/.exec(html) ??
+    /data-t3-context-fragment=(?:"([^"]+)"|'([^']+)')/.exec(html);
   const encoded = match?.[1] ?? match?.[2];
   if (!encoded) return null;
   try {

@@ -68,7 +68,7 @@ function sharedBackendTargetHost(host: string | undefined): string {
 }
 
 export const DEFAULT_T2_HOME = Effect.map(Effect.service(Path.Path), (path) =>
-  path.join(NodeOS.homedir(), ".t3"),
+  path.join(NodeOS.homedir(), ".t2"),
 );
 
 const MODE_ARGS = {
@@ -371,7 +371,6 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       output.T2CODE_SINGLE_ORIGIN_DEV = "1";
     } else {
       delete output.T2CODE_HOME;
-      delete output.T3CODE_HOME;
     }
 
     // A dev-runner server is never launcher-managed. When the shell that runs
@@ -417,7 +416,6 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       delete output.T2CODE_NO_BROWSER;
       delete output.T2CODE_HOST;
       delete output.T2CODE_DEV_AUTH_TOKEN;
-      delete output.T3CODE_DEV_AUTH_TOKEN;
     }
   } else {
     output.T2CODE_PORT = String(serverPort);
@@ -826,8 +824,7 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
   const resolvedT2Home =
     (input.t2Home?.trim() || undefined) ??
     worktreeHome ??
-    (hostEnvironment.T2CODE_HOME?.trim() || undefined) ??
-    (hostEnvironment.T3CODE_HOME?.trim() || undefined);
+    (hostEnvironment.T2CODE_HOME?.trim() || undefined);
   const env = yield* createDevRunnerEnv({
     mode: input.mode,
     baseEnv: hostEnvironment,
@@ -1017,7 +1014,7 @@ const devRunnerCli = Command.make("dev-runner", {
   ),
   t2Home: Flag.String("home-dir").pipe(
     Flag.withDescription(
-      "Explicit T2 Code data directory; runtime state is stored under userdata (equivalent to T2CODE_HOME). Inside a git worktree this defaults to that worktree's own .t3 so dev state stays off the shared home.",
+      "Explicit T2 Code data directory; runtime state is stored under userdata (equivalent to T2CODE_HOME). Inside a git worktree this defaults to that worktree's own .t2 so dev state stays off the shared home.",
     ),
     Flag.optional,
     Flag.map(Option.getOrUndefined),

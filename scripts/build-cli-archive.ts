@@ -466,7 +466,7 @@ export const signMacArchiveContents = Effect.fn("signMacArchiveContents")(functi
         entry.endsWith(".node") ||
         entry.endsWith(".dylib") ||
         entry.endsWith("spawn-helper") ||
-        entry.endsWith("t3-resource-monitor"),
+        entry.endsWith("t2-resource-monitor"),
     )
     .map((entry) => path.join(input.contentDir, entry));
 

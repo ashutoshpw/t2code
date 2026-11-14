@@ -64,7 +64,7 @@ export function MicrophoneTest({
     setRecording(null);
     setPhase("idle");
   };
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- releases the microphone and the recording's object URL on unmount
+  // oxlint-disable-next-line t2code/react-effect-budget -- releases the microphone and the recording's object URL on unmount
   useEffect(
     () => () => {
       releaseCapture();

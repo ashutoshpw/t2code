@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://t2.codes/download"><strong>Download</strong></a> ·
   <a href="https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824">iOS</a> ·
-  <a href="https://play.google.com/store/apps/details?id=com.t3tools.t3code">Android</a> ·
+  <a href="https://play.google.com/store/apps/details?id=com.t2tools.t2code">Android</a> ·
   <a href="https://app.t2.codes">Web</a> ·
   <a href="./docs/README.md">Docs</a> ·
   <a href="https://discord.gg/jn4EGJjrvv">Discord</a>
@@ -43,11 +43,10 @@ It works with Claude Code, Codex, Cursor, OpenCode, Grok Build, Antigravity, Kir
 
 [Download T2 Code](https://t2.codes/download) for macOS, Windows, or Linux. You can also use a package manager:
 
-| Platform       | Command                                                              |
-| -------------- | -------------------------------------------------------------------- |
+| Platform       | Command                                                               |
+| -------------- | --------------------------------------------------------------------- |
 | Debian, Ubuntu | `.deb` from [Releases](https://github.com/ashutoshpw/t2code/releases) |
-| Arch Linux     | `yay -S t2code-bin`                                                  |
-
+| Arch Linux     | `yay -S t2code-bin`                                                   |
 
 ### Try it out (install-free)
 
@@ -69,8 +68,7 @@ To try it once without installing, run `npx @t2code/cli@latest`. It offers to in
 
 ### Phone
 
-Get the app from the [App Store](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Google Play](https://play.google.com/store/apps/details?id=com.t3tools.t3code). Then follow [remote access](./docs/user/remote-access.md) to connect it to your computer.
-
+Get the app from the [App Store](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Google Play](https://play.google.com/store/apps/details?id=com.t2tools.t2code). Then follow [remote access](./docs/user/remote-access.md) to connect it to your computer.
 
 ### Sign in to an agent
 
@@ -80,11 +78,9 @@ T2 Code needs one agent that is installed and signed in. For example, install [C
 
 ## "Wait, what are you selling me?"
 
-
 Nothing. We built T2 Code because we wanted the best possible development experience with agents. We were inspired by existing solutions like the Codex desktop app, Conductor, Claude Desktop and Cursor Glass, but none met our bar.
 
 We wanted something performant, remote-ready, and truly open. If we ever go the wrong direction, we want you to have everything you need to fork and build the tool that you want.
-
 
 ## Documentation
 

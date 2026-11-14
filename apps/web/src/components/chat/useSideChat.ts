@@ -1,11 +1,11 @@
-import type { ModelSelection, RuntimeMode, ScopedThreadRef } from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { deriveThreadTitleSeed } from "@t3tools/client-runtime/operations";
+import type { ModelSelection, RuntimeMode, ScopedThreadRef } from "@t2code/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { deriveThreadTitleSeed } from "@t2code/client-runtime/operations";
 import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import { useRef } from "react";
 
 import { newMessageId, newThreadId } from "~/lib/utils";

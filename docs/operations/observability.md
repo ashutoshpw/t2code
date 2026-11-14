@@ -10,7 +10,7 @@ T2 Code has one server-side observability model:
 
 The local trace file is the persisted source of truth for normal local launches. Those launches do not
 write a separate server log file, but SSH-managed launches also persist the remote process's
-stdout/stderr at `~/.t3/ssh-launch/<state>/server.log`. Each managed launch starts that file
+stdout/stderr at `~/.t2/ssh-launch/<state>/server.log`. Each managed launch starts that file
 empty, so it holds only the latest launch's output.
 
 ## Where To Find Things
@@ -22,7 +22,7 @@ Logs are human-facing:
 - destination: stdout
 - format: `Logger.consolePretty()`
 - normal local persistence: none
-- SSH-managed launch persistence: `~/.t3/ssh-launch/<state>/server.log`
+- SSH-managed launch persistence: `~/.t2/ssh-launch/<state>/server.log`
 
 If you want a log message to show up in the trace file, emit it inside an active span with `Effect.log...`. `Logger.tracerLogger` will attach it as a span event.
 
@@ -30,10 +30,10 @@ If you want a log message to show up in the trace file, emit it inside an active
 
 Completed spans are written as NDJSON records to `serverTracePath`. The default depends on how the
 server starts: production and explicitly configured homes use
-`<home>/userdata/logs/server.trace.ndjson` (so `~/.t3/userdata/...` by default, or
+`<home>/userdata/logs/server.trace.ndjson` (so `~/.t2/userdata/...` by default, or
 `/custom/path/userdata/...` with `--home-dir /custom/path`), a linked worktree dev run uses
-`<worktree>/.t3/userdata/logs/server.trace.ndjson`, and an implicit dev run outside a linked
-worktree uses `~/.t3/dev/logs/server.trace.ndjson`.
+`<worktree>/.t2/userdata/logs/server.trace.ndjson`, and an implicit dev run outside a linked
+worktree uses `~/.t2/dev/logs/server.trace.ndjson`.
 
 Important fields common to both record types:
 
@@ -188,7 +188,7 @@ For endpoint settings and startup precedence, see the
 [user telemetry guide](../user/telemetry.md#export-diagnostics-to-your-own-receiver).
 In a worktree, use `vp run dev` instead of `t3` to keep state isolated.
 
-```bash
+````bash
 export T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces
 export T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
 export T2CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs
@@ -199,7 +199,7 @@ Optional:
 ```bash
 export T2CODE_TRACE_MIN_LEVEL=Info
 export T2CODE_TRACE_TIMING_ENABLED=true
-```
+````
 
 #### 3. Launch the app from that same shell
 
@@ -257,19 +257,19 @@ Resolve the path for the launch mode once. Production and explicitly configured 
 state under the base directory's `userdata` folder:
 
 ```bash
-TRACE_FILE="${T2CODE_HOME:-$HOME/.t3}/userdata/logs/server.trace.ndjson"
+TRACE_FILE="${T2CODE_HOME:-$HOME/.t2}/userdata/logs/server.trace.ndjson"
 ```
 
 A dev server started from a linked worktree defaults to that worktree's local home:
 
 ```bash
-TRACE_FILE="$WORKTREE/.t3/userdata/logs/server.trace.ndjson"
+TRACE_FILE="$WORKTREE/.t2/userdata/logs/server.trace.ndjson"
 ```
 
 Only an implicit dev run outside a linked worktree uses the shared dev directory:
 
 ```bash
-TRACE_FILE="$HOME/.t3/dev/logs/server.trace.ndjson"
+TRACE_FILE="$HOME/.t2/dev/logs/server.trace.ndjson"
 ```
 
 Tail the selected file:
@@ -369,12 +369,12 @@ Recommended flow in Grafana:
 2. Pick the `Tempo` data source.
 3. Set the time range to something recent like `Last 15 minutes`.
 4. Start broad. Do not begin with a very narrow query.
-5. Look for spans from the `t3code-server` or `t3code-desktop` service, then narrow by span name or
+5. Look for spans from the `t2code-server` or `t2code-desktop` service, then narrow by span name or
    attributes.
 
 Good first searches:
 
-- service name `t3code-server` or `t3code-desktop`, plus a resource attribute such as
+- service name `t2code-server` or `t2code-desktop`, plus a resource attribute such as
   `deployment.environment.name`
 - span names like `sendTurn` or a Git operation such as `GitVcsDriver.statusDetails.status`
 - Git spans whose `git.operation` attribute identifies the operation
@@ -582,9 +582,10 @@ The desktop main process is a second producer, assembled in
 `apps/desktop/src/app/DesktopObservability.ts`. It reads the same `T2CODE_OTLP_*` names and the same
 Settings entries as the backend it supervises, and covers work the backend cannot see: app startup,
 window and menu handling, backend supervision, and updates. It reports as service
-`t3code-desktop`, so a collector shows it alongside the backend rather than mixed into it. It
+`t2code-desktop`, so a collector shows it alongside the backend rather than mixed into it. It
 exports traces and logs only; the main process records no metrics, so the metrics endpoint applies
 to the backend alone.
+
 ### Env Vars
 
 Local trace file:
@@ -602,7 +603,7 @@ OTLP export:
 - `T2CODE_OTLP_METRICS_URL`: OTLP metric endpoint
 - `T2CODE_OTLP_LOGS_URL`: OTLP log endpoint
 - `T2CODE_OTLP_EXPORT_INTERVAL_MS`: export interval, default `10000`
-- `T2CODE_OTLP_HEADERS`: extra headers for all three exporters, same format as  `OTEL_EXPORTER_OTLP_HEADERS`: comma-separated `key=value` pairs with percent-encoded values.
+- `T2CODE_OTLP_HEADERS`: extra headers for all three exporters, same format as `OTEL_EXPORTER_OTLP_HEADERS`: comma-separated `key=value` pairs with percent-encoded values.
 - `T2CODE_OTLP_PROTOCOL`: `http/json` (default) or `http/protobuf`
 
 The server and the desktop app also read the standard
@@ -618,13 +619,13 @@ an `http` or `https` URL, a protocol other than `http/protobuf` or `http/json` s
 headers that are not `key=value` pairs with percent-encoded values turn that signal's export off
 with a startup warning, rather than sending it to the Settings endpoint.
 
-Service names are fixed: `t3code-server` for the backend and `t3code-desktop` for the desktop main
-process, both in `service.namespace` `t3code`. `OTEL_SERVICE_NAME` and a `service.name` or
+Service names are fixed: `t2code-server` for the backend and `t2code-desktop` for the desktop main
+process, both in `service.namespace` `t2code`. `OTEL_SERVICE_NAME` and a `service.name` or
 `service.namespace` in `OTEL_RESOURCE_ATTRIBUTES` are ignored. Tell installations apart with other
 resource attributes, such as `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=staging`.
 
 Each process reports its own build, not the one it talks to: the server, the desktop main process,
-the UI, and the mobile app each carry `t3code.release.channel` (`dev`, `stable`, `nightly`, or
+the UI, and the mobile app each carry `t2code.release.channel` (`dev`, `stable`, `nightly`, or
 `preview`, from their own version; desktop PR builds count as `preview`, and a server not built by a
 release workflow reports `dev`) and `deployment.environment.name` (`development`, `production`, or
 `staging` for `preview`). On the server and the desktop main process either key in
@@ -633,10 +634,10 @@ set `VITE_RELEASE_CHANNEL=preview` because their `APP_VERSION` must stay compara
 server's, and the mobile app maps its build variant (`development`, `preview`, `production`), or
 reports `dev` from a development bundle.
 
-Attributes specific to T3 Code use the `t3code.` prefix. The UI runs as `t3code-web` in both a
-browser and the desktop window, since it is the same code, and `t3code.client.surface` is `desktop`
-or `web`. The server's `t3code.server.managed_by` is `desktop` when the desktop app launched it and
-`standalone` otherwise. The desktop main process reports `t3code.desktop.mode` as `development` or
+Attributes specific to T2 Code use the `t2code.` prefix. The UI runs as `t2code-web` in both a
+browser and the desktop window, since it is the same code, and `t2code.client.surface` is `desktop`
+or `web`. The server's `t2code.server.managed_by` is `desktop` when the desktop app launched it and
+`standalone` otherwise. The desktop main process reports `t2code.desktop.mode` as `development` or
 `packaged` (formerly `service.mode`; dashboards filtering on that key must switch). Node processes
 also report the semantic `process.runtime.name`, `process.runtime.version`, and
 `process.runtime.description`, and UI traces report `browser.language`, `user_agent.original`, and,
@@ -648,20 +649,21 @@ per page load for the UI, and the Expo session on mobile. A `service.instance.id
 
 If the OTLP URLs are unset, local tracing still works, metrics stay in-process only, and logs stay
 on stdout only.
+
 ### The Kill Switch
 
-`T3CODE_OTEL_SDK_DISABLED` and `OTEL_SDK_DISABLED` turn off every OTLP export in both the server and
+`T2CODE_OTEL_SDK_DISABLED` and `OTEL_SDK_DISABLED` turn off every OTLP export in both the server and
 the desktop main process, overriding any endpoint from the environment or Settings. Local trace
 files and stdout logs are unaffected.
 
-`T3CODE_OTEL_SDK_DISABLED` wins when set, so `T3CODE_OTEL_SDK_DISABLED=false` re-enables export on a
+`T2CODE_OTEL_SDK_DISABLED` wins when set, so `T2CODE_OTEL_SDK_DISABLED=false` re-enables export on a
 machine that sets `OTEL_SDK_DISABLED` for everything else. It accepts the usual boolean spellings
 (`true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0`, `y`/`n`). `OTEL_SDK_DISABLED` follows the
 OpenTelemetry specification and only `true` disables export, so `OTEL_SDK_DISABLED=1` does not.
 Values are case-insensitive and trimmed. An unrecognized value is ignored with a startup warning.
 
 `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER`, or `OTEL_LOGS_EXPORTER` set to `none` turns off
-just that signal, overriding an OTEL endpoint and the Settings endpoint. A `T3CODE_OTLP_*_URL` still
+just that signal, overriding an OTEL endpoint and the Settings endpoint. A `T2CODE_OTLP_*_URL` still
 wins for its signal. `otlp` is the default, and any other exporter name, such as `console` or
 `prometheus`, is ignored with a startup warning.
 
@@ -703,7 +705,7 @@ pid="$(jq .pid "${T2CODE_HOME:-$HOME/.t3}/userdata/server-runtime.json")"
 ps -p "$pid" -o command=
 ```
 
-If `ps` shows the T3 Code server, send the signal:
+If `ps` shows the T2 Code server, send the signal:
 
 ```bash
 kill -USR2 "$pid"

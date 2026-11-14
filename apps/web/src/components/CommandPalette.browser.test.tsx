@@ -1,5 +1,5 @@
-import { threadKey } from "@t3tools/client-runtime/state/entities";
-import { EnvironmentId, ProjectId, ThreadId } from "@t3tools/contracts";
+import { threadKey } from "@t2code/client-runtime/state/entities";
+import { EnvironmentId, ProjectId, ThreadId } from "@t2code/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 

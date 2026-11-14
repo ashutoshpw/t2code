@@ -1,11 +1,11 @@
 import { createMemoryHistory } from "@tanstack/react-router";
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { EnvironmentId, RunId, ThreadId } from "@t3tools/contracts";
-import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
+import { scopeProjectRef, scopeThreadRef } from "@t2code/client-runtime/environment";
+import { EnvironmentId, RunId, ThreadId } from "@t2code/contracts";
+import { DEFAULT_CLIENT_SETTINGS } from "@t2code/contracts/settings";
 import {
   compileResolvedKeybindingsConfig,
   mergeWithDefaultKeybindings,
-} from "@t3tools/shared/keybindings";
+} from "@t2code/shared/keybindings";
 import type * as Context from "effect/Context";
 import { expect, it, vi } from "vite-plus/test";
 import { cdp, page, userEvent } from "vite-plus/test/browser";

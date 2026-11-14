@@ -69,6 +69,18 @@ export const childThreadApprovalsAtom = createChildThreadApprovalsAtom({
   pendingRequestsAtom: environmentThreadDetails.pendingRequestsAtom,
 });
 
+/** Keeps the subagent tree under `rootThreadId` in the thread list while the caller shows it. */
+export function useThreadFamily(
+  environmentId: EnvironmentId | null,
+  rootThreadId: ThreadId | null,
+): void {
+  // oxlint-disable-next-line t2code/react-effect-budget -- mounts the subagent tree under the root thread into the shared thread registry while the caller shows it
+  useEffect(() => {
+    if (environmentId === null || rootThreadId === null) return;
+    return threadFamilies.mount(appAtomRegistry, environmentId, rootThreadId);
+  }, [environmentId, rootThreadId]);
+}
+
 // Long enough for the opened screen to subscribe; its subscription keeps the thread after this.
 const OPENING_THREAD_HOLD_MS = 3_000;
 
