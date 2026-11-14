@@ -257,6 +257,56 @@ it.effect.each(["darwin", "linux"] as const)(
   },
 );
 
+it.effect("reports implemented tools separately from locally available executables", () => {
+  const runGitOnly = (
+    input: Pick<
+      SourceControlHost.SourceControlProcessInput,
+      "operation" | "command" | "args" | "cwd"
+    >,
+  ): Effect.Effect<SourceControlHost.SourceControlProcessOutput, VcsProcessSpawnError> =>
+    input.command === "git"
+      ? Effect.succeed(TestSourceControlHost.processOutput("git version 2.51.0\n"))
+      : Effect.fail(
+          new VcsProcessSpawnError({
+            operation: input.operation,
+            command: input.command,
+            cwd: input.cwd,
+            cause: new Error(`${input.command} not found`),
+          }),
+        );
+
+  const layerVcsOnly = Layer.effect(
+    SourceControlProviderRegistry.SourceControlProviderRegistry,
+    SourceControlProviderRegistry.makeWithProviders([]),
+  ).pipe(
+    Layer.provideMerge(TestSourceControlHost.layer({ process: { run: runGitOnly } })),
+    Layer.provideMerge(ServerSettings.ServerSettingsService.layerTest()),
+    Layer.provideMerge(Layer.mock(VcsDriverRegistry.VcsDriverRegistry)({})),
+    Layer.provideMerge(Layer.mock(VcsProcess.VcsProcess)({ run: runGitOnly })),
+    Layer.provideMerge(
+      ServerConfig.layerTest(process.cwd(), { prefix: "t2-source-control-vcs-discovery-" }),
+    ),
+    Layer.provideMerge(NodeServices.layer),
+  );
+
+  return Effect.gen(function* () {
+    const discovery = yield* SourceControlDiscovery.SourceControlDiscovery;
+    const result = yield* discovery.discover;
+
+    assert.deepStrictEqual(
+      result.versionControlSystems.map((item) => ({
+        kind: item.kind,
+        implemented: item.implemented,
+        status: item.status,
+      })),
+      [
+        { kind: "git", implemented: true, status: "available" },
+        { kind: "jj", implemented: false, status: "missing" },
+      ],
+    );
+  }).pipe(Effect.provide(SourceControlDiscovery.layer.pipe(Layer.provide(layerVcsOnly))));
+});
+
 // Spawns a real login shell and `jj`, so it runs on wall-clock time; the fixture shell is POSIX sh.
 it.live.skipIf(HostProcess.Platform.defaultValue() === "win32")(
   "rescans with tools the login shell gained after the server started",
