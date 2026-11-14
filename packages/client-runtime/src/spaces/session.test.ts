@@ -338,12 +338,40 @@ describe("SpaceDocumentSession", () => {
       session.apply([
         { kind: "insert", block: { ...paragraph("child", "b"), parentId: SpaceBlockId.make("a") } },
       ]),
-    ).toThrow("list item");
+    ).toThrow("loaded container");
     expect(() =>
       session.apply(["b", "c", "d"].map((id) => ({ kind: "insert", block: paragraph(id, id) }))),
     ).toThrow("limit");
     expect(session.getSnapshot().blocks).toEqual([paragraph("first")]);
     expect(session.getSnapshot().dirty).toBe(false);
+  });
+
+  it("validates tabs windows and nesting for inserts", async () => {
+    const tabs = { ...paragraph("", "t"), type: "tabs", content: {} };
+    const pane = {
+      ...tabs,
+      id: SpaceBlockId.make("p"),
+      parentId: tabs.id,
+      type: "tab_pane",
+      content: { title: "One" },
+    };
+    const child = { ...paragraph("body", "c"), parentId: pane.id };
+    const { options } = harness({
+      save: async () => ({ status: "saved", revision: 2 }),
+      lookupReceipt: noReceipt,
+    });
+    const session = new SpaceDocumentSession(key, { ...options, maxLoadedBlocks: 10 });
+    await session.hydrate({ revision: 1, blocks: [tabs, pane, child] });
+    expect(session.getSnapshot().blocks).toHaveLength(3);
+    expect(() =>
+      session.apply([{ kind: "insert", block: { ...paragraph("x", "d"), parentId: tabs.id } }]),
+    ).toThrow("loaded container");
+    session.apply([{ kind: "insert", block: { ...paragraph("x", "e"), parentId: pane.id } }]);
+    expect(session.getSnapshot().blocks.map((block) => block.id)).toContain("e");
+    const invalid = new SpaceDocumentSession(key, { ...options, maxLoadedBlocks: 10 });
+    expect(() =>
+      invalid.hydrate({ revision: 1, blocks: [tabs, { ...child, parentId: tabs.id }] }),
+    ).toThrow("nesting");
   });
 
   it("bounds repeated text edits by their pending payload rather than keystroke count", async () => {

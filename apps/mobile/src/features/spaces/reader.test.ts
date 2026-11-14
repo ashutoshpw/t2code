@@ -51,13 +51,13 @@ const capability: SpaceCapability = {
   },
 };
 const decodePage = Schema.decodeUnknownSync(SpacePageGetResult);
-function located(pageId = target.pageId) {
+function located(pageId = target.pageId, revision = 7) {
   const metadata = decodePage({
     page: {
       id: pageId,
       spaceId: "current-space",
       title: "Current title",
-      revision: 7,
+      revision,
       rootOrder: "a",
       location: { kind: "root", spaceId: "current-space", order: "a" },
       createdAt: "2026-10-27T00:00:00.000Z",
@@ -344,6 +344,73 @@ function retainedDraft(pageId = target.pageId): SpaceDocumentDraft {
     },
   };
 }
+
+describe("mobile Spaces live refresh", () => {
+  function liveSetup() {
+    const state = { revision: 7, reads: 0 };
+    const reader = new SpacesPageReader(target, {
+      session: pageSession(),
+      access: { availability: "read-only", capability, current: () => true },
+      locate: async () => located(target.pageId, state.revision),
+      blocks: async () => {
+        state.reads++;
+        return { revision: state.revision, blocks: [], nextCursor: null };
+      },
+    });
+    return { reader, state };
+  }
+  const signal = (changeSeq: number, resyncSeq = 0, bodyRevision = 8, revision = 8) => ({
+    changeSeq,
+    resyncSeq,
+    revision,
+    bodyRevision,
+  });
+
+  it("silently re-reads a clean page when the body moved on", async () => {
+    const { reader, state } = liveSetup();
+    await reader.first();
+    expect(state.reads).toBe(1);
+    state.revision = 8;
+    await reader.liveRefresh(signal(1));
+    expect(state.reads).toBe(2);
+    expect(reader.getSnapshot()).toMatchObject({
+      loading: false,
+      location: { page: { revision: 8 } },
+      window: { revision: 8 },
+    });
+  });
+
+  it("holds while the page is dirty and reads nothing", async () => {
+    const { reader, state } = liveSetup();
+    await reader.first();
+    reader.session.apply([
+      {
+        kind: "insert",
+        block: {
+          id: SpaceBlockId.make("local"),
+          parentId: null,
+          order: "a",
+          type: "divider",
+          version: 1,
+          content: {},
+        },
+      },
+    ]);
+    state.revision = 8;
+    await reader.liveRefresh(signal(1));
+    expect(state.reads).toBe(1);
+  });
+
+  it("after a resync reads the page only when its revision changed", async () => {
+    const { reader, state } = liveSetup();
+    await reader.first();
+    await reader.liveRefresh(signal(0, 1));
+    expect(state.reads).toBe(1);
+    state.revision = 8;
+    await reader.liveRefresh(signal(0, 2));
+    expect(state.reads).toBe(2);
+  });
+});
 
 describe("mobile document ownership", () => {
   it("shares one hydration across two views and does not let a stale release retire the remaining owner", async () => {

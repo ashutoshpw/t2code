@@ -12,6 +12,7 @@ import { SpacesNativePublication } from "./nativeSpacesPublication";
 import { canRestoreMobileSpaceBlock, nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
 import type { SpacesReadAccess } from "./readAccess";
 import { allocateMobileSpaceRootOrder } from "./blockOrder";
+import { isMobileReadOnlyBlock } from "./blockVisibility";
 
 export type MobileCoreBlockKind =
   | "paragraph"
@@ -125,7 +126,11 @@ export class MobileSpaceEditing {
 
   canDeleteCoreBlock(blockId: SpaceBlockId) {
     const block = this.ports.session.getSnapshot().blocks.find((item) => item.id === blockId);
-    return !!block && deletableCore(block);
+    return (
+      !!block &&
+      deletableCore(block) &&
+      !isMobileReadOnlyBlock(this.ports.session.getSnapshot().blocks, block)
+    );
   }
 
   async insertCore(kind: MobileCoreBlockKind, id: SpaceBlockId, current: () => boolean) {
@@ -177,7 +182,10 @@ export class MobileSpaceEditing {
         if (block.parentId !== null && ids.has(block.parentId)) ids.add(block.id);
     }
     const selected = state.blocks.filter((block) => ids.has(block.id));
-    if (selected.some((block) => !deletableCore(block)))
+    if (
+      isMobileReadOnlyBlock(state.blocks, root) ||
+      selected.some((block) => !deletableCore(block) || isMobileReadOnlyBlock(state.blocks, block))
+    )
       throw new Error(
         "This subtree contains read-only or unsupported content; original blocks retained",
       );
@@ -239,6 +247,8 @@ export class MobileSpaceEditing {
     const session = this.ports.session;
     const block = session.getSnapshot().blocks.find((item) => item.id === blockId);
     if (!block) throw new Error("This block is not loaded");
+    if (isMobileReadOnlyBlock(session.getSnapshot().blocks, block))
+      throw new Error("Tabs and synced blocks are read-only on mobile");
     const focus: FocusedBlock = {
       owner,
       token: ++this.#token,
@@ -354,6 +364,7 @@ export class MobileSpaceEditing {
     const block = this.ports.session.getSnapshot().blocks.find((item) => item.id === blockId);
     if (
       !block ||
+      isMobileReadOnlyBlock(this.ports.session.getSnapshot().blocks, block) ||
       !nativeDocumentForSpaceBlock(block) ||
       !isKnownSpaceBlock(block) ||
       block.type !== "todo_item"

@@ -452,8 +452,8 @@ describe("Current-selection Spaces formatting", () => {
     view.dispatch(
       view.state.tr.setSelection(TextSelection.create(view.state.doc, position(view.state, "h"))),
     );
-    expect(view.run(view.bridge.adapter.setHeadingLevel(2))).toBe(true);
-    expect(view.run(view.bridge.adapter.setHeadingLevel(3))).toBe(true);
+    expect(view.run(view.bridge.adapter.setHeadingLevel(blocks[0]!.id, 2))).toBe(true);
+    expect(view.run(view.bridge.adapter.setHeadingLevel(blocks[0]!.id, 3))).toBe(true);
     expect(view.controller.session.getSnapshot().blocks[0]).toEqual({
       ...blocks[0],
       content: { level: 3, runs },
@@ -470,13 +470,13 @@ describe("Current-selection Spaces formatting", () => {
     view.dispatch(
       view.state.tr.setSelection(TextSelection.create(view.state.doc, position(view.state, "c"))),
     );
-    expect(view.run(view.bridge.adapter.setCalloutIcon("📌"))).toBe(true);
+    expect(view.run(view.bridge.adapter.setCalloutIcon(blocks[1]!.id, "📌"))).toBe(true);
     view.dispatch(
       view.state.tr.setSelection(
         TextSelection.create(view.state.doc, position(view.state, "code")),
       ),
     );
-    expect(view.run(view.bridge.adapter.setCodeLanguage("typescript"))).toBe(true);
+    expect(view.run(view.bridge.adapter.setCodeLanguage(blocks[2]!.id, "typescript"))).toBe(true);
     expect(view.controller.session.getSnapshot().blocks).toEqual([
       { ...blocks[0], content: { level: 3, runs } },
       { ...blocks[1], content: { icon: "📌", runs } },
@@ -557,9 +557,9 @@ it("refuses unsafe links, readonly attributes and unknown payloads without chang
   for (const href of ["javascript:alert(1)", "data:text/html,evil", "/relative", ""]) {
     expect(view.run(view.bridge.adapter.setLink(href))).toBe(false);
   }
-  expect(view.run(view.bridge.adapter.setHeadingLevel(4 as 1))).toBe(false);
+  expect(view.run(view.bridge.adapter.setHeadingLevel(SpaceBlockId.make("h"), 4 as 1))).toBe(false);
   view.bridge.setWritable(false);
-  expect(view.run(view.bridge.adapter.setHeadingLevel(2))).toBe(false);
+  expect(view.run(view.bridge.adapter.setHeadingLevel(SpaceBlockId.make("h"), 2))).toBe(false);
   expect(view.run(view.bridge.adapter.setLink("https://example.test"))).toBe(false);
   view.bridge.setWritable(true);
   expect(view.state.doc.eq(doc)).toBe(true);
@@ -569,7 +569,9 @@ it("refuses unsafe links, readonly attributes and unknown payloads without chang
       NodeSelection.create(view.state.doc, view.state.doc.child(0).nodeSize),
     ),
   );
-  expect(view.run(view.bridge.adapter.setHeadingLevel(3))).toBe(false);
+  expect(view.run(view.bridge.adapter.setHeadingLevel(SpaceBlockId.make("unknown"), 3))).toBe(
+    false,
+  );
   expect(view.run(view.bridge.adapter.setLink("https://example.test"))).toBe(false);
   view.dispatch(
     view.state.tr.setSelection(
@@ -580,7 +582,7 @@ it("refuses unsafe links, readonly attributes and unknown payloads without chang
     ),
   );
   const restState = view.state;
-  expect(view.run(view.bridge.adapter.setHeadingLevel(3))).toBe(false);
+  expect(view.run(view.bridge.adapter.setHeadingLevel(SpaceBlockId.make("rest"), 3))).toBe(false);
   expect(view.state).toBe(restState);
   expect(view.controller.session.getSnapshot()).toBe(before);
   expect(view.controller.session.getSnapshot().blocks).toEqual(before.blocks);
@@ -724,8 +726,12 @@ it.each(
     expect(view.controller.session.getSnapshot().dirty).toBe(false);
     refuse();
     select("history");
-    expect(view.run(view.bridge.adapter.setHeadingLevel(2))).toBe(true);
-    expect(view.run(view.bridge.adapter.setHeadingLevel(3))).toBe(true);
+    expect(view.run(view.bridge.adapter.setHeadingLevel(SpaceBlockId.make("history"), 2))).toBe(
+      true,
+    );
+    expect(view.run(view.bridge.adapter.setHeadingLevel(SpaceBlockId.make("history"), 3))).toBe(
+      true,
+    );
     expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
     expect([undoDepth(view.state), redoDepth(view.state)]).toEqual([1, 1]);
     select("linked", caret);

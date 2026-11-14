@@ -15,10 +15,12 @@ import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import type * as SqlError from "effect/sql/SqlError";
+import * as BlockKinds from "./BlockKinds.ts";
 import * as BlockStore from "./BlockStore.ts";
 import * as PageStore from "./PageStore.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
+import * as SyncedBlocks from "./SyncedBlocks.ts";
 import { byteLength } from "./CorePolicy.ts";
 
 const captureLimits = { pages: 8, blocks: 256, depth: 16, bytes: 2_097_152 } as const;
@@ -42,6 +44,8 @@ function clip(text: string, chars: number, bytes: number) {
 }
 
 function blockText(block: C.SpaceBlock) {
+  const pane = BlockKinds.strictTabPaneBlock(block);
+  if (pane) return `### ${clip(pane.content.title, 100, 400).text}`;
   const known = Option.getOrUndefined(knownBlock(block));
   if (!known) return "[Unsupported block]";
   const content = known.content;
@@ -93,9 +97,11 @@ export const capture = Effect.fn("SpacesContextSnapshot.capture")(function* (
   ];
   const pages = new Set([root.id]);
   const blocks = new Set<C.SpaceBlockId>();
+  const expandedSynced = new Set<string>();
   let inspected = 0;
   let inspectedBytes = 0;
   let text = "";
+  let lines = 0;
   let truncated = false;
   const stack: Frame[] = [
     {
@@ -182,20 +188,55 @@ export const capture = Effect.fn("SpacesContextSnapshot.capture")(function* (
         }>`SELECT title FROM spaces_db_databases WHERE database_id=${database.content.databaseId}`
       : [];
     // Agents read database rows through the database tools; the snapshot only names the database.
+    const ref = BlockKinds.strictSyncedRefBlock(value);
+    const original = ref ? yield* SyncedBlocks.resolveSource(ref.content.sourceBlockId) : undefined;
     const line = database
       ? `[database ${database.content.databaseId} "${clip(named?.title ?? "", 200, 800).text}"]`
-      : blockText(value);
+      : BlockKinds.strictTabsBlock(value) || BlockKinds.strictSyncedBlock(value)
+        ? undefined
+        : ref
+          ? original?.status === "found"
+            ? `[synced from ${clip(original.page.title, 100, 400).text}]`
+            : "[synced block unavailable]"
+          : blockText(value);
     const next = clip(
-      `${text}${blocks.size > 1 ? "\n" : ""}${line}`,
+      line === undefined ? text : `${text}${lines > 0 ? "\n" : ""}${line}`,
       SPACE_CONTEXT_LIMITS.maxTextChars,
       SPACE_CONTEXT_LIMITS.maxTextBytes,
     );
     text = next.text;
+    if (line !== undefined) lines++;
     if (next.truncated || byteLength(record()) > SPACE_CONTEXT_LIMITS.maxRecordBytes) {
       truncated = true;
       break;
     }
-    if (value.type === "child_page" && input.includeChildPages) {
+    if (ref && original?.status === "found") {
+      const sourceId = ref.content.sourceBlockId;
+      if (!blocks.has(sourceId) && !expandedSynced.has(sourceId)) {
+        const sourcePage = original.page;
+        if (!pages.has(sourcePage.page_id)) {
+          if (pages.size >= captureLimits.pages) {
+            truncated = true;
+            break;
+          }
+          pages.add(sourcePage.page_id);
+          sources.push({
+            environmentId: input.environmentId,
+            spaceId: sourcePage.space_id,
+            pageId: sourcePage.page_id,
+            revision: sourcePage.revision,
+            blockIds: [],
+          });
+        }
+        expandedSynced.add(sourceId);
+        stack.push({
+          pageId: sourcePage.page_id,
+          parentId: C.SpaceBlockId.make(sourceId),
+          after: null,
+          depth: frame.depth + 1,
+        });
+      }
+    } else if (value.type === "child_page" && input.includeChildPages) {
       const known = Option.getOrUndefined(knownBlock(value));
       if (!known || !("pageId" in known.content)) continue;
       if (pages.size >= captureLimits.pages) {
@@ -214,7 +255,10 @@ export const capture = Effect.fn("SpacesContextSnapshot.capture")(function* (
         blockIds: [],
       });
       stack.push({ pageId: child.page_id, parentId: null, after: null, depth: frame.depth + 1 });
-    } else if (BlockStore.isListContainer(value)) {
+    } else if (
+      BlockStore.isContainer(value) &&
+      !(value.type === "synced_block" && expandedSynced.has(value.id))
+    ) {
       stack.push({ pageId: frame.pageId, parentId: value.id, after: null, depth: frame.depth + 1 });
     }
   }

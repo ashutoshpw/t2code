@@ -1,5 +1,4 @@
 import { useEditorState } from "@tiptap/react";
-import { toastManager } from "../components/ui/toast";
 import {
   useContext,
   useState,
@@ -23,8 +22,10 @@ import {
   ListTodoIcon,
   MessageSquareIcon,
   MinusIcon,
+  PanelTopIcon,
   PilcrowIcon,
   QuoteIcon,
+  RefreshCcwIcon,
   SquareCodeIcon,
   PaletteIcon,
   StrikethroughIcon,
@@ -53,14 +54,25 @@ import { SpaceEditorAdapter } from "./adapter";
 import {
   slashMatch,
   SlashItem,
-  turnInto,
+  TURN_INTO,
+  canTurnInto,
+  runTurnInto,
   SpaceEditorWrapperContext,
   selectedBlock,
   editorCapabilities,
   runCommand,
   placeAt,
+  fromNestedEditor,
   type SpaceEditorParts,
 } from "./spaceEditorSupport";
+import { insertTabs } from "./tabs/tabsCommands";
+import { insertSynced } from "./synced/syncedCommands";
+
+/** Block kinds the connected environment can store; the slash menu offers only these. */
+export interface SpaceBlockFeatures {
+  readonly tabs?: boolean;
+  readonly synced?: boolean;
+}
 
 /** Asks the host to create a database, then to place its block with `place`. */
 export type SlashDatabaseCreate = (
@@ -116,12 +128,14 @@ export function BubbleLayer({
   return (
     <div
       className="contents"
-      onFocus={(event) =>
+      onFocus={(event) => {
+        if (fromNestedEditor(event)) return;
         setFocused(
           !(event.target instanceof Element && event.target.closest("[data-space-database]")),
-        )
-      }
+        );
+      }}
       onBlur={(event) => {
+        if (fromNestedEditor(event)) return;
         if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
       }}
     >
@@ -207,23 +221,22 @@ export function BubbleLayer({
                 <ChevronDownIcon />
               </MenuTrigger>
               <MenuPopup align="start">
-                {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
-                  const [label, Icon] = turnInto[type];
-                  return (
-                    <MenuItem
-                      key={type}
-                      disabled={
-                        !bubbleState.structure ||
-                        !selectedId ||
-                        !can(adapter.convert(selectedId, type))
-                      }
-                      onClick={() => selectedId && run(adapter.convert(selectedId, type))}
-                    >
-                      <Icon />
-                      {label}
-                    </MenuItem>
-                  );
-                })}
+                {TURN_INTO.map((entry) => (
+                  <MenuItem
+                    key={entry.key}
+                    disabled={
+                      !bubbleState.structure ||
+                      !selectedId ||
+                      !can((state) => canTurnInto(adapter, state, selectedId, entry))
+                    }
+                    onClick={() =>
+                      selectedId && runTurnInto(editor, editable, adapter, selectedId, entry)
+                    }
+                  >
+                    <entry.icon />
+                    {entry.label}
+                  </MenuItem>
+                ))}
               </MenuPopup>
             </Menu>
           </div>
@@ -252,10 +265,12 @@ export function SlashLayer({
   editable,
   onCreatePage,
   onCreateDatabase,
+  blockFeatures,
   children,
 }: SpaceEditorParts & {
   readonly onCreatePage: ((blockId: SpaceBlockId | null) => void) | undefined;
   readonly onCreateDatabase?: SlashDatabaseCreate | undefined;
+  readonly blockFeatures?: SpaceBlockFeatures | undefined;
   readonly children: ReactNode;
 }) {
   const wrapper = useContext(SpaceEditorWrapperContext);
@@ -282,17 +297,8 @@ export function SlashLayer({
       if (id && selectedBlock(editor.state)?.type !== type) run(adapter.convert(id, type));
     };
   const headingTo = (level: 1 | 2 | 3) => (id: SpaceBlockId | null) => {
-    if (!id) return;
-    run(adapter.convert(id, "heading"));
-    try {
-      adapter.setHeadingLevel(level)(editor.state, editor.view.dispatch);
-    } catch (error) {
-      toastManager.add({
-        type: "error",
-        title: "Couldn't set the heading level",
-        description: error instanceof Error ? error.message : undefined,
-      });
-    }
+    const entry = TURN_INTO.find((item) => item.level === level);
+    if (id && entry) runTurnInto(editor, editable, adapter, id, entry);
   };
   const allSlashItems: readonly SlashItem[] = [
     {
@@ -342,6 +348,26 @@ export function SlashLayer({
       keywords: "separator hr line",
       apply: () => run(adapter.placeBlock("divider")),
     },
+    ...(blockFeatures?.tabs
+      ? [
+          {
+            label: "Tabs",
+            icon: PanelTopIcon,
+            keywords: "tabs tab sections",
+            apply: (id: SpaceBlockId | null) => run(insertTabs(adapter, id)),
+          },
+        ]
+      : []),
+    ...(blockFeatures?.synced
+      ? [
+          {
+            label: "Synced block",
+            icon: RefreshCcwIcon,
+            keywords: "synced sync mirror",
+            apply: (id: SpaceBlockId | null) => run(insertSynced(adapter, id)),
+          },
+        ]
+      : []),
     ...(onCreatePage
       ? [
           {
@@ -398,6 +424,7 @@ export function SlashLayer({
     item.apply(selectedBlock(editor.state)?.id ?? null);
   };
   const onSlashKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (fromNestedEditor(event)) return;
     if (event.key === "/") setDismissed(null);
     if (!slashOpen || event.nativeEvent.isComposing) return;
     const count = slashItems.length;
@@ -416,6 +443,7 @@ export function SlashLayer({
       className="contents"
       onKeyDownCapture={onSlashKey}
       onBlur={(event) => {
+        if (fromNestedEditor(event)) return;
         if (slash && !event.currentTarget.contains(event.relatedTarget)) setDismissed(slash.key);
       }}
     >
@@ -465,52 +493,6 @@ function ToolbarIconButton({
       </TooltipTrigger>
       <TooltipPopup side="top">{hint ?? label}</TooltipPopup>
     </Tooltip>
-  );
-}
-
-export function FormatValue({
-  label,
-  initial,
-  writable,
-  command,
-  can,
-  run,
-}: {
-  label: string;
-  initial: string;
-  writable: boolean;
-  command: (value: string) => Command;
-  can: (command: Command) => boolean;
-  run: (command: Command) => void;
-}) {
-  const [value, setValue] = useState(initial);
-  return (
-    <form
-      className="flex flex-wrap items-center gap-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        run(command(value));
-      }}
-    >
-      <label className="flex items-center gap-2">
-        {label}
-        <Input
-          size="sm"
-          value={value}
-          disabled={!writable}
-          onChange={(event) => setValue(event.target.value)}
-        />
-      </label>
-      <Button
-        type="submit"
-        variant="outline"
-        size="sm"
-        disabled={!can(command(value))}
-        onMouseDown={(event) => event.preventDefault()}
-      >
-        Apply {label.toLowerCase()}
-      </Button>
-    </form>
   );
 }
 

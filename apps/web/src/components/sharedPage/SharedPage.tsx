@@ -24,6 +24,7 @@ import { lazy, Suspense, useEffect, useState, type MouseEvent } from "react";
 import { SpaceEditor } from "~/spaces/SpaceEditor";
 import { SpacePageGlyph } from "~/spaces/SpacePageGlyph";
 import { Button } from "../ui/button";
+import { SyncedStaticContext } from "~/spaces/synced/SyncedContext";
 import { staticAdapter } from "./staticAdapter";
 
 // The public viewer loads the database code only for a page that has a database.
@@ -109,12 +110,15 @@ async function loadSharedPage(
         return { problem: "invalid" };
       }
       const next = decodePage(await response.json());
-      page = page
-        ? {
-            ...page,
-            window: { ...page.window, blocks: [...page.window.blocks, ...next.window.blocks] },
-          }
-        : next;
+      if (page) {
+        const synced = [...(page.synced ?? []), ...(next.synced ?? [])];
+        const { synced: _first, ...rest } = page;
+        page = {
+          ...rest,
+          window: { ...page.window, blocks: [...page.window.blocks, ...next.window.blocks] },
+          ...(synced.length > 0 ? { synced } : {}),
+        };
+      } else page = next;
       cursor = next.nextCursor;
       if (cursor === undefined) break;
     }
@@ -262,6 +266,9 @@ function SharedDocument({
 }) {
   const { page, window: blocks, breadcrumb, children } = shared;
   const [adapter] = useState(() => staticAdapter(shared.page.id, shared.window));
+  const [synced] = useState(
+    () => new Map((shared.synced ?? []).map((entry) => [entry.sourceBlockId, entry])),
+  );
   const childById = new Map(children.map((child) => [child.id, child]));
   const assetUrl = (assetId: string) =>
     `${SPACE_PAGE_SHARE_ASSET_ROUTE}?${new URLSearchParams({
@@ -368,7 +375,9 @@ function SharedDocument({
         </p>
       ) : null}
       <h1 className="mb-6 font-bold text-4xl leading-tight">{page.title || "Untitled page"}</h1>
-      <SpaceEditor adapter={adapter} editable={false} renderChild={renderBlock} />
+      <SyncedStaticContext.Provider value={synced}>
+        <SpaceEditor adapter={adapter} editable={false} renderChild={renderBlock} />
+      </SyncedStaticContext.Provider>
       {unlisted.length > 0 ? (
         <section aria-label="Sub-pages" className="mt-8 flex flex-col">
           {unlisted.map((child) => (

@@ -445,6 +445,8 @@ export const WS_METHODS = {
   spacesPagesUpdate: "spaces.pages.update",
   spacesBlocksRead: "spaces.blocks.read",
   spacesBlocksApply: "spaces.blocks.apply",
+  spacesBlocksReadSubtree: "spaces.blocks.readSubtree",
+  spacesBlocksUnsync: "spaces.blocks.unsync",
   spacesReceiptsGet: "spaces.receipts.get",
   spacesAssetsUploadCreate: "spaces.assets.upload.create",
   spacesAssetsUploadGet: "spaces.assets.upload.get",
@@ -469,6 +471,7 @@ export const WS_METHODS = {
   spacesDatabasesGet: "spaces.databases.get",
   spacesDatabasesQuery: "spaces.databases.query",
   spacesDatabasesSubscribeChanges: "spaces.databases.subscribeChanges",
+  spacesPagesSubscribeChanges: "spaces.pages.subscribeChanges",
   spacesDatabasesRowsGet: "spaces.databases.rows.get",
   spacesDatabasesCreate: "spaces.databases.create",
   spacesDatabasesUpdate: "spaces.databases.update",
@@ -793,6 +796,18 @@ export const WsSpacesBlocksApplyRpc = Rpc.make(WS_METHODS.spacesBlocksApply, {
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
 
+export const WsSpacesBlocksReadSubtreeRpc = Rpc.make(WS_METHODS.spacesBlocksReadSubtree, {
+  payload: Spaces.SpaceReadSubtreeInput,
+  success: Spaces.SpaceReadSubtreeResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesBlocksUnsyncRpc = Rpc.make(WS_METHODS.spacesBlocksUnsync, {
+  payload: Spaces.SpaceUnsyncInput,
+  success: Spaces.SpaceUnsyncResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
 export const WsSpacesPagesCreateChildRpc = Rpc.make(WS_METHODS.spacesPagesCreateChild, {
   payload: Spaces.SpaceCreateChildPageInput,
   success: Spaces.SpaceCreateChildPageResult,
@@ -902,6 +917,13 @@ export const WsSpacesDatabasesSubscribeChangesRpc = Rpc.make(
     stream: true,
   },
 );
+
+export const WsSpacesPagesSubscribeChangesRpc = Rpc.make(WS_METHODS.spacesPagesSubscribeChanges, {
+  payload: Spaces.SpacePageChangesSubscribeInput,
+  success: Spaces.SpacePageChangeEvent,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+  stream: true,
+});
 
 export const WsSpacesDatabasesRowsGetRpc = Rpc.make(WS_METHODS.spacesDatabasesRowsGet, {
   payload: Spaces.SpaceDatabaseRowGetInput,
@@ -2514,6 +2536,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesPagesUpdateRpc,
   WsSpacesBlocksReadRpc,
   WsSpacesBlocksApplyRpc,
+  WsSpacesBlocksReadSubtreeRpc,
+  WsSpacesBlocksUnsyncRpc,
   WsSpacesReceiptsGetRpc,
   WsSpacesAssetsUploadCreateRpc,
   WsSpacesAssetsUploadGetRpc,
@@ -2538,6 +2562,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesDatabasesGetRpc,
   WsSpacesDatabasesQueryRpc,
   WsSpacesDatabasesSubscribeChangesRpc,
+  WsSpacesPagesSubscribeChangesRpc,
   WsSpacesDatabasesRowsGetRpc,
   WsSpacesDatabasesCreateRpc,
   WsSpacesDatabasesUpdateRpc,

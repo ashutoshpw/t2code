@@ -8,7 +8,9 @@ import * as BlockStore from "./BlockStore.ts";
 import { limits } from "./CorePolicy.ts";
 import * as Liveness from "./databases/Liveness.ts";
 import * as PageStore from "./PageStore.ts";
+import * as BlockKinds from "./BlockKinds.ts";
 import * as SpacesSql from "./SpacesSql.ts";
+import * as SyncedBlocks from "./SyncedBlocks.ts";
 
 interface ShareRow {
   readonly page_id: C.SpacePageId;
@@ -137,6 +139,35 @@ export const readBody = Effect.fn("SpacesPageShares.readBody")(function* (
   return { page, window };
 });
 
+const SYNCED_PER_WINDOW = 8;
+
+/** The originals behind the copies in a window; a trashed or deleted original is left out, so nothing of it leaks. */
+const syncedSources = Effect.fn("SpacesPageShares.syncedSources")(function* (
+  blocks: readonly C.SpaceBlock[],
+) {
+  const wanted = new Set<string>();
+  for (const block of blocks) {
+    const ref = BlockKinds.strictSyncedRefBlock(block);
+    if (ref && wanted.size < SYNCED_PER_WINDOW) wanted.add(ref.content.sourceBlockId);
+  }
+  const synced: Array<{
+    sourceBlockId: C.SpaceBlockId;
+    blocks: readonly C.SpaceBlock[];
+    complete: boolean;
+  }> = [];
+  for (const sourceBlockId of wanted) {
+    const source = yield* SyncedBlocks.resolveSource(sourceBlockId);
+    if (source.status !== "found") continue;
+    const body = yield* SyncedBlocks.subtreeBlocks(
+      source.row,
+      limits.maxBlockWindowBlocks,
+      limits.maxBlockWindowResponseBytes,
+    );
+    synced.push({ sourceBlockId: C.SpaceBlockId.make(sourceBlockId), ...body });
+  }
+  return synced;
+});
+
 export const read = Effect.fn("SpacesPageShares.read")(function* (
   rootPageId: C.SpacePageId,
   expiresAt: string,
@@ -146,6 +177,7 @@ export const read = Effect.fn("SpacesPageShares.read")(function* (
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const { page, window } = yield* readBody(pageId, cursor);
+  const synced = yield* syncedSources(window.blocks);
   const children = yield* sql<{
     readonly page_id: C.SpacePageId;
     readonly title: string;
@@ -167,6 +199,7 @@ export const read = Effect.fn("SpacesPageShares.read")(function* (
       updatedAt: page.updated_at,
     },
     window: { revision: window.revision, blocks: window.blocks },
+    ...(synced.length === 0 ? {} : { synced }),
     ...(window.nextCursor === null ? {} : { nextCursor: window.nextCursor }),
     breadcrumb,
     children: children.map((child) => ({
@@ -186,7 +219,23 @@ export const referencesAsset = Effect.fn("SpacesPageShares.referencesAsset")(fun
   const rows = yield* sql`SELECT 1 FROM spaces_block_asset_refs r
     JOIN spaces_blocks b ON b.block_id = r.block_id
     WHERE b.page_id = ${pageId} AND b.deleted = 0 AND r.asset_id = ${assetId} LIMIT 1`;
-  return rows.length > 0;
+  if (rows.length > 0) return true;
+  // Assets inside the original of a synced copy on this page are served with the page.
+  const synced = yield* sql`WITH RECURSIVE sub(block_id, page_id, depth) AS (
+      SELECT s.block_id, s.page_id, 0 FROM spaces_blocks ref
+      JOIN spaces_blocks s ON s.block_id = json_extract(ref.payload, '$.content.sourceBlockId')
+      JOIN spaces_pages sp ON sp.page_id = s.page_id
+      WHERE ref.page_id = ${pageId} AND ref.deleted = 0
+        AND json_extract(ref.payload, '$.type') = 'synced_ref'
+        AND s.deleted = 0 AND json_extract(s.payload, '$.type') = 'synced_block'
+        AND sp.trash_batch_id IS NULL
+      UNION ALL
+      SELECT c.block_id, c.page_id, sub.depth + 1 FROM sub
+      JOIN spaces_blocks c ON c.page_id = sub.page_id AND c.parent_id = sub.block_id
+      WHERE c.deleted = 0 AND sub.depth < 16)
+    SELECT 1 FROM sub JOIN spaces_block_asset_refs r ON r.block_id = sub.block_id
+    WHERE r.asset_id = ${assetId} LIMIT 1`;
+  return synced.length > 0;
 });
 
 export const purgeExpired = Effect.fn("SpacesPageShares.purgeExpired")(function* (now: number) {

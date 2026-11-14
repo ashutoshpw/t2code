@@ -7,9 +7,11 @@ import {
   type SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
 import * as Schema from "effect/Schema";
-import type {
-  SpaceDocumentSession,
-  SpaceSessionSnapshot,
+import {
+  spaceLiveAction,
+  type SpaceDocumentSession,
+  type SpacePageLiveSignal,
+  type SpaceSessionSnapshot,
   SpacePageNavigationTarget,
 } from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces, type SpacesAvailability } from "@t2code/client-runtime/state/spaces";
@@ -58,6 +60,10 @@ export class SpacesPageReader {
   #serverWindow: SpaceReadBlocksResult | null = null;
   #reserved = false;
   #firstWindow = false;
+  #cursor: SpaceCursor | undefined;
+  #lastSignal: SpacePageLiveSignal | null = null;
+  #pendingSignal: SpacePageLiveSignal | null = null;
+  #liveRun: Promise<void> | null = null;
   #snapshot: ReaderSnapshot;
   readonly editing: MobileSpaceEditing;
 
@@ -276,6 +282,93 @@ export class SpacesPageReader {
     return this.#start(this.#snapshot.window.nextCursor);
   };
 
+  /**
+   * Reacts to the server announcing that this page changed elsewhere. A page with local work keeps
+   * it; a failed read leaves what is shown as it was. Signals arriving mid-refresh coalesce.
+   */
+  liveRefresh(signal: SpacePageLiveSignal): Promise<void> {
+    this.#pendingSignal = signal;
+    this.#liveRun ??= this.#drainLive().finally(() => {
+      this.#liveRun = null;
+    });
+    return this.#liveRun;
+  }
+
+  async #drainLive() {
+    for (;;) {
+      if (this.#opening) await this.#opening.catch(() => undefined);
+      const signal = this.#pendingSignal;
+      this.#pendingSignal = null;
+      if (!signal) return;
+      try {
+        await this.#liveStep(signal);
+      } catch {
+        // The next announcement or an explicit refresh retries.
+      }
+    }
+  }
+
+  async #liveStep(signal: SpacePageLiveSignal) {
+    const state = this.session.getSnapshot();
+    const editing = this.editing.getSnapshot();
+    const location = this.#snapshot.location;
+    const action = spaceLiveAction(this.#lastSignal, signal, {
+      hydrated: state.hydrated && location !== null && this.#serverWindow !== null,
+      busy:
+        state.dirty ||
+        state.pending !== null ||
+        state.status === "saving" ||
+        state.persistenceError !== null ||
+        this.#reserved ||
+        this.ports.mediaBlocked?.() === true ||
+        editing.focus !== null ||
+        editing.busy !== null ||
+        this.#snapshot.loading,
+      baseRevision: state.baseRevision,
+      metadataRevision: location?.page.revision ?? null,
+    });
+    this.#lastSignal = signal;
+    if (action === "body") await this.#silentReload();
+    else if (action === "metadata" || action === "check") {
+      const { access } = this.ports;
+      const abort = new AbortController();
+      const next = await this.ports.locate(abort.signal);
+      const current = this.#snapshot.location;
+      if (!access.current() || !current || !next.current() || next.page.id !== current.page.id)
+        return;
+      if (next.page.revision === current.page.revision) return;
+      if (action === "check") await this.#silentReload();
+      else this.#publish({ ...this.#snapshot, location: next });
+    }
+  }
+
+  /** Re-reads the window on screen without a loading state; drops the result if anything moved. */
+  async #silentReload() {
+    const request = this.#request;
+    const { access } = this.ports;
+    const abort = new AbortController();
+    const { location, window } = await this.#readWindow(access, abort.signal, this.#cursor);
+    const state = this.session.getSnapshot();
+    const editing = this.editing.getSnapshot();
+    if (
+      request !== this.#request ||
+      this.#opening ||
+      !access.current() ||
+      this.#reserved ||
+      this.ports.mediaBlocked?.() === true ||
+      editing.focus !== null ||
+      editing.busy !== null ||
+      state.dirty ||
+      state.pending !== null ||
+      state.persistenceError !== null
+    )
+      return;
+    this.session.replaceWindow(window);
+    this.#serverWindow = window;
+    this.#snapshot = { ...this.#snapshot, error: null, location };
+    this.#publishSession();
+  }
+
   async readCurrentWindow() {
     return (await this.#readWindow(this.ports.access, new AbortController().signal)).window;
   }
@@ -371,6 +464,7 @@ export class SpacesPageReader {
         this.session.replaceWindow(window);
       this.#serverWindow = window;
       this.#firstWindow = cursor === undefined;
+      this.#cursor = cursor;
       this.#snapshot = {
         ...this.#snapshot,
         unavailable: null,

@@ -3,6 +3,8 @@ import { type Editor } from "@tiptap/core";
 import { createContext } from "react";
 import {
   Heading1Icon,
+  Heading2Icon,
+  Heading3Icon,
   ListIcon,
   ListOrderedIcon,
   ListCollapseIcon,
@@ -10,10 +12,13 @@ import {
   MessageSquareIcon,
   PilcrowIcon,
   QuoteIcon,
+  type LucideIcon,
 } from "lucide-react";
 import { NodeSelection, type Command, type EditorState } from "@tiptap/pm/state";
 import { type SpaceBlock, type SpaceBlockId } from "@t2code/contracts/spaces";
+import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
 import { SpaceEditorAdapter } from "./adapter";
+import { spaceDocumentBlocks } from "./document";
 import type { SpaceEditorBridge } from "./editorBridge";
 
 export function slashMatch(state: EditorState) {
@@ -31,16 +36,56 @@ export type SlashItem = {
   readonly apply: (id: SpaceBlockId | null) => void;
 };
 
-export const turnInto = {
-  paragraph: ["Paragraph", PilcrowIcon],
-  heading: ["Heading", Heading1Icon],
-  quote: ["Quote", QuoteIcon],
-  callout: ["Callout", MessageSquareIcon],
-  bulleted_item: ["Bullet list", ListIcon],
-  numbered_item: ["Numbered list", ListOrderedIcon],
-  todo_item: ["To-do", ListTodoIcon],
-  toggle: ["Toggle list", ListCollapseIcon],
-} as const;
+type ConvertType = Parameters<SpaceEditorAdapter["convert"]>[1];
+
+export const TURN_INTO: readonly {
+  readonly key: string;
+  readonly label: string;
+  readonly icon: LucideIcon;
+  readonly type: ConvertType;
+  readonly level?: 1 | 2 | 3;
+}[] = [
+  { key: "paragraph", label: "Paragraph", icon: PilcrowIcon, type: "paragraph" },
+  { key: "heading-1", label: "Heading 1", icon: Heading1Icon, type: "heading", level: 1 },
+  { key: "heading-2", label: "Heading 2", icon: Heading2Icon, type: "heading", level: 2 },
+  { key: "heading-3", label: "Heading 3", icon: Heading3Icon, type: "heading", level: 3 },
+  { key: "quote", label: "Quote", icon: QuoteIcon, type: "quote" },
+  { key: "callout", label: "Callout", icon: MessageSquareIcon, type: "callout" },
+  { key: "bulleted_item", label: "Bullet list", icon: ListIcon, type: "bulleted_item" },
+  { key: "numbered_item", label: "Numbered list", icon: ListOrderedIcon, type: "numbered_item" },
+  { key: "todo_item", label: "To-do", icon: ListTodoIcon, type: "todo_item" },
+  { key: "toggle", label: "Toggle list", icon: ListCollapseIcon, type: "toggle" },
+];
+
+type TurnIntoEntry = (typeof TURN_INTO)[number];
+
+export function canTurnInto(
+  adapter: SpaceEditorAdapter,
+  state: EditorState,
+  id: SpaceBlockId,
+  entry: TurnIntoEntry,
+): boolean {
+  return (
+    adapter.convert(id, entry.type)(state) ||
+    (!!entry.level && adapter.setHeadingLevel(id, entry.level)(state))
+  );
+}
+
+export function runTurnInto(
+  editor: Editor,
+  editable: boolean,
+  adapter: SpaceEditorAdapter,
+  id: SpaceBlockId,
+  entry: TurnIntoEntry,
+) {
+  const typeOf = () => spaceDocumentBlocks(editor.state.doc).find((block) => block.id === id);
+  if (typeOf()?.type !== entry.type) runCommand(editor, editable, adapter.convert(id, entry.type));
+  const block = typeOf();
+  if (entry.level && block && isKnownSpaceBlock(block) && block.type === "heading") {
+    if (block.content.level !== entry.level)
+      runCommand(editor, editable, adapter.setHeadingLevel(id, entry.level));
+  }
+}
 
 export const SpaceEditorWrapperContext = createContext<HTMLElement | null>(null);
 
@@ -112,3 +157,19 @@ export type SpaceEditorParts = {
   readonly bridge: SpaceEditorBridge | undefined;
   readonly editable: boolean;
 };
+
+/**
+ * Whether an event came from a nested editor that this handler's own editor does not own. Events
+ * of a synced copy's editor bubble through React into the host's handlers.
+ */
+export function fromNestedEditor(event: {
+  readonly target: EventTarget | null;
+  readonly currentTarget: EventTarget | null;
+}) {
+  const { target, currentTarget } = event;
+  if (!(target instanceof Element) || !(currentTarget instanceof Element)) return false;
+  return (
+    target.closest("[data-space-nested-editor]") !==
+    currentTarget.closest("[data-space-nested-editor]")
+  );
+}

@@ -7,6 +7,7 @@ import type { SummaryRow } from "./PageStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 
 const known = Schema.is(C.SpaceKnownBlock);
+const tabPane = Schema.is(C.SpaceTabPaneBlock);
 const decodeKnown = Schema.decodeUnknownSync(C.SpaceKnownBlock);
 const parseJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json));
 
@@ -52,7 +53,8 @@ export const writeBlock = Effect.fn("SpacesSearch.writeBlock")(function* (
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   let text: string | undefined;
-  if (block !== null && known(block)) {
+  if (block !== null && tabPane(block)) text = block.content.title;
+  else if (block !== null && known(block)) {
     const content = decodeKnown(block).content;
     if ("runs" in content) text = content.runs.map((run) => run.text).join("");
     else if ("text" in content) text = content.text;
@@ -141,7 +143,7 @@ export const advance = Effect.fn("SpacesSearch.advance")(function* () {
     }>`SELECT payload,deleted FROM spaces_blocks WHERE block_id=${row.block_id}`;
     if (!body) return "storage";
     const value: unknown = body.deleted ? null : parseJson(body.payload);
-    if (known(value)) yield* writeBlock(row.page_id, row.block_id, value);
+    if (known(value) || tabPane(value)) yield* writeBlock(row.page_id, row.block_id, value);
     else if (body.deleted) yield* writeBlock(row.page_id, row.block_id, null);
     else yield* clearText(row.page_id, row.block_id);
     consumed++;

@@ -2,11 +2,7 @@ import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { useContext, useRef, useState, useSyncExternalStore } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceId, SpacePageSummary, SpaceSummary } from "@t2code/contracts/spaces";
-import {
-  SPACE_PAGE_ICONS,
-  normalizeSpacePageIcon,
-  type SpaceRootReorder,
-} from "@t2code/client-runtime/spaces";
+import { type SpaceRootReorder } from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
@@ -26,6 +22,7 @@ import {
 } from "../components/ui/dialog";
 import { toastManager } from "../components/ui/toast";
 import { spaceRootReorder } from "./sessionRuntime";
+import { SpaceEmojiPicker } from "./SpaceEmojiPicker";
 
 interface Props {
   environmentId: EnvironmentId;
@@ -117,13 +114,11 @@ function EditableIcon({
   const availability = useSpacesAvailability(environmentId);
   const allowed = useAtomValue(spacesEnvironment.updatePage.permissionAtom(environmentId));
   const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
   const writable = allowed && availability === "writable" && !page.trash;
   if (!writable) return page.icon ? <span className="block text-6xl">{page.icon}</span> : null;
   const choose = (icon: string | null) => {
     if (!current() || snapshot.busy || snapshot.journal.pending) return;
     setOpen(false);
-    setText("");
     owner.setPageIcon(page, icon).catch((error: unknown) => {
       toastManager.add({
         type: "error",
@@ -132,7 +127,6 @@ function EditableIcon({
       });
     });
   };
-  const typed = normalizeSpacePageIcon(text);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <span
@@ -164,41 +158,10 @@ function EditableIcon({
         </PopoverTrigger>
       </span>
       <PopoverPopup align="start" width="md">
-        <div className="grid grid-cols-8 gap-1" role="group" aria-label="Icons">
-          {SPACE_PAGE_ICONS.map((icon) => (
-            <Button
-              key={icon}
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Use ${icon}`}
-              onClick={() => choose(icon)}
-            >
-              {icon}
-            </Button>
-          ))}
-        </div>
-        <form
-          className="mt-3 flex gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (typed) choose(typed);
-          }}
-        >
-          <Input
-            aria-label="Type an emoji"
-            placeholder="Type an emoji"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-          />
-          <Button type="submit" variant="outline" disabled={!typed}>
-            Use
-          </Button>
-        </form>
-        {page.icon ? (
-          <Button className="mt-2" variant="ghost" size="sm" onClick={() => choose(null)}>
-            Remove
-          </Button>
-        ) : null}
+        <SpaceEmojiPicker
+          onChoose={choose}
+          {...(page.icon ? { onRemove: () => choose(null) } : {})}
+        />
       </PopoverPopup>
     </Popover>
   );

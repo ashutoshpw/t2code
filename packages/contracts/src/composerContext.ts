@@ -325,7 +325,6 @@ export const SpaceContextSnapshot = Schema.Struct({
     const pages = new Set(snapshot.sources.map((source) => source.pageId));
     const blocks = snapshot.sources.flatMap((source) => source.blockIds);
     return (
-      (snapshot.includeChildPages || snapshot.sources.length === 1) &&
       pages.size === snapshot.sources.length &&
       blocks.length <= SPACE_CONTEXT_LIMITS.maxBlockIds &&
       new Set(blocks).size === blocks.length

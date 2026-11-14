@@ -415,6 +415,27 @@ describe("Spaces core protocol", () => {
     expect(encodeWindow(decodeWindow(window))).toEqual(window);
   });
 
+  it("carries a synced subtree scope and an unsync request, and rejects an empty copy list", () => {
+    const scoped = {
+      operation: "applyBlockBatch",
+      input: { ...batch, subtreeRootId: "original" },
+    };
+    expect(encodeRequest(decodeRequest(scoped))).toEqual(scoped);
+    const unsync = {
+      operation: "unsyncBlocks",
+      input: { ...writeContext, sourceBlockId: "original", refBlockIds: ["copy"] },
+    };
+    expect(encodeRequest(decodeRequest(unsync))).toEqual(unsync);
+    expect(() =>
+      decodeRequest({ ...unsync, input: { ...unsync.input, refBlockIds: [] } }),
+    ).toThrow();
+    const receipt = {
+      operation: "unsyncBlocks",
+      result: { status: "saved", ...acknowledgement, pages: [{ pageId: "page-1", revision: 5 }] },
+    };
+    expect(decodeReceipt(receipt)).toEqual(receipt);
+  });
+
   it("rejects unknown request fields at the strict decoding boundary", () => {
     const request = { operation: "applyBlockBatch", input: batch };
     expect(decodeRequest(request)).toEqual(request);

@@ -6,6 +6,7 @@ import * as DateTime from "effect/DateTime";
 import { byteLength } from "../CorePolicy.ts";
 import * as Receipts from "../Receipts.ts";
 import * as RevisionStore from "../RevisionStore.ts";
+import * as PageChanges from "../PageChanges.ts";
 import * as PageUpdate from "../PageUpdate.ts";
 import * as Settle from "../databases/computed/Settle.ts";
 import * as DatabaseStore from "../databases/DatabaseStore.ts";
@@ -17,6 +18,7 @@ import * as DatabaseMutations from "../databases/Mutations.ts";
 import { applyBatch } from "./BlockBatch.ts";
 import * as PageStore from "../PageStore.ts";
 import * as PageStructure from "../PageStructure.ts";
+import * as SyncedBlocks from "../SyncedBlocks.ts";
 import * as PageRecovery from "../PageRecovery.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 import * as SearchStore from "../SearchStore.ts";
@@ -175,6 +177,7 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
       const id = C.SpaceId.make(NodeCrypto.randomUUID());
       yield* sql`INSERT INTO spaces_ids (id, kind) VALUES (${id}, 'space')`;
       yield* sql`INSERT INTO spaces (space_id, title, is_default, created_at, updated_at) VALUES (${id}, ${input.title}, 0, ${now}, ${now})`;
+      yield* PageChanges.recordSpace(id);
       yield* changed();
       return decodeReceipt({
         operation: request.operation,
@@ -188,6 +191,7 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
         return decodeReceipt({ operation: request.operation, result: yield* conflict([space]) });
       if (space.title !== input.title) {
         yield* sql`UPDATE spaces SET title = ${input.title}, revision = revision + 1, updated_at = ${now} WHERE space_id = ${input.spaceId}`;
+        yield* PageChanges.recordSpace(input.spaceId);
         yield* changed();
       }
       return decodeReceipt({
@@ -213,6 +217,8 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
       if (space.space_id !== previous.space_id) {
         yield* sql`UPDATE spaces SET is_default = 0, revision = revision + 1, updated_at = ${now} WHERE space_id = ${previous.space_id}`;
         yield* sql`UPDATE spaces SET is_default = 1, revision = revision + 1, updated_at = ${now} WHERE space_id = ${space.space_id}`;
+        yield* PageChanges.recordSpace(previous.space_id);
+        yield* PageChanges.recordSpace(space.space_id);
         yield* changed();
       }
       return decodeReceipt({
@@ -251,6 +257,7 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
         meta.observed_time_ms,
       );
       yield* sql`UPDATE spaces SET root_order_revision = root_order_revision + 1, updated_at = ${now} WHERE space_id = ${input.spaceId}`;
+      yield* PageChanges.recordPage(id, input.spaceId, { tree: true });
       yield* changed();
       return decodeReceipt({
         operation: request.operation,
@@ -329,6 +336,7 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
         mutationId: input.mutationId,
         nowMs: meta.observed_time_ms,
         requestBytes: byteLength(request),
+        ...(input.subtreeRootId === undefined ? {} : { scope: { rootId: input.subtreeRootId } }),
       });
       return decodeReceipt({
         operation: request.operation,
@@ -338,6 +346,17 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
           generation: input.generation,
           revision: result.revision,
         },
+      });
+    }
+    case "unsyncBlocks": {
+      const pages = yield* SyncedBlocks.unsync(
+        request.input,
+        request.input.mutationId,
+        meta.observed_time_ms,
+      );
+      return decodeReceipt({
+        operation: request.operation,
+        result: { status: "saved", ...ack, pages },
       });
     }
     case "createDatabase":
