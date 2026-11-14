@@ -95,7 +95,7 @@ describe("Antigravity release gates", () => {
         filter || native || advertisedAppend ? { antigravity } : undefined,
       );
       expect(isQualifiedAntigravityRelease(version)).toBe(native);
-      expect(antigravityClientInfo(version).name).toBe(ownName ? "t3-code" : "zed");
+      expect(antigravityClientInfo(version).name).toBe(ownName ? "t2-code" : "zed");
     },
   );
 });
