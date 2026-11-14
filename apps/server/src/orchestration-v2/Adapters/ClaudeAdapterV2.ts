@@ -2441,8 +2441,11 @@ export const CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
 // request_secret can wait an hour; exceed Claude's default 60 s timeout.
 export const CLAUDE_T2_MCP_TOOL_TIMEOUT_MS = 65 * 60 * 1_000;
 
-// allowedTools pre-approves calls; tools controls availability. Pre-approve T3 tools for headless modes,
-// limited to annotated read-only tools in read-only sandboxes.
+// The SDK's `allowedTools` only pre-approves tool calls; availability is the separate `tools`
+// option. Attaching the t2-code MCP server therefore always pre-approves its tools (headless
+// modes like `dontAsk` deny anything that is not pre-approved), but read-only sandboxes
+// pre-approve only the annotated read-only orchestrator tools so a read-only session cannot
+// silently spawn threads or scheduled tasks.
 
 export function claudeMcpQueryOverrides(input: {
   readonly mcpSession: McpProviderSession.McpProviderSessionConfig | undefined;

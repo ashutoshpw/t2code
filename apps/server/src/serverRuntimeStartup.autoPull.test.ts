@@ -8,6 +8,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
+import * as Stream from "effect/Stream";
 import { HttpServer } from "effect/http";
 import * as NetAddress from "effect/net/NetAddress";
 
@@ -97,7 +98,7 @@ it.effect("parks automatic pull until activation without delaying command readin
         mode: "desktop",
         cwd,
         host: "localhost",
-        port: 3773,
+        port: 3772,
         devUrl: undefined,
         noBrowser: true,
         startupPresentation: "browser",
@@ -166,7 +167,7 @@ it.effect("parks automatic pull until activation without delaying command readin
       Layer.mock(EnvironmentAuth.EnvironmentAuth)({}),
       Layer.mock(ExternalLauncher.ExternalLauncher)({}),
       Layer.mock(HttpServer.HttpServer)({
-        address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3773),
+        address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3772),
       }),
       Path.layer,
     );

@@ -1525,7 +1525,7 @@ function codexThreadRuntimeParams(input: {
       ...(t2Server === undefined
         ? {}
         : {
-            // Override only T3's servers so launch-argument MCP servers survive.
+            // Override only T2's servers so launch-argument MCP servers survive.
             "mcp_servers.t2-code": { ...t2Server, disabled_tools: CODEX_DIRECT_ONLY_T2_TOOLS },
             // Code Mode runs a blocking wait or delegate wait as a nested call, and the model
             // keeps polling it. A second, direct-only registration makes it a plain tool call.
