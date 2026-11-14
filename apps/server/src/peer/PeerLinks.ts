@@ -96,6 +96,15 @@ export class PeerLinks extends Context.Service<
     /** Whether the Linked environments beta (Settings → Labs) is on here. */
     readonly enabled: Effect.Effect<boolean>;
     readonly link: (input: PeerLinkCreateInput) => Effect.Effect<PeerLink, PeerLinkError>;
+    /**
+     * The environment answering at `url`, or nothing when it is not a usable
+     * address or does not answer as T2 Code. Sends no credential.
+     */
+    readonly describe: (
+      url: string,
+    ) => Effect.Effect<
+      Option.Option<{ readonly environmentId: EnvironmentId; readonly label: string }>
+    >;
     readonly list: Effect.Effect<ReadonlyArray<PeerLinkSummary>, PeerLinkError>;
     /** The stored link, without asking the peer whether it answers. */
     readonly get: (
@@ -113,7 +122,7 @@ export class PeerLinks extends Context.Service<
       outcome: { readonly error: string | null },
     ) => Effect.Effect<void>;
   }
->()("t3/peer/PeerLinks") {}
+>()("@t2code/cli/peer/PeerLinks") {}
 
 interface PeerLinkRow {
   readonly environment_id: string;
@@ -211,7 +220,7 @@ const probeFailure = (
 
 /** Whether a host is this machine's own loopback. Tests serve their peers there, so they narrow it. */
 export const LoopbackHost = Context.Reference<(host: string) => boolean>(
-  "t3/peer/PeerLinks/LoopbackHost",
+  "@t2code/cli/peer/PeerLinks/LoopbackHost",
   { defaultValue: () => isLocalLoopbackHost },
 );
 
@@ -522,10 +531,10 @@ const make = Effect.gen(function* () {
     if (!linkLimitsHold(peer)) {
       return yield* new PeerLinkError({
         reason: "incompatible",
-        message: `${peer.label} runs a T3 Code version that cannot keep a linked agent's limits. Update it, then link again.`,
+        message: `${peer.label} runs a T2 Code version that cannot keep a linked agent's limits. Update it, then link again.`,
       });
     }
-    const issued = yield* signIn(primary, input, `T3 Code · ${self.label}`);
+    const issued = yield* signIn(primary, input, `T2 Code · ${self.label}`);
     const now = yield* DateTime.now;
     const linked: PeerLink = {
       environmentId: peer.environmentId,
@@ -683,7 +692,7 @@ const make = Effect.gen(function* () {
       if (!linkLimitsHold(peer)) {
         return yield* new PeerLinkError({
           reason: "incompatible",
-          message: `${link.label} runs a T3 Code version that cannot keep a linked agent's limits. Update it, then link again.`,
+          message: `${link.label} runs a T2 Code version that cannot keep a linked agent's limits. Update it, then link again.`,
         });
       }
       return {
@@ -712,9 +721,17 @@ const make = Effect.gen(function* () {
       Effect.ignoreCause({ log: true }),
     );
 
+  const describeUrl: PeerLinks["Service"]["describe"] = (url) =>
+    peerOrigin(url).pipe(
+      Effect.flatMap(describe),
+      Effect.map(Option.map((peer) => ({ environmentId: peer.environmentId, label: peer.label }))),
+      Effect.orElseSucceed(() => Option.none()),
+    );
+
   return PeerLinks.of({
     enabled,
     link,
+    describe: describeUrl,
     list,
     get,
     unlink,

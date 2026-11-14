@@ -1116,8 +1116,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   });
   const sendLater = useSendLater({
     environmentId,
-    threadId: props.isServerThread && activeThread ? activeThread.id : null,
-    projectId: props.isServerThread && activeThread ? activeThread.projectId : null,
+    threadId: activeThread ? activeThread.id : null,
+    projectId: activeThread ? activeThread.projectId : null,
     prompt,
     hasNonTextContent:
       composerImages.length +
@@ -3670,7 +3670,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                   target={attachmentDraftTarget}
                   context={attachmentDraft.contextDraft}
                   prompt={prompt}
-                  disabled={!canOperateThread || isConnecting}
+                  disabled={!canOperateThread}
                 />
               )}
 

@@ -15,7 +15,6 @@ import {
   ConnectOnboardingOptOutSchema,
   EMPTY_CONNECT_ONBOARDING_OPT_OUT_STATE,
 } from "~/cloud/connectOnboarding";
-import { useManagedTunnelUsage } from "~/cloud/managedRelayState";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useCloudLinkController } from "~/cloud/useCloudLinkController";
 import { useLocalStorage } from "~/hooks/useLocalStorage";
@@ -404,11 +403,8 @@ function OnboardingTunnelLimitAlert({
 }: {
   readonly onOpenAccountPage: ((page: T2ConnectAccountPageUrl) => void) | null;
 }) {
-  const { upgrade } = useManagedTunnelUsage();
   return (
     <TunnelLimitAlert
-      upgrade={upgrade}
-      onLinkT3Chat={onOpenAccountPage ? () => onOpenAccountPage("t3-chat") : null}
       onManageTunnels={onOpenAccountPage ? () => onOpenAccountPage("t2-connect") : null}
     />
   );

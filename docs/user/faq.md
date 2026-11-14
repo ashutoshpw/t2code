@@ -37,7 +37,7 @@ Your agents run wherever T2 Code runs: your desktop, a server, a VPS. You connec
 
 ## How do I use T2 Code on my phone?
 
-Get the [iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Android](https://play.google.com/store/apps/details?id=com.t2tools.t2code) app, then connect it to your computer with T2 Connect or a pairing link. The phone is a remote. Your computer does the work and needs to stay on. [Mobile setup](./install.md#mobile-app) · [Remote access](./remote-access.md)
+Get the [iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code) app, then connect it to your computer with T2 Connect or a pairing link. The phone is a remote. Your computer does the work and needs to stay on. [Mobile setup](./install.md#mobile-app) · [Remote access](./remote-access.md)
 
 ## Why does T2 Connect keep disconnecting?
 
@@ -63,7 +63,7 @@ Yes. Add another provider instance in Settings and give it its own keys and endp
 
 No. T2 Code is a serious developer tool. Locally runnable models are not capable of meaningful engineering work.
 
-## Does my code go to T2 servers?
+## Does my code go to T3 servers?
 
 No. Your code and prompts go from your machine to your provider (Anthropic, OpenAI, etc.), not to us. With T2 Connect, traffic rides a Cloudflare tunnel (`cloudflared` on your machine). Our relay sets up the link. It does not proxy your HTTP or WebSocket sessions. T2 Code does send basic product usage events (provider, model, token totals, that kind of thing). No prompts, no file contents. That is the same on Tailscale, LAN, or T2 Connect. Set `T2CODE_TELEMETRY_ENABLED=false` if you want it off. [Product usage data](./telemetry.md)
 

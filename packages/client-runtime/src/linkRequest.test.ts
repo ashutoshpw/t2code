@@ -56,7 +56,7 @@ describe("linkRequestAnswerInput", () => {
   const vps = {
     environmentId: EnvironmentId.make("environment-vps"),
     label: "VPS",
-    urls: ["https://vps.ts.net", "http://10.0.0.2:3773"],
+    urls: ["https://vps.ts.net", "http://10.0.0.2:3772"],
   };
 
   it("answers with the machine picked and every address known for it", () => {
@@ -189,11 +189,10 @@ const discovered = (
 
 describe("linkableMachines", () => {
   it("lists the other machines with reported addresses before saved ones, once each", () => {
-    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3773"] });
-    // A loopback address would name the linking server itself, so it is no address of the VPS.
+    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3772"] });
     const vps = presentation("environment-vps", "VPS", {
-      saved: ["https://vps.example.com", "https://vps.ts.net", "http://127.0.0.1:3773"],
-      reported: ["https://vps.ts.net", "http://localhost:3773"],
+      saved: ["https://vps.example.com", "https://vps.ts.net", "http://127.0.0.1:3772"],
+      reported: ["https://vps.ts.net", "http://localhost:3772"],
     });
     const mini = presentation("environment-mini", "Mini", { connected: false });
     expect(
@@ -225,8 +224,8 @@ describe("linkableMachines", () => {
     ]);
   });
 
-  it("reaches a machine saved only over T3 Connect at its Connect address", () => {
-    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3773"] });
+  it("reaches a machine saved only over T2 Connect at its Connect address", () => {
+    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3772"] });
     const box = presentation("environment-box", "Box");
     const [listed] = linkableMachines({
       environments: [here, box],
@@ -247,9 +246,9 @@ describe("linkableMachines", () => {
   });
 
   it("also offers the Connect address of a machine saved by direct address, last", () => {
-    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3773"] });
+    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3772"] });
     const vps = presentation("environment-vps", "VPS", {
-      saved: ["http://192.168.1.20:3773"],
+      saved: ["http://192.168.1.20:3772"],
       reported: ["https://vps.ts.net"],
     });
     const [listed] = linkableMachines({
@@ -260,15 +259,15 @@ describe("linkableMachines", () => {
     });
     expect(listed?.urls).toEqual([
       "https://vps.ts.net",
-      "http://192.168.1.20:3773",
+      "http://192.168.1.20:3772",
       "https://environment-vps.t3.example",
     ]);
   });
 
   it("no longer counts a machine as linked once its link expired", () => {
-    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3773"] });
+    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3772"] });
     const vps = presentation("environment-vps", "VPS", { saved: ["https://vps.ts.net"] });
-    const mini = presentation("environment-mini", "Mini", { saved: ["http://mini.local:3773"] });
+    const mini = presentation("environment-mini", "Mini", { saved: ["http://mini.local:3772"] });
     const listed = linkableMachines({
       environments: [here, vps, mini],
       threadEnvironmentId: here.environmentId,
@@ -286,8 +285,8 @@ describe("linkableMachines", () => {
     ]);
   });
 
-  it("offers machines only on T3 Connect after the saved ones, at their Connect address", () => {
-    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3773"] });
+  it("offers machines only on T2 Connect after the saved ones, at their Connect address", () => {
+    const here = presentation("environment-here", "Here", { saved: ["http://localhost:3772"] });
     const vps = presentation("environment-vps", "VPS", { saved: ["https://vps.ts.net"] });
     const listed = linkableMachines({
       environments: [here, vps],
@@ -323,7 +322,7 @@ describe("linkableMachines", () => {
       ...local,
       environment: {
         ...local.environment,
-        endpoint: { ...local.environment.endpoint, httpBaseUrl: "http://127.0.0.1:3773/" },
+        endpoint: { ...local.environment.endpoint, httpBaseUrl: "http://127.0.0.1:3772/" },
       },
     };
     expect(
@@ -422,7 +421,7 @@ describe("linkRequestTarget", () => {
     connected: true,
     connectOnly: false,
     linked: false,
-    urls: ["http://10.0.0.2:3773", "https://box.t3connect.example/"],
+    urls: ["http://10.0.0.2:3772", "https://box.t3connect.example/"],
   } as const;
 
   it("takes a machine from an address the agent gave only where this app already reaches it", () => {
@@ -458,7 +457,7 @@ describe("linkRequestTarget", () => {
     );
     // A private address two machines share names neither.
     const mini = { ...box, environmentId: EnvironmentId.make("environment-mini") };
-    expect(linkRequestTarget({ url: "http://10.0.0.2:3773" }, [box, mini], null)).toEqual({
+    expect(linkRequestTarget({ url: "http://10.0.0.2:3772" }, [box, mini], null)).toEqual({
       kind: "address",
     });
   });

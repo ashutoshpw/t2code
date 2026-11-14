@@ -708,7 +708,7 @@ export const buildBase = (
     ],
     /** Tools ToolSearch loads: T2 tools from source, and native tools the template only names. */
     t3,
-    deferred: [...t2, ...nativeDeferred.map((name) => ({ name, ...nativeSchema(name) }))],
+    deferred: [...t3, ...nativeDeferred.map((name) => ({ name, ...nativeSchema(name) }))],
   };
 };
 
@@ -794,7 +794,7 @@ const buildCodexBase = (
     },
     nativeTools,
     t3,
-    deferred: [...t2],
+    deferred: [...t3],
     codex: { ...template, input, reasoning: { ...template.reasoning, effort } },
   };
 };

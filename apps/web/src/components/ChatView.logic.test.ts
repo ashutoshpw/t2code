@@ -6,10 +6,13 @@ import {
   planComposerTurn,
   deriveTimelineWorking,
   snapshotComposerSend,
+  threadShellHasStarted,
+  shouldRetargetThreadPullRequestPanel,
   withMessageContext,
   deriveAvailableRevertTurnCounts,
   deriveThreadPendingBackgroundTasks,
 } from "./ChatView.logic";
+import type { RightPanelSurface } from "../rightPanelStore";
 import {
   isThreadEnvironmentLocked,
   recallCheckoutIsRepo,

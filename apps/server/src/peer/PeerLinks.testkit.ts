@@ -78,6 +78,7 @@ export const servePeer = <E, R>(
     const layerEnvironment = Layer.succeed(ServerEnvironment.ServerEnvironment, {
       getEnvironmentId: Ref.get(descriptor).pipe(Effect.map((current) => current.environmentId)),
       getDescriptor: Ref.get(descriptor),
+      setEnvironmentLabel: () => Effect.void,
     });
     const authContext = yield* EnvironmentAuth.layer.pipe(
       Layer.provide(ManagedPolicy.layerTest()),
@@ -94,7 +95,7 @@ export const servePeer = <E, R>(
       (httpEffect) =>
         Effect.gen(function* () {
           const request = yield* HttpServerRequest.HttpServerRequest;
-          if (request.url.startsWith("/.well-known/t3/environment")) {
+          if (request.url.startsWith("/.well-known/t2/environment")) {
             yield* Ref.update(probes, (count) => count + 1);
             if (yield* Ref.get(asleep)) {
               yield* Queue.offer(unanswered, undefined);
@@ -175,7 +176,7 @@ export const servePeer = <E, R>(
         .listSessions()
         .pipe(
           Effect.map((sessions) =>
-            sessions.filter((session) => session.client.label?.startsWith("T3 Code · ")),
+            sessions.filter((session) => session.client.label?.startsWith("T2 Code · ")),
           ),
         ),
     };
@@ -207,6 +208,7 @@ export const layerLinkingEnvironment = <E = never>(
       Layer.succeed(ServerEnvironment.ServerEnvironment, {
         getEnvironmentId: Effect.succeed(descriptor.environmentId),
         getDescriptor: Effect.succeed(descriptor),
+        setEnvironmentLabel: () => Effect.void,
       }),
     ),
     Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-peer-link-here-" })),

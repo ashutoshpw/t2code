@@ -107,6 +107,7 @@ describe("environmentBootstrap", () => {
         replaceState: vi.fn(),
       },
       desktopBridge: {
+        getLocalEnvironmentEnabled: () => true,
         getLocalEnvironmentBootstraps: () => [
           {
             id: "primary",
