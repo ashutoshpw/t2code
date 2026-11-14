@@ -4,7 +4,7 @@
   </a>
 </p>
 
-T2 Code is an "agent harness control surface". It enables control of the agents on your machine with a best-in-class mobile app ([Android](https://play.google.com/store/apps/details?id=codes.t2.mobile)), [web app](https://app.t2.codes) and [Electron-based desktop app](https://github.com/ashutoshpw/t2code/releases).
+<h1 align="center">T2 Code</h1>
 
 <p align="center">The open-source control plane for coding agents.</p>
 
@@ -45,8 +45,12 @@ It works with Claude Code, Codex, Cursor, OpenCode, Grok Build, Antigravity, Kir
 
 | Platform       | Command                                                               |
 | -------------- | --------------------------------------------------------------------- |
-| Debian, Ubuntu | `.deb` from [Releases](https://github.com/ashutoshpw/t2code/releases) |
+| macOS          | `brew install --cask t2-code`                                         |
+| Windows        | `winget install T2Tools.T2Code` or `scoop install extras/t2code`      |
 | Arch Linux     | `yay -S t2code-bin`                                                   |
+| Debian, Ubuntu | `.deb` from [Releases](https://github.com/ashutoshpw/t2code/releases) |
+
+The AUR packaging is maintained in this repository under [`packaging/aur`](./packaging/aur).
 
 ### Try it out (install-free)
 
