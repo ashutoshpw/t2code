@@ -17,11 +17,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy_preview:
-    name: Deploy relay preview
+  check_secrets:
+    name: Check relay preview credentials
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       contains(github.event.pull_request.labels.*.name, 'relay:preview')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      present: ${{ steps.check.outputs.present }}
+    steps:
+      - id: check
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLERK_SECRET_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLOUDFLARE_API_TOKEN or CLERK_SECRET_KEY is not set; skipping the relay preview deploy."
+          fi
+
+  deploy_preview:
+    name: Deploy relay preview
+    needs: check_secrets
+    if: needs.check_secrets.outputs.present == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment:
