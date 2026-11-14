@@ -91,17 +91,14 @@ export const gitCommandDuration = Metric.timer("t2_git_command_duration", {
   description: "Git command execution duration.",
 });
 
-export const terminalSessionsTotal = Metric.counter("t2_terminal_sessions_total", {
-  description: "Total terminal sessions started.",
-});
-
-<<<<<<< HEAD
-=======
 export const terminalRestartsTotal = Metric.counter("t2_terminal_restarts_total", {
   description: "Total terminal restart requests handled.",
 });
 
->>>>>>> ff5ece81 (refactor(relay): rename the relay wire headers and server metrics)
+export const terminalSessionsTotal = Metric.counter("t2_terminal_sessions_total", {
+  description: "Total terminal sessions started.",
+});
+
 export const webhookDeliveriesTotal = Metric.counter("t2_webhook_deliveries_total", {
   description: "Webhook requests handled, by outcome and source.",
 });
