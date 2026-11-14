@@ -19,12 +19,12 @@ const ipv4 = (address: string, internal = false): NodeOS.NetworkInterfaceInfo =>
 });
 
 it("resolves wildcard hosts to a concrete external interface when one is available", () => {
-  const connectionString = resolveHeadlessConnectionString("0.0.0.0", 3773, {
+  const connectionString = resolveHeadlessConnectionString("0.0.0.0", 3772, {
     interfaces: { en0: [ipv4("192.168.1.42")], lo0: [ipv4("127.0.0.1", true)] },
     platform: "linux",
   });
 
-  expect(connectionString).toBe("http://192.168.1.42:3773");
+  expect(connectionString).toBe("http://192.168.1.42:3772");
 });
 
 it("skips public and container addresses for a private-network listener", () => {

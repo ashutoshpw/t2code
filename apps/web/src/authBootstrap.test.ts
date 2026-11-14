@@ -151,8 +151,8 @@ describe("resolveInitialServerAuthGateState", () => {
         {
           id: "primary",
           label: "Windows",
-          httpBaseUrl: "http://localhost:3773",
-          wsBaseUrl: "ws://localhost:3773",
+          httpBaseUrl: "http://localhost:3772",
+          wsBaseUrl: "ws://localhost:3772",
           bootstrapToken: "desktop-bootstrap-token",
         },
       ],
