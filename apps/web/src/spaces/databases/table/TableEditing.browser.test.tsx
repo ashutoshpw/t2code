@@ -42,6 +42,15 @@ const focused = () => {
 };
 const writes = (fake: FakeDatabase) =>
   fake.callsOf("updateRows").map((call) => call.input.rows as unknown[]);
+// Whether edits share a batch depends on timing; the writer's own tests cover batching.
+const written = (fake: FakeDatabase, pageId: string) =>
+  Object.assign(
+    {},
+    ...writes(fake)
+      .flat()
+      .filter((row) => (row as { pageId: string }).pageId === pageId)
+      .map((row) => (row as { cells: object }).cells),
+  );
 
 describe("text editing", () => {
   it("edits a title in place, keeps the new value after the write lands and does not requery", async () => {
@@ -204,10 +213,9 @@ describe("keyboard", () => {
     expect(focused()).toBe("row-1:amount");
     await userEvent.keyboard("{Enter}5{Shift>}{Tab}{/Shift}");
     expect(focused()).toBe("row-1:notes");
-    await vi.waitFor(() => expect(writes(fake)).toHaveLength(1));
-    expect(writes(fake)[0]).toEqual([
-      { pageId: "row-1", cells: { notes: [{ text: "one", marks: [] }], amount: 5 } },
-    ]);
+    await vi.waitFor(() =>
+      expect(written(fake, "row-1")).toEqual({ notes: [{ text: "one", marks: [] }], amount: 5 }),
+    );
   });
 
   it("clears a writable cell with Backspace", async () => {
@@ -215,8 +223,7 @@ describe("keyboard", () => {
     await using _screen = screen;
     cell("row-1", "status")!.focus();
     await userEvent.keyboard("{Backspace}");
-    await vi.waitFor(() => expect(writes(fake)).toHaveLength(1));
-    expect(writes(fake)[0]).toEqual([{ pageId: "row-1", cells: { status: null } }]);
+    await vi.waitFor(() => expect(written(fake, "row-1")).toEqual({ status: null }));
   });
 
   it("swallows page shortcuts on a cell so they never reach the document", async () => {
