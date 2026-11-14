@@ -122,7 +122,7 @@ it.effect("reads the newest version from the update feed file a mirror publishes
   }),
 );
 
-it.layer(NodeServices.layer)("t3 update under a managed policy", (it) => {
+it.layer(NodeServices.layer)("t2 update under a managed policy", (it) => {
   const runWithPolicy = (
     updates: ManagedUpdatesPolicy,
     input: { readonly channel?: "stable" | "nightly"; readonly requestedVersion?: string } = {},
@@ -198,15 +198,15 @@ it.layer(NodeServices.layer)("t3 update under a managed policy", (it) => {
   );
 });
 
-it.layer(NodeServices.layer)("t3 update launcher", (it) => {
+it.layer(NodeServices.layer)("t2 update launcher", (it) => {
   it.effect("replaces a legacy symlink with a script that execs the new version", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
-      const oldExe = path.join(root, "runtime/versions/1.0.0/t3");
-      const newExe = path.join(root, "runtime/versions/2.0.0/t3");
-      const launcher = path.join(root, "bin/t3");
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" });
+      const oldExe = path.join(root, "runtime/versions/1.0.0/t2");
+      const newExe = path.join(root, "runtime/versions/2.0.0/t2");
+      const launcher = path.join(root, "bin/t2");
       for (const file of [oldExe, newExe]) {
         yield* fs.makeDirectory(path.dirname(file), { recursive: true });
         yield* fs.writeFileString(file, "");
@@ -235,19 +235,19 @@ it.layer(NodeServices.layer)("t3 update launcher", (it) => {
         const path = yield* Path.Path;
         const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
         const root = yield* fs.realPath(
-          yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" }),
+          yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" }),
         );
         // A quote and a space in the home path exercise the script's quoting.
         const home = path.join(root, "it's home");
-        const entry = (version: string) => path.join(home, "runtime/versions", version, "t3");
+        const entry = (version: string) => path.join(home, "runtime/versions", version, "t2");
         for (const version of ["1.0.0", "2.0.0"]) {
           yield* fs.makeDirectory(path.dirname(entry(version)), { recursive: true });
           yield* fs.writeFileString(entry(version), '#!/bin/sh\nprintf \'[%s]\\n\' "$0" "$@"\n', {
             mode: 0o755,
           });
         }
-        const launcher = path.join(root, "bin/t3");
-        const alias = path.join(root, "alias/t3");
+        const launcher = path.join(root, "bin/t2");
+        const alias = path.join(root, "alias/t2");
         yield* fs.makeDirectory(path.dirname(launcher), { recursive: true });
         yield* fs.makeDirectory(path.dirname(alias), { recursive: true });
         yield* fs.writeFileString(launcher, posixLauncherScript(entry("1.0.0")), { mode: 0o755 });
@@ -273,7 +273,7 @@ it.layer(NodeServices.layer)("t3 update launcher", (it) => {
 
         // Like the shell, a relative PATH entry resolves from the working directory, and a
         // script nobody can execute is passed over.
-        const unrunnable = path.join(root, "unrunnable/t3");
+        const unrunnable = path.join(root, "unrunnable/t2");
         yield* fs.makeDirectory(path.dirname(unrunnable), { recursive: true });
         yield* fs.writeFileString(unrunnable, posixLauncherScript(entry("2.0.0")), { mode: 0o644 });
         yield* fs.writeFileString(launcher, posixLauncherScript(entry("2.0.0")), { mode: 0o755 });

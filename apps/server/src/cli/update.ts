@@ -83,15 +83,15 @@ export const resolveNewestVersion = Effect.fn("cli.update.resolve_newest")(funct
     const body = yield* httpClient.execute(authenticatedRequest).pipe(
       Effect.flatMap(HttpClientResponse.filterStatusOk),
       Effect.flatMap((response) => response.text),
-      Effect.mapError(() => new CliUpdateError({ reason: "Could not list t3 releases." })),
+      Effect.mapError(() => new CliUpdateError({ reason: "Could not list t2 releases." })),
       Effect.timeoutOrElse({
         duration: RELEASE_INDEX_TIMEOUT,
-        orElse: () => Effect.fail(new CliUpdateError({ reason: "Timed out listing t3 releases." })),
+        orElse: () => Effect.fail(new CliUpdateError({ reason: "Timed out listing t2 releases." })),
       }),
     );
     const releases = yield* decodeReleaseIndex(body).pipe(
       Effect.mapError(
-        () => new CliUpdateError({ reason: "The t3 release index had an unexpected shape." }),
+        () => new CliUpdateError({ reason: "The t2 release index had an unexpected shape." }),
       ),
     );
     const version = newestCliReleaseVersion(releases, channel);
@@ -176,7 +176,7 @@ export const repointLauncher = Effect.fn("cli.update.repoint_launcher")(function
       .writeFileString(shimPath, `@echo off\r\n"${input.targetEntryPath}" %*`)
       .pipe(
         Effect.mapError(
-          () => new CliUpdateError({ reason: `Could not rewrite the t3 launcher at ${shimPath}.` }),
+          () => new CliUpdateError({ reason: `Could not rewrite the t2 launcher at ${shimPath}.` }),
         ),
       );
     return Option.some(shimPath);
@@ -192,10 +192,36 @@ export const repointLauncher = Effect.fn("cli.update.repoint_launcher")(function
   }).pipe(
     Effect.mapError(
       (cause) =>
-        new CliUpdateError({ reason: `Could not repoint the t3 launcher at ${launcher}.`, cause }),
+        new CliUpdateError({ reason: `Could not repoint the t2 launcher at ${launcher}.`, cause }),
     ),
   );
   return Option.some(launcher);
+});
+
+/**
+ * Node keeps the shell's spelling in argv0: a launcher symlink or `./t2` resolves against the
+ * working directory, while a bare `t2` was found on PATH and has to be looked up there again, or
+ * the launcher symlink is never seen.
+ */
+export const resolveLauncherPath = Effect.gen(function* () {
+  const path = yield* Path.Path;
+  const fs = yield* FileSystem.FileSystem;
+  const invokedAs = yield* HostProcess.InvokedAs;
+  const cwd = yield* HostProcess.WorkingDirectory;
+  const environment = yield* HostProcess.Environment;
+  const platform = yield* HostProcess.Platform;
+  if (invokedAs.includes("/") || invokedAs.includes("\\")) {
+    return path.resolve(cwd, invokedAs);
+  }
+  const delimiter = platform === "win32" ? ";" : ":";
+  for (const directory of (environment["PATH"] ?? "").split(delimiter)) {
+    if (directory.length === 0) continue;
+    const candidate = path.join(directory, invokedAs);
+    if (yield* fs.exists(candidate).pipe(Effect.orElseSucceed(() => false))) {
+      return candidate;
+    }
+  }
+  return undefined;
 });
 
 /** Windows executables see their own path, so find the installer shim by matching t3.cmd targets on PATH. */
@@ -210,7 +236,7 @@ export const findWindowsShim = Effect.fn("cli.update.find_windows_shim")(functio
     ...(environment["PATH"] ?? environment["Path"] ?? "").split(";"),
   ].filter((entry) => entry.trim().length > 0);
   for (const directory of candidates) {
-    const shimPath = path.join(directory, "t3.cmd");
+    const shimPath = path.join(directory, "t2.cmd");
     const contents = yield* fs.readFileString(shimPath).pipe(Effect.option);
     if (Option.isNone(contents)) continue;
     const target = windowsShimTarget(contents.value);
@@ -228,7 +254,7 @@ const updateFlags = {
   ...projectLocationFlags,
   channel: Flag.Literals("channel", CLI_RELEASE_CHANNELS).pipe(
     Flag.withDescription(
-      "Release channel to follow. Defaults to the channel this t3 was published on.",
+      "Release channel to follow. Defaults to the channel this CLI was published on.",
     ),
     Flag.optional,
   ),
@@ -257,7 +283,7 @@ export const updateCommand = Command.make("update", {
   version: versionArgument,
 }).pipe(
   Command.withDescription(
-    "Download a newer t3 and switch this machine to it, including the background service when one is installed.",
+    "Download a newer t2 and switch this machine to it, including the background service when one is installed.",
   ),
   Command.withHandler((flags) =>
     Effect.gen(function* () {
@@ -359,7 +385,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
   }
   if (input.requestedVersion !== undefined && !isExactServiceVersion(input.requestedVersion)) {
     return yield* new CliUpdateError({
-      reason: `'${input.requestedVersion}' is not an exact t3 version.`,
+      reason: `'${input.requestedVersion}' is not an exact t2 version.`,
     });
   }
   const progress = createUpdateProgress();
@@ -377,7 +403,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
   if (targetChannel === "preview" && currentChannel !== "preview") {
     yield* Console.log(
       [
-        `t3@${targetVersion} is a preview build.`,
+        `t2@${targetVersion} is a preview build.`,
         "  Preview builds are cut by maintainers from unreleased branches to exercise the release",
         "  pipeline. They can be broken, receive no fixes, and are never offered as updates; you",
         `  will have to switch back to ${currentChannel} yourself with \`t2code update --channel ${currentChannel} --allow-downgrade\`.`,
@@ -425,14 +451,14 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
   if (executableCurrent && serviceCurrent) {
     yield* Console.log(
       serviceVersion !== undefined
-        ? `t3 and its background service are already on ${targetVersion} (${targetChannel}).`
-        : `t3 is already on ${targetVersion} (${targetChannel}).`,
+        ? `t2 and its background service are already on ${targetVersion} (${targetChannel}).`
+        : `t2 is already on ${targetVersion} (${targetChannel}).`,
     );
     return;
   }
   if (!input.allowDowngrade && compareExactServiceVersions(targetVersion, newestInstalled) < 0) {
     return yield* new CliUpdateError({
-      reason: `t3@${targetVersion} is older than the installed ${newestInstalled}. Pass --allow-downgrade to install it anyway.`,
+      reason: `t2@${targetVersion} is older than the installed ${newestInstalled}. Pass --allow-downgrade to install it anyway.`,
     });
   }
 
@@ -498,14 +524,14 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
         .pipe(
           Effect.mapError(
             (cause) =>
-              new PinnedRuntimeInstallError({ step: "verifying the downloaded t3", cause }),
+              new PinnedRuntimeInstallError({ step: "verifying the downloaded t2", cause }),
           ),
           Effect.flatMap((result) =>
             result.code === 0 && /\bv(\S+)\s*$/.exec(result.stdout)?.[1] === targetVersion
               ? Effect.void
               : Effect.fail(
                   new PinnedRuntimeInstallError({
-                    step: "verifying the downloaded t3",
+                    step: "verifying the downloaded t2",
                     exitCode: Number(result.code),
                   }),
                 ),
@@ -518,8 +544,8 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
         new CliUpdateError({
           reason:
             mirror === undefined
-              ? `No release archive was published for t3@${targetVersion}.`
-              : `${mirror.organization}'s update mirror has no t3@${targetVersion} for this machine.`,
+              ? `No release archive was published for t2@${targetVersion}.`
+              : `${mirror.organization}'s update mirror has no t2@${targetVersion} for this machine.`,
         }),
       ),
     ),
@@ -555,7 +581,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
       Effect.mapError(
         (error) =>
           new CliUpdateError({
-            reason: `t3@${targetVersion} is installed but the background service could not be ${restartService ? "updated" : "pointed at it"}: ${error.message}`,
+            reason: `t2@${targetVersion} is installed but the background service could not be ${restartService ? "updated" : "pointed at it"}: ${error.message}`,
           }),
       ),
     );
@@ -574,7 +600,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
 
   progress.success(`Installed T2 Code ${targetVersion}`);
   if (Option.isSome(repointed)) {
-    yield* Console.log("  Run t3 to get started.\n");
+    yield* Console.log("  Run t2 to get started.\n");
   } else {
     yield* Console.log(`  Run ${runtime.entryPath}\n`);
   }
