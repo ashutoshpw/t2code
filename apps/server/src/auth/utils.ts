@@ -50,7 +50,7 @@ export function resolveLegacySessionCookieName(input: {
 }): string | undefined {
   return input.mode === "web" && !input.development && isRemoteReachableHost(input.host)
     ? // The pre-rename bare cookie name; still accepted so existing remote-web sessions survive.
-      "t3_session"
+      SESSION_COOKIE_NAME
     : undefined;
 }
 
