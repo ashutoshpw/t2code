@@ -32,7 +32,7 @@ const bitbucketPullRequest = {
   updated_on: "2026-01-02T00:00:00.000Z",
   links: {
     html: {
-      href: "https://bitbucket.org/pingdotgg/t2code/pull-requests/42",
+      href: "https://bitbucket.org/pingdotgg/t3code/pull-requests/42",
     },
   },
   source: {
@@ -169,7 +169,7 @@ it.effect("parses pull request responses from the Bitbucket REST API", () => {
     assert.deepStrictEqual(result, {
       number: 42,
       title: "Add Bitbucket provider",
-      url: "https://bitbucket.org/pingdotgg/t2code/pull-requests/42",
+      url: "https://bitbucket.org/pingdotgg/t3code/pull-requests/42",
       baseRefName: "main",
       headRefName: "feature/source-control",
       state: "open",
@@ -180,7 +180,7 @@ it.effect("parses pull request responses from the Bitbucket REST API", () => {
     });
     assert.strictEqual(
       execute.mock.calls[0]?.[0].url,
-      "https://api.test.local/2.0/repositories/pingdotgg/t2code/pullrequests/42",
+      "https://api.test.local/2.0/repositories/pingdotgg/t3code/pullrequests/42",
     );
   }).pipe(Effect.provide(layer));
 });
@@ -324,7 +324,7 @@ it.effect("lists pull requests with Bitbucket state and source branch query para
     const request = execute.mock.calls[0]?.[0];
     assert.strictEqual(
       request?.url,
-      "https://api.test.local/2.0/repositories/pingdotgg/t2code/pullrequests",
+      "https://api.test.local/2.0/repositories/pingdotgg/t3code/pullrequests",
     );
     assert.deepStrictEqual(request?.urlParams.params, [
       ["pagelen", "10"],
@@ -546,7 +546,7 @@ it.effect(
         execute.mock.calls.map((call) => call[0].url).toSorted(),
         [
           "https://api.test.local/2.0/repositories/pingdotgg/t3code",
-          "https://api.test.local/2.0/repositories/pingdotgg/t2code/branching-model",
+          "https://api.test.local/2.0/repositories/pingdotgg/t3code/branching-model",
         ].toSorted(),
       );
     }).pipe(Effect.provide(layer));
@@ -602,7 +602,7 @@ it.effect("creates pull requests using the official REST payload shape", () => {
     const request = execute.mock.calls[0]?.[0];
     assert.strictEqual(
       request?.url,
-      "https://api.test.local/2.0/repositories/pingdotgg/t2code/pullrequests",
+      "https://api.test.local/2.0/repositories/pingdotgg/t3code/pullrequests",
     );
     assert.strictEqual(request?.method, "POST");
     assert.ok(request);

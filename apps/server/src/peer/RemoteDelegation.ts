@@ -58,7 +58,7 @@ const FOLLOW_MAX_BACKOFF = Duration.minutes(5);
 const FOLLOW_MAX_DEFECTS = 3;
 /** How a follower retries; tests step it by hand. */
 export const FollowRetrySchedule = Context.Reference<Schedule.Schedule<unknown>>(
-  "t3/peer/RemoteDelegation/FollowRetrySchedule",
+  "@t2code/cli/peer/RemoteDelegation/FollowRetrySchedule",
   {
     defaultValue: () =>
       Schedule.exponential(Duration.seconds(2)).pipe(
@@ -135,7 +135,7 @@ export class RemoteDelegation extends Context.Service<
      */
     readonly start: () => Effect.Effect<void, never, Scope.Scope>;
   }
->()("t3/peer/RemoteDelegation") {}
+>()("@t2code/cli/peer/RemoteDelegation") {}
 
 /** The other side refused because the thread there runs above this caller's modes. */
 const isModeRefusal = (error: OrchestratorMcpFailure) =>

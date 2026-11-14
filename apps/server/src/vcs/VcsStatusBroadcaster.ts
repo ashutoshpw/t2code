@@ -161,7 +161,7 @@ interface ActiveRemotePoller {
 }
 
 export class VcsAutomaticFetchInterval extends Context.Reference<Effect.Effect<Duration.Duration>>(
-  "t2/vcs/VcsAutomaticFetchInterval",
+  "@t2code/cli/vcs/VcsAutomaticFetchInterval",
   { defaultValue: () => Effect.succeed(DEFAULT_AUTOMATIC_GIT_FETCH_INTERVAL) },
 ) {}
 
@@ -936,7 +936,7 @@ export const make = Effect.gen(function* () {
       ),
   );
 
-  // A checkout outside T3 Code, such as `git switch` in the terminal, calls no refresh RPC.
+  // A checkout outside T2 Code, such as `git switch` in the terminal, calls no refresh RPC.
   // Rereading remote too, without a fetch, sends the new branch with its own PR and counts.
   const publishCheckedOutRef = Effect.fn("VcsStatusBroadcaster.publishCheckedOutRef")(function* (
     cwd: string,

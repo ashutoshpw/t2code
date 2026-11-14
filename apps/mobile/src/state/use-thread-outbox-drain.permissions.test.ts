@@ -100,7 +100,11 @@ vi.mock("./threads", async () => {
       familyAtom: () => Atom.make(AsyncResult.success({})),
       refresh: vi.fn(),
     },
-    environmentThreadDetails: { threadAtom: () => Atom.make(null) },
+    environmentThreadDetails: {
+      threadAtom: () => Atom.make(null),
+      // Never mounted in the registry, so no queued row is ever an echo here.
+      stateAtom: () => Atom.make(null),
+    },
   };
 });
 vi.mock("./git", () => ({ gitEnvironment: { preparePullRequestThread: state.checkout } }));

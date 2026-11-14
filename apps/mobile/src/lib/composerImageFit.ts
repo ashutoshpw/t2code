@@ -3,10 +3,7 @@ import {
   downscalableImageMimeType,
   fitImageAttachmentSize,
 } from "@t2code/client-runtime/image-attachment-size";
-import {
-  IMAGE_DIMENSIONS_HEADER_BYTES,
-  readImageDimensions,
-} from "@t2code/shared/imageDimensions";
+import { IMAGE_DIMENSIONS_HEADER_BYTES, readImageDimensions } from "@t2code/shared/imageDimensions";
 import { estimateBase64ByteSize } from "./base64";
 
 const PHOTO_JPEG_QUALITY = 0.85;

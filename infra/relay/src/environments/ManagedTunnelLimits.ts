@@ -1,8 +1,12 @@
-import { and, count, eq, isNull, ne } from "drizzle-orm";
+import { and, count, eq, exists, gt, gte, isNotNull, isNull, ne, not, or, sql } from "drizzle-orm";
+import { QueryBuilder } from "drizzle-orm/pg-core";
 import * as Context from "effect/Context";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
+import * as SqlError from "effect/sql/SqlError";
+import { DEFAULT_MANAGED_TUNNEL_LIMIT, T3CHAT_PLAN_TUNNEL_LIMITS } from "@t3tools/contracts/relay";
 
 import * as RelayDb from "../db.ts";
 import {
@@ -10,13 +14,15 @@ import {
   relayManagedEndpointAllocations,
   relayManagedTunnelLimits,
 } from "../persistence/schema.ts";
+import * as T3ChatAccounts from "../t3chat/T3ChatAccounts.ts";
 
-export const DEFAULT_MANAGED_TUNNEL_LIMIT = 3;
+// Reserve-to-tunnel takes two Cloudflare calls capped at 8 seconds each; a reservation older than this was abandoned.
+const MANAGED_TUNNEL_PENDING_WINDOW_MINUTES = 15;
 
 export class ManagedTunnelLimitPersistenceError extends Schema.TaggedError<ManagedTunnelLimitPersistenceError>()(
   "ManagedTunnelLimitPersistenceError",
   {
-    operation: Schema.Literals(["load-limit", "count-tunnels"]),
+    operation: Schema.Literals(["transaction", "lock-user", "load-limit", "count-tunnels"]),
     userId: Schema.String,
     cause: Schema.Defect(),
   },
@@ -40,6 +46,58 @@ export class ManagedTunnelLimitExceeded extends Schema.TaggedError<ManagedTunnel
   }
 }
 
+const allocation = relayManagedEndpointAllocations;
+
+const withdrawnLink = (since: typeof allocation.updatedAt) =>
+  exists(
+    new QueryBuilder()
+      .select({ userId: relayEnvironmentLinks.userId })
+      .from(relayEnvironmentLinks)
+      .where(
+        and(
+          eq(relayEnvironmentLinks.userId, allocation.userId),
+          eq(relayEnvironmentLinks.environmentId, allocation.environmentId),
+          or(
+            isNotNull(relayEnvironmentLinks.revokedAt),
+            eq(relayEnvironmentLinks.managedTunnelsEnabled, false),
+          ),
+          gte(relayEnvironmentLinks.updatedAt, since),
+        ),
+      ),
+  );
+
+// Counts allocations, not links: a link is written only after its tunnel exists.
+// `environment` is `ne` for the user's other environments or `eq` for this one, which relinks without counting itself.
+// updatedAt moves only on provisioning writes and release, never on teardown claims, so a link
+// withdrawn at or after it means cleanup is owed; an older withdrawal means a relink that never finished.
+export const countedAllocations = (input: {
+  readonly userId: string;
+  readonly environmentId: string;
+  readonly pendingCutoff: string;
+  readonly environment: typeof eq;
+}) =>
+  and(
+    eq(allocation.userId, input.userId),
+    input.environment(allocation.environmentId, input.environmentId),
+    or(
+      // Reserved but not yet holding a tunnel. Release writes updatedAt = tunnelReleasedAt and
+      // a relink reserves before rewriting its link, so only a newer reservation counts here.
+      and(
+        gt(allocation.updatedAt, input.pendingCutoff),
+        or(
+          isNull(allocation.tunnelReleasedAt),
+          gt(allocation.updatedAt, allocation.tunnelReleasedAt),
+        ),
+        not(withdrawnLink(allocation.updatedAt)),
+      ),
+      and(
+        isNotNull(allocation.tunnelId),
+        isNull(allocation.tunnelReleasedAt),
+        not(withdrawnLink(allocation.updatedAt)),
+      ),
+    ),
+  );
+
 export class ManagedTunnelLimits extends Context.Service<
   ManagedTunnelLimits,
   {
@@ -53,10 +111,24 @@ export class ManagedTunnelLimits extends Context.Service<
       readonly userId: string;
     }) => Effect.Effect<number | null, ManagedTunnelLimitPersistenceError>;
   }
->()("t2code-relay/environments/ManagedTunnelLimits") {}
+>()("t3code-relay/environments/ManagedTunnelLimits") {}
 
-export const make = Effect.gen(function* () {
+const make = Effect.gen(function* () {
   const db = yield* RelayDb.RelayDb;
+  const t3Chat = yield* T3ChatAccounts.T3ChatAccounts;
+
+  // Asked only at the cap, so most links never call T3 Chat. Any failure keeps the lower cap.
+  const t3ChatTunnelLimit = (userId: string) =>
+    t3Chat.getLink({ userId }).pipe(
+      Effect.map((link) =>
+        link && link.plan !== "free" ? T3CHAT_PLAN_TUNNEL_LIMITS[link.plan] : 0,
+      ),
+      Effect.catch((error) =>
+        Effect.logWarning("T3 Chat plan check failed", { userId, error: error.message }).pipe(
+          Effect.as(0),
+        ),
+      ),
+    );
 
   const loadOverride = (userId: string) =>
     db
@@ -153,50 +225,10 @@ export const make = Effect.gen(function* () {
                 operation: "transaction",
                 userId: input.userId,
                 cause,
-              }),
-          ),
-        );
-      const maxTunnels = overrides[0]?.maxTunnels ?? DEFAULT_MANAGED_TUNNEL_LIMIT;
-
-      // Exclude this environment so relinking remains idempotent at the account limit.
-      const counted = yield* db
-        .select({ activeTunnels: count() })
-        .from(relayManagedEndpointAllocations)
-        .innerJoin(
-          relayEnvironmentLinks,
-          and(
-            eq(relayEnvironmentLinks.userId, relayManagedEndpointAllocations.userId),
-            eq(relayEnvironmentLinks.environmentId, relayManagedEndpointAllocations.environmentId),
-          ),
-        )
-        .where(
-          and(
-            eq(relayManagedEndpointAllocations.userId, input.userId),
-            ne(relayManagedEndpointAllocations.environmentId, input.environmentId),
-            isNull(relayEnvironmentLinks.revokedAt),
-            eq(relayEnvironmentLinks.managedTunnelsEnabled, true),
-          ),
-        )
-        .pipe(
-          Effect.mapError(
-            (cause) =>
-              new ManagedTunnelLimitPersistenceError({
-                operation: "count-tunnels",
-                userId: input.userId,
-                cause,
-              }),
-          ),
-        );
-      const activeTunnels = counted[0]?.activeTunnels ?? 0;
-
-      if (activeTunnels >= maxTunnels) {
-        return yield* new ManagedTunnelLimitExceeded({
-          userId: input.userId,
-          environmentId: input.environmentId,
-          maxTunnels,
-          activeTunnels,
-        });
-      }
+              })
+            : cause,
+        ),
+      );
     }),
   });
 });
