@@ -11,6 +11,7 @@ import {
   ArchiveIcon,
   FlaskConicalIcon,
   BotIcon,
+  CalendarClockIcon,
   createLucideIcon,
   CalendarClockIcon,
   FileDiffIcon,

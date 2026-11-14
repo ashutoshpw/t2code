@@ -1,3 +1,4 @@
+import { pullRequestChecksRefreshIntervalMs } from "@t2code/client-runtime/pull-request-checks";
 import type { PullRequestCheck } from "@t2code/contracts";
 
 import { useLiveRefresh } from "./useLiveRefresh";

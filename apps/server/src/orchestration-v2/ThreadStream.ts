@@ -4,6 +4,7 @@ import type {
 } from "@t2code/contracts";
 
 import { omitLocalVisibleTurnItems } from "@t2code/shared/orchestrationV2BoundedSnapshot";
+import { dedupeSnapshotBodies } from "@t2code/shared/orchestrationV2DedupedBodies";
 
 import {
   buildBoundedThreadProjection,

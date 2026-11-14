@@ -1,13 +1,8 @@
 /**
- * `t2code triage` - hand a misbehaving install to the user's own coding agent.
- *
- * The command is deliberately thin: it writes a `context.md` with machine facts
- * (version, paths, server liveness), then launches claude or codex
- * interactively, seeded with the playbook from `triagePrompt.ts`. The agent
- * asks the user what went wrong, investigates, and files the issue; the
- * harness's own permission prompts gate anything it wants to run. With no
- * agent CLI installed, the prompt and context are written to disk for the user
- * to paste into whatever agent they do have.
+ * `t2code triage` - hand a misbehaving install to the user's own coding agent:
+ * write a `context.md` with machine facts, then launch claude or codex
+ * interactively with the `triagePrompt.ts` playbook; the agent's own permission
+ * prompts gate what it runs. With no agent CLI, everything lands on disk.
  */
 // @effect-diagnostics nodeBuiltinImport:off
 import * as NodeChildProcess from "node:child_process";

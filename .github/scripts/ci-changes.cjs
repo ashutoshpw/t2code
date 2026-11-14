@@ -44,9 +44,8 @@ const TEST_ONLY_DEPS = {
     "@t2code/provider-cursor",
   ],
 };
-// Declared dependencies that only feed a build step: the server bundles the
-// built web app (apps/server/vite.config.ts) but never imports it.
-const BUILD_ONLY_DEPS = { t2: ["@t2code/web"] };
+// The server bundles the web build without importing it.
+const BUILD_ONLY_DEPS = { "@t2code/cli": ["@t2code/web"] };
 
 const MOBILE_NATIVE =
   /^apps\/mobile\/.*\.(swift|kt|kts)$|^apps\/mobile\/(\.swiftlint\.yml|detekt\.yml|\.editorconfig|Brewfile)$|^scripts\/mobile-native-static-check\.ts$|^package\.json$|^\.github\/workflows\/ci\.yml$|^\.github\/scripts\/ci-changes\.cjs$|^\.github\/actions\/ci-changes\//;

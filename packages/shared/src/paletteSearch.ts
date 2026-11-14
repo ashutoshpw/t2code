@@ -238,7 +238,7 @@ function matchToken(
     if (joined) return joined;
   }
   if ((best !== null && best.score > MID_WORD) || !typos || token.length < 3) return best;
-  // Numbers skip typos: #22889 is not #22189. Words with digits ("t2code") do not.
+  // Numbers skip typos to keep pull requests distinct. Words with digits ("t2code") do not.
   if (LETTER.test(token)) {
     for (let index = 0; index < field.text.length; index++) {
       if (!field.wordStarts[index]) continue;

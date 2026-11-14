@@ -1,4 +1,5 @@
 import type { AssetResource, ProjectReadFileError, ScopedThreadRef } from "@t2code/contracts";
+import { mediaFileReference } from "@t2code/client-runtime/media-reference";
 import { isHostPath, workspaceRelativeFilePath } from "@t2code/shared/path";
 
 export function resolveFilePreviewPath(path: string | null, cwd: string): string | null {

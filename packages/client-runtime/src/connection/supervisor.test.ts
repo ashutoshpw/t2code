@@ -1836,8 +1836,8 @@ describe("EnvironmentSupervisor routes", () => {
                 connectionId: secondLanTarget.connectionId,
                 environmentId: TARGET.environmentId,
                 label: TARGET.label,
-                httpBaseUrl: "http://192.168.56.1:3773/",
-                wsBaseUrl: "ws://192.168.56.1:3773/",
+                httpBaseUrl: "http://192.168.56.1:3772/",
+                wsBaseUrl: "ws://192.168.56.1:3772/",
               }),
             ),
           },
@@ -1917,8 +1917,8 @@ describe("EnvironmentSupervisor routes", () => {
                 connectionId: tailnetTarget.connectionId,
                 environmentId: TARGET.environmentId,
                 label: TARGET.label,
-                httpBaseUrl: "http://100.100.1.2:3773/",
-                wsBaseUrl: "ws://100.100.1.2:3773/",
+                httpBaseUrl: "http://100.100.1.2:3772/",
+                wsBaseUrl: "ws://100.100.1.2:3772/",
                 network: "tailscale",
               }),
             ),
@@ -1976,7 +1976,7 @@ describe("EnvironmentSupervisor routes", () => {
         prepare: (_attempt, target) => {
           attempted.push(target._tag);
           return target._tag === "RelayConnectionTarget"
-            ? Effect.fail(blocked("Sign in to T3 Connect."))
+            ? Effect.fail(blocked("Sign in to T2 Connect."))
             : Effect.succeed(preparedFor(target));
         },
       });
@@ -2021,7 +2021,7 @@ describe("EnvironmentSupervisor routes", () => {
     }).pipe(Effect.provide(TestClock.layer())),
   );
 
-  it.effect("skips a silent LAN route and connects over T3 Connect", () =>
+  it.effect("skips a silent LAN route and connects over T2 Connect", () =>
     Effect.gen(function* () {
       const harness = yield* makeHarness({
         checkRoute: (route) =>
@@ -2080,7 +2080,7 @@ describe("EnvironmentSupervisor routes", () => {
         checkRoute: () => Effect.succeed("answered"),
         prepare: (_attempt, target) =>
           target._tag === "RelayConnectionTarget"
-            ? Effect.fail(blocked("Sign in to T3 Connect."))
+            ? Effect.fail(blocked("Sign in to T2 Connect."))
             : Effect.fail(transient("LAN socket refused.")),
       });
       const supervisor = yield* EnvironmentSupervisor.make(LAN_THEN_RELAY_ENTRY, {
@@ -2301,7 +2301,7 @@ describe("EnvironmentSupervisor routes", () => {
   );
 
   it.effect.each(["initial", "late", "withdrawn", "withdrawn-upgrade", "omitted"] as const)(
-    "learns the %s direct endpoint over T3 Connect",
+    "learns the %s direct endpoint over T2 Connect",
     (discovery) =>
       Effect.gen(function* () {
         const relayEntry: ConnectionCatalogEntry =

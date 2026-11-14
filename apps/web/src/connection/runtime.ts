@@ -5,6 +5,7 @@ import {
   ThreadHistoryController,
 } from "@t2code/client-runtime/state/threads";
 import { PullRequestDiffLoader } from "@t2code/client-runtime/state/pull-requests";
+import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { Atom } from "effect/reactivity";
 

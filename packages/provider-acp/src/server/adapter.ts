@@ -8238,6 +8238,16 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
             resolveExtractedTextPath: host.resolveExtractedTextPath,
           });
           const isNativeSlashCommand = userText.trimStart().startsWith("/");
+          const text = t2AcpPromptWithInstructions({
+            prompt: messageText,
+            state: instructionState,
+            ...(previousInstructionState === undefined || compactionMarker !== undefined
+              ? {}
+              : { previousState: previousInstructionState }),
+          });
+          if (text.length > 0) {
+            prompt.push({ type: "text", text });
+          }
           const imageAttachments = turnInput.message.attachments.filter(
             isProviderNativeImageAttachment,
           );

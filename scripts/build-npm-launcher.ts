@@ -1,17 +1,5 @@
 #!/usr/bin/env node
-/**
- * Builds the `@t2code/cli` npm package behind `npx @t2code/cli` /
- * `npm i -g @t2code/cli`: a launcher with no dependencies that downloads this
- * exact version's CLI archive from the GitHub Release on first run
- * (scripts/npm-launcher/t2code.mjs).
- * The executables are not published to npm. npm's publish-time scanning held
- * 250 MB platform packages back for up to an hour after the launcher went
- * live, and every install in that window ran a launcher with nothing to
- * launch.
- *
- * Output: `<output-dir>/@t2code/cli/` (the package tree) and
- * `<output-dir>/@t2code/cli.tgz`, which is what gets published.
- */
+// GitHub archives avoid npm scanning delays; output <output-dir>/t3/ and publishable t3.tgz.
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Effect from "effect/Effect";

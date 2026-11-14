@@ -408,11 +408,7 @@ interface PendingRequest {
 
 const rule = (action: string, effect: Rule["effect"]): Rule => ({ action, resource: "*", effect });
 
-/**
- * OpenCode skips every tool of a server whose name is over 64 characters (its
- * tool namespace limit), and its router rejects adding one over 100, so a
- * thread id that does not fit is replaced by a digest of it.
- */
+/** OpenCode hides tools for names over 64 chars and rejects names over 100; hash long thread IDs. */
 export const t2McpServerName = Effect.fn("t2McpServerName")(function* (threadId: string) {
   const name = `t2-code-${threadId.replaceAll(/[^a-zA-Z0-9_-]/g, "_")}`;
   if (name.length <= 64) return name;
@@ -2583,7 +2579,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
         );
       }
       // Cancel reports user Stop; record failure here and skip that execution end.
-      yield* Effect.logWarning("Declined an OpenCode form T3 Code cannot show.", {
+      yield* Effect.logWarning("Declined an OpenCode form T2 Code cannot show.", {
         reason: mapped.unsupported,
       });
       const cancelled = yield* deliver(

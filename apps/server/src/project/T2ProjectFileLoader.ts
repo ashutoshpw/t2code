@@ -28,10 +28,7 @@ export class T2ProjectFileLoadError extends Schema.TaggedError<T2ProjectFileLoad
 export class T2ProjectFileLoader extends Context.Service<
   T2ProjectFileLoader,
   {
-    /**
-     * Never fails: missing, unreadable, or invalid files resolve to `Option.none` (invalid files
-     * are logged as warnings).
-     */
+    /** Never fails; missing/unreadable/invalid files return none, with warnings for invalid files. */
     readonly load: (workspaceRoot: string) => Effect.Effect<Option.Option<T2ProjectFile>>;
   }
 >()("@t2code/cli/project/T2ProjectFileLoader") {}

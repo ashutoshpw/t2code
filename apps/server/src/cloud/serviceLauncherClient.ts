@@ -110,7 +110,7 @@ export class ServiceLauncherClient extends Context.Service<
       readonly targetVersion: string;
       readonly dbPath: string;
     }) => Effect.Effect<string, ServiceLauncherClientError | ServiceLauncherRejectedError>;
-    /** Owned `t3` symlinks move to the new runtime only when this start commits the trial. */
+    /** Owned `t2` symlinks move to the new runtime only when this start commits the trial. */
     readonly prepareTrial: (input: {
       readonly baseDir: string;
     }) => Effect.Effect<ServerSelfUpdateOutcome | undefined, ServiceLauncherClientError>;
@@ -122,9 +122,7 @@ const resolveStartup = Effect.fn("cloud.service_launcher_client.resolve_startup"
     const host = yield* ServiceLauncherHostProcess;
     const environment = yield* HostProcess.Environment;
     const currentVersion = options?.currentVersion ?? packageJson.version;
-    // The launcher always spawns its child with an IPC channel, and Node does
-    // not pass that channel on. Without one, the context was inherited from an
-    // ancestor (e.g. `t2code serve` run in a T2 terminal), so it describes someone else.
+    // IPC channels are not inherited; without one, launcher context belongs to an ancestor.
     const rawContext = host.connected ? environment[SERVICE_LAUNCHER_CONTEXT_ENV] : undefined;
     const context = rawContext === undefined ? undefined : decodeServiceLauncherContext(rawContext);
 
@@ -156,17 +154,17 @@ export const repointLaunchers = Effect.fn("cloud.service_launcher_client.repoint
     const platform = yield* HostProcess.Platform;
     if (platform !== "linux" && platform !== "darwin") return;
     const installBinDir =
-      environment["T3CODE_INSTALL_BIN_DIR"] ||
+      environment["T2CODE_INSTALL_BIN_DIR"] ||
       (environment["HOME"] ? path.join(environment["HOME"], ".local", "bin") : undefined);
     const candidates = new Set<string>();
-    if (installBinDir !== undefined) candidates.add(path.join(installBinDir, "t3"));
+    if (installBinDir !== undefined) candidates.add(path.join(installBinDir, "t2"));
     for (const directory of (environment["PATH"] ?? "").split(":")) {
       if (directory.length === 0) continue;
-      const candidate = path.join(directory, "t3");
+      const candidate = path.join(directory, "t2");
       if (
         yield* fs.exists(candidate).pipe(
           Effect.catch((cause) =>
-            Effect.logWarning("Could not check the t3 command on PATH", {
+            Effect.logWarning("Could not check the t2 command on PATH", {
               launchedAs: candidate,
               cause,
             }).pipe(Effect.as(false)),
@@ -205,9 +203,9 @@ export const repointLaunchers = Effect.fn("cloud.service_launcher_client.repoint
             return;
           const temporary = yield* fs.makeTempDirectoryScoped({
             directory: path.dirname(launchedAs),
-            prefix: ".t3-launcher-",
+            prefix: ".t2-launcher-",
           });
-          const link = path.join(temporary, "t3");
+          const link = path.join(temporary, "t2");
           yield* fs.symlink(target.entryPath, link);
           yield* fs.rename(link, launchedAs);
         }),
@@ -215,7 +213,7 @@ export const repointLaunchers = Effect.fn("cloud.service_launcher_client.repoint
         Effect.catchCause((cause) =>
           Cause.hasInterrupts(cause)
             ? Effect.interrupt
-            : Effect.logWarning("Could not move the t3 command to the updated version", {
+            : Effect.logWarning("Could not move the t2 command to the updated version", {
                 launchedAs,
                 cause,
               }),

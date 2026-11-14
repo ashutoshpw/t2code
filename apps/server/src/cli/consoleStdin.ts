@@ -40,8 +40,7 @@ export function attachConsoleStdin(): number | undefined {
     stdinMissing: isMissingInput(0),
     stdoutIsConsole: NodeTty.isatty(1),
   });
-  // The marker describes this process's own start; a server started here
-  // must not pass it on to the shells and `t2` runs it spawns.
+  // The launcher marker must not propagate to child shells or t2 processes.
   delete process.env.T2CODE_DESKTOP_CLI_LAUNCHER;
   if (!needed) return undefined;
   let fd: number;
