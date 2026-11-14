@@ -1004,7 +1004,7 @@ server.listen(0, "127.0.0.1", () => {
 });
 `;
 
-const AGENT_COMMAND_ENV = "T3CODE_TEST_AGENT_COMMAND";
+const AGENT_COMMAND_ENV = "T2CODE_TEST_AGENT_COMMAND";
 
 /**
  * A real HTML server with an agent's environment, started the way an agent's tool shell starts a

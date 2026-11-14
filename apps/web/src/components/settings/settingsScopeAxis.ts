@@ -1,4 +1,4 @@
-import { fileBasename } from "@t3tools/shared/path";
+import { fileBasename } from "@t2code/shared/path";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import type { EnvironmentPresentation } from "../../state/environments";
 import type { ResolvedSettingsScope, SettingsScopeSearch } from "./settingsScope";

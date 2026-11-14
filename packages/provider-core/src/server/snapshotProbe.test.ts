@@ -180,14 +180,14 @@ describe("resolveProviderProbeTimeoutMs", () => {
     expect(resolveProviderProbeTimeoutMs(provider, 25000, { [key]: "60000" })).toBe(60000);
     expect(resolveProviderProbeTimeoutMs(provider, 25000, { [key]: "1000" })).toBe(25000);
     expect(
-      resolveProviderProbeTimeoutMs(provider, 25000, { T3CODE_OTHER_PROBE_TIMEOUT_MS: "60000" }),
+      resolveProviderProbeTimeoutMs(provider, 25000, { T2CODE_OTHER_PROBE_TIMEOUT_MS: "60000" }),
     ).toBe(25000);
   });
   it.each([undefined, "", " ", "bad", "0", "-1", "1.5", "Infinity", "2147483648"])(
     "retains the phase default for invalid value %s",
     (value) => {
       expect(
-        resolveProviderProbeTimeoutMs("claude", 25000, { T3CODE_CLAUDE_PROBE_TIMEOUT_MS: value }),
+        resolveProviderProbeTimeoutMs("claude", 25000, { T2CODE_CLAUDE_PROBE_TIMEOUT_MS: value }),
       ).toBe(25000);
     },
   );

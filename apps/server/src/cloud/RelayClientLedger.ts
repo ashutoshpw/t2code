@@ -1,5 +1,5 @@
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { writeFileStringAtomically } from "@t3tools/shared/atomicWrite";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { writeFileStringAtomically } from "@t2code/shared/atomicWrite";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -35,7 +35,7 @@ export class RelayClientLedger extends Context.Service<
     /** Records a started relay client; the returned effect forgets it once it has stopped. */
     readonly track: (pid: number) => Effect.Effect<Effect.Effect<void>>;
   }
->()("t3/cloud/RelayClientLedger") {}
+>()("@t2code/cli/cloud/RelayClientLedger") {}
 
 const ENTRY_DIRECTORY = "relay-clients";
 const ENTRY_FILE = /^\d+\.json$/;
@@ -193,7 +193,7 @@ export const make = Effect.fn("RelayClientLedger.make")(function* (input: {
   const stopOrphan = Effect.fn("RelayClientLedger.stopOrphan")(function* (client: ProcessIdentity) {
     let state = yield* compare(client);
     if (state !== "same") return state === "gone";
-    yield* Effect.logInfo("Stopping a relay client left by a previous T3 Code server", {
+    yield* Effect.logInfo("Stopping a relay client left by a previous T2 Code server", {
       pid: client.pid,
     });
     for (const name of ["SIGTERM", "SIGKILL"] as const) {

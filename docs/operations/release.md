@@ -490,7 +490,7 @@ To pull a bad nightly, delete its release and tag, then run
 `gh release delete-asset update-feed nightly.json`. Installs fall back to the feed until the next
 unpaused tick or manual nightly rewrites the pointer. Without that command, installs that know the
 pointer report an update error until then. If npm's `nightly` dist-tag still names the pulled
-build, also move it to the last good one with `npm dist-tag add t3@<version> nightly`. The channel
+build, also move it to the last good one with `npm dist-tag add t2@<version> nightly`. The channel
 switch in Settings reads that tag and refuses an older desktop build.
 
 ## Desktop auto-update notes

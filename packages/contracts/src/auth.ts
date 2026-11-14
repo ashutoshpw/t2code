@@ -324,7 +324,7 @@ export type AuthPairingCredentialResult = typeof AuthPairingCredentialResult.Typ
 const BASE64URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 /**
- * A short code both sides show for a T3 Connect device, read from its proof key thumbprint.
+ * A short code both sides show for a T2 Connect device, read from its proof key thumbprint.
  * The waiting device and the approver compare it so an approval lands on the device in hand.
  */
 export function connectDeviceVerificationCode(proofKeyThumbprint: string): string {
@@ -346,7 +346,7 @@ export const AuthClientMetadata = Schema.Struct({
 });
 export type AuthClientMetadata = typeof AuthClientMetadata.Type;
 
-/** A T3 Connect device waiting for someone on this environment to approve it. */
+/** A T2 Connect device waiting for someone on this environment to approve it. */
 export const AuthConnectDeviceRequest = Schema.Struct({
   verificationCode: TrimmedNonEmptyString,
   /** What the device said about itself when it first asked. Absent until it does. */
@@ -361,12 +361,12 @@ export const AuthPairingLink = Schema.Struct({
   label: Schema.optionalKey(TrimmedNonEmptyString),
   createdAt: Schema.DateTimeUtc,
   expiresAt: Schema.DateTimeUtc,
-  /** Set while a T3 Connect device waits for approval. Older servers never send it. */
+  /** Set while a T2 Connect device waits for approval. Older servers never send it. */
   connectDeviceRequest: Schema.optionalKey(AuthConnectDeviceRequest),
 });
 export type AuthPairingLink = typeof AuthPairingLink.Type;
 
-/** A T3 Connect device key this environment trusts to connect without asking again. */
+/** A T2 Connect device key this environment trusts to connect without asking again. */
 export const AuthConnectDevice = Schema.Struct({
   proofKeyThumbprint: TrimmedNonEmptyString,
   verificationCode: TrimmedNonEmptyString,

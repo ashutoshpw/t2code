@@ -1,4 +1,4 @@
-import { threadPullRequestKeyOf } from "@t3tools/client-runtime/thread-pull-requests";
+import { threadPullRequestKeyOf } from "@t2code/client-runtime/thread-pull-requests";
 import * as Dialog from "../../components/ui/Dialog";
 import type {
   EnvironmentId,

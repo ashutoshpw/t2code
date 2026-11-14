@@ -40,6 +40,6 @@ export const azureCliInstall = (
 /** The launcher path comes from the host's PATH, so this reads the Windows layout it names. */
 export const AzureCliInstallLocation = Context.Reference<
   (launcherPath: string) => AzureCliInstall | undefined
->("@t3tools/source-control-azure-devops/azureCliInstallLocation", {
+>("@t2code/source-control-azure-devops/azureCliInstallLocation", {
   defaultValue: () => azureCliInstall,
 });

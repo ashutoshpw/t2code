@@ -1,4 +1,4 @@
-import type { PreviewAnnotationPoint, PreviewAnnotationRect } from "@t3tools/contracts";
+import type { PreviewAnnotationPoint, PreviewAnnotationRect } from "@t2code/contracts";
 
 // Setting a path's `d` makes Chromium parse the whole string again, so a long
 // stroke is drawn as a run of paths and only the last one is rewritten per move.

@@ -80,11 +80,11 @@ bug. Three rules avoid that:
   project the app opens its first-run page instead of the one the scenario expects.
 
 The app starts with only `PATH`, `HOME` and the temp directory in its environment, whatever the
-shell that ran the scenario has set. Name what it needs in `T3_SCENARIO_INHERIT_ENV`: exact
+shell that ran the scenario has set. Name what it needs in `T2_SCENARIO_INHERIT_ENV`: exact
 names or prefixes ending in `*`, separated by commas.
 
 ```sh
-T3_SCENARIO_INHERIT_ENV='SHELL,MY_FIXTURE_*' vp run scenarios:prove scripts/scenarios/name.e2e.ts --base main
+T2_SCENARIO_INHERIT_ENV='SHELL,MY_FIXTURE_*' vp run scenarios:prove scripts/scenarios/name.e2e.ts --base main
 ```
 
 ## Run

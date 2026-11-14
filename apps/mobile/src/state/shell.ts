@@ -1,4 +1,4 @@
-import { enabledEnvironmentIds } from "@t3tools/client-runtime/state/connections";
+import { enabledEnvironmentIds } from "@t2code/client-runtime/state/connections";
 import {
   createEnvironmentShellAtoms,
   createEnvironmentShellSummaryAtom,

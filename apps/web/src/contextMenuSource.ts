@@ -1,4 +1,4 @@
-import type { ContextMenuSource } from "@t3tools/contracts";
+import type { ContextMenuSource } from "@t2code/contracts";
 
 // Chromium uses no button for keyboard context menus and zero clicks for keyboard activation.
 export function contextMenuSourceOf(

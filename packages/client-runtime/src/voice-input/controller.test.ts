@@ -318,7 +318,7 @@ describe("resolveTranscriptCommit", () => {
 
   it("keeps every citation when several were inserted while recording", () => {
     const captured = draft({ text: "[todo", selection: { start: 0, end: 1 } });
-    const current = "[A](t3-citation://v1/a)[todo[B](t3-citation://v1/b)";
+    const current = "[A](t2-citation://v1/a)[todo[B](t2-citation://v1/b)";
     const result = resolveTranscriptCommit(
       captured,
       draft({ text: current, selection: { start: 0, end: 0 } }),

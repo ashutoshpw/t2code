@@ -13,7 +13,7 @@ import type {
   PullRequestMergeMethod,
 } from "@t2code/contracts";
 
-import { sortChecks } from "@t3tools/source-control-core/server/pullRequestChecks";
+import { sortChecks } from "@t2code/source-control-core/server/pullRequestChecks";
 
 import * as AzureDevOpsCli from "./AzureDevOpsCli.ts";
 import { blobContent, readBlobZip } from "./azureDevOpsBlobZip.ts";

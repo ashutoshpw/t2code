@@ -492,7 +492,7 @@ describe("ssh tunnel scripts", () => {
         yield* fs.chmod(bash, 0o755);
         yield* fs.writeFileString(
           startupFile,
-          "if shopt -q login_shell; then export T3_SSH_LOGIN_ENV=loaded; fi\n",
+          "if shopt -q login_shell; then export T2_SSH_LOGIN_ENV=loaded; fi\n",
         );
         const target = { alias: "login-test", hostname: "login-test", username: null, port: null };
         let remoteCommand = "";
@@ -508,7 +508,7 @@ describe("ssh tunnel scripts", () => {
         );
         yield* fs.writeFileString(
           `${directory}/.zprofile`,
-          "if [[ -o login ]]; then export T3_SSH_LOGIN_ENV=loaded; fi\n",
+          "if [[ -o login ]]; then export T2_SSH_LOGIN_ENV=loaded; fi\n",
         );
         const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
         const cases = [
@@ -543,11 +543,11 @@ describe("ssh tunnel scripts", () => {
                 SHELL: shell,
                 BASH_ENV: startupFile,
                 ZDOTDIR: directory,
-                T3_SSH_LOGIN_ENV: "",
+                T2_SSH_LOGIN_ENV: "",
               },
               stdin: {
                 stream: Stream.make(
-                  new TextEncoder().encode('printf "%s:%s" "${T3_SSH_LOGIN_ENV:-missing}" "$1"'),
+                  new TextEncoder().encode('printf "%s:%s" "${T2_SSH_LOGIN_ENV:-missing}" "$1"'),
                 ),
                 endOnDone: true,
               },
@@ -809,7 +809,7 @@ describe("ssh tunnel scripts", () => {
               ),
               Effect.as(makeRunningProcess(() => undefined)),
             )
-          : Effect.succeed(makeSuccessfulProcess('{"remotePort":3773}\n')),
+          : Effect.succeed(makeSuccessfulProcess('{"remotePort":3772}\n')),
       );
       const httpClient = HttpClient.make((request) =>
         Effect.gen(function* () {
@@ -876,7 +876,7 @@ describe("ssh tunnel scripts", () => {
           tunnelPorts.push(args[args.indexOf("-p") + 1]);
           return Effect.succeed(makeRunningProcess(() => undefined));
         }
-        return Effect.succeed(makeSuccessfulProcess('{"remotePort":3773}\n'));
+        return Effect.succeed(makeSuccessfulProcess('{"remotePort":3772}\n'));
       });
       const layer = Layer.mergeAll(
         NodeServices.layer,
@@ -1555,7 +1555,7 @@ describe("SSH launch during desktop update", () => {
     Effect.gen(function* () {
       const result = runLauncher(yield* captureLauncher, {
         marker: { startedAt: 0, expiresAt: 60_000 },
-        initialPort: 3773,
+        initialPort: 3772,
         readyAt: 3_000,
       });
       assert.deepEqual(result.output, { remotePort: 4888, serverKind: "external" });

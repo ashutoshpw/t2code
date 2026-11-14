@@ -213,7 +213,7 @@ function runGit(
 class GitFixtureTemplates extends Context.Service<
   GitFixtureTemplates,
   { readonly repo: string; readonly bareRemote: string }
->()("t3/git/GitManager.test/GitFixtureTemplates") {}
+>()("@t2code/cli/git/GitManager.test/GitFixtureTemplates") {}
 
 const layerGitFixtureTemplates = Layer.effect(
   GitFixtureTemplates,
@@ -6003,7 +6003,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
           pullRequest: {
             number: 642,
             title: "fix: use commit as the default git action without origin",
-            url: "https://github.com/pingdotgg/t2code/pull/642",
+            url: "https://github.com/pingdotgg/t3code/pull/642",
             baseRefName: "main",
             headRefName: "fix/git-action-default-without-origin",
             state: "open",

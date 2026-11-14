@@ -55,7 +55,7 @@ import { requestUrl } from "../requestUrl.ts";
 
 const DEFAULT_SESSION_SUBJECT = "cli-issued-session";
 export const INTERNAL_ADMINISTRATIVE_BOOTSTRAP_SUBJECT = "administrative-bootstrap";
-/** Sessions and pairing links T3 Connect minted for a device signed in to the linked account. */
+/** Sessions and pairing links T2 Connect minted for a device signed in to the linked account. */
 export const CLOUD_CONNECT_SUBJECT = "cloud-connect";
 
 export interface IssuedPairingLink {
@@ -346,7 +346,7 @@ export class ServerAuthConnectDevicesError extends Schema.TaggedError<ServerAuth
   },
 ) {
   override get message(): string {
-    return "Failed to update T3 Connect devices.";
+    return "Failed to update T2 Connect devices.";
   }
 }
 
@@ -445,13 +445,13 @@ export const serverAuthInvalidRequestReason = (
 ): "invalid_scope" | "scope_not_granted" =>
   error._tag === "ServerAuthInvalidScopeError" ? "invalid_scope" : "scope_not_granted";
 
-/** The credential is fine, but the host has not approved this T3 Connect device yet. */
+/** The credential is fine, but the host has not approved this T2 Connect device yet. */
 export class ServerAuthConnectApprovalPendingError extends Schema.TaggedError<ServerAuthConnectApprovalPendingError>()(
   "ServerAuthConnectApprovalPendingError",
   {},
 ) {
   override get message(): string {
-    return "This T3 Connect device is waiting for approval.";
+    return "This T2 Connect device is waiting for approval.";
   }
 }
 
@@ -525,7 +525,7 @@ export class EnvironmentAuth extends Context.Service<
       ServerAuthInternalError | ManagedLimits.ManagedPolicyRefusedError
     >;
     /**
-     * The one-time credential T3 Connect hands a device. With approval required, an untrusted
+     * The one-time credential T2 Connect hands a device. With approval required, an untrusted
      * device key gets one that waits for approval, and keeps it across retries.
      */
     readonly issueConnectCredential: (input: {
@@ -985,7 +985,7 @@ export const make = Effect.gen(function* () {
       readonly requiredScopes?: ReadonlyArray<AuthEnvironmentScope>;
       /** Only an agent sign-in opts in to spending a code issued for it. */
       readonly mcpApproval?: AuthMcpClientAccess;
-      /** Shown to approvers when the credential waits on T3 Connect device approval. */
+      /** Shown to approvers when the credential waits on T2 Connect device approval. */
       readonly requestMetadata?: AuthClientMetadata;
     },
   ): Effect.Effect<
@@ -1032,7 +1032,7 @@ export const make = Effect.gen(function* () {
     );
   };
 
-  // T3 Connect credential issuance, DPoP exchanges and device revocation take turns. Two mints
+  // T2 Connect credential issuance, DPoP exchanges and device revocation take turns. Two mints
   // at once would open two requests with one code, and a revoke landing between an exchange
   // spending its credential and trusting the key would be undone by that exchange.
   const connectTrustLock = yield* Semaphore.make(1);
@@ -1044,7 +1044,7 @@ export const make = Effect.gen(function* () {
         requestMetadata,
         ...(requestedScopes !== undefined ? { requestedScopes } : {}),
       }).pipe(
-        // Every T3 Connect key that gets in is remembered, so turning approval on later
+        // Every T2 Connect key that gets in is remembered, so turning approval on later
         // keeps the devices already in use and lists them for review.
         Effect.tap((grant) =>
           grant.subject === CLOUD_CONNECT_SUBJECT && input?.proofKeyThumbprint
@@ -1221,7 +1221,7 @@ export const make = Effect.gen(function* () {
       subject: CLOUD_CONNECT_SUBJECT,
       // Long enough for someone to notice the request and approve it.
       ttl: mustWait ? Duration.minutes(10) : Duration.minutes(2),
-      label: "T3 Connect",
+      label: "T2 Connect",
       proofKeyThumbprint,
       ...(mustWait ? { requiresConnectApproval: true } : {}),
     });
@@ -1399,7 +1399,7 @@ export const make = Effect.gen(function* () {
     const proofKeyThumbprint = yield* sessions
       .proofKeyThumbprintOf(targetSessionId)
       .pipe(Effect.mapError((cause) => new ServerAuthSessionRevocationError({ cause })));
-    // A T3 Connect device would otherwise mint itself a new session right away.
+    // A T2 Connect device would otherwise mint itself a new session right away.
     if (Option.isSome(proofKeyThumbprint)) {
       const currentProofKey = yield* sessions
         .proofKeyThumbprintOf(currentSessionId)

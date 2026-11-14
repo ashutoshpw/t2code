@@ -1,19 +1,19 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as NetService from "@t3tools/shared/Net";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import * as NetService from "@t2code/shared/Net";
 import { expect } from "e2e";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as Path from "effect/Path";
 
-import { APP_DIR, T3_HOME } from "../e2e.config.ts";
+import { APP_DIR, T2_HOME } from "../e2e.config.ts";
 import { prepareHome, start } from "./start-app.ts";
 import { makeState, runPromise, test, WEB } from "./t3.ts";
 
-const SECOND_HOME = `${T3_HOME}-second-environment`;
+const SECOND_HOME = `${T2_HOME}-second-environment`;
 
-/** A second server on its own T3 home, running until interrupted. `--dev-url` admits the web
+/** A second server on its own T2 home, running until interrupted. `--dev-url` admits the web
  * origin through CORS and registers the replay agent; `paired` gets the Add environment input. */
 const runSecondServer = Effect.fn("scenario.secondServer")(function* (
   devUrl: string,
@@ -43,7 +43,7 @@ const runSecondServer = Effect.fn("scenario.secondServer")(function* (
     env: {
       PATH: `${path.join(SECOND_HOME, "bin")}:${hostEnvironment.PATH ?? ""}`,
       HOME: hostEnvironment.HOME,
-      T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "0",
+      T2CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "0",
     },
     onLine: (line) => {
       const value = /^Token:\s*(\S+)/.exec(line)?.[1];
@@ -64,7 +64,7 @@ test(
       title: "Finished here",
       messages: ["first"],
     });
-    const primary = makeState(T3_HOME);
+    const primary = makeState(T2_HOME);
     const second = makeState(SECOND_HOME);
     const pairing = Promise.withResolvers<{ host: string; token: string }>();
     const server = Effect.runFork(

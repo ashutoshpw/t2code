@@ -212,7 +212,7 @@ export class EnvironmentScopeRequiredError extends Schema.TaggedError<Environmen
   }
 }
 
-/** The host requires approval for this T3 Connect device and nobody has given it yet. */
+/** The host requires approval for this T2 Connect device and nobody has given it yet. */
 export class EnvironmentConnectApprovalPendingError extends Schema.TaggedError<EnvironmentConnectApprovalPendingError>()(
   "EnvironmentConnectApprovalPendingError",
   {

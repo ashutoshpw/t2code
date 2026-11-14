@@ -239,7 +239,7 @@ compare against the version their package manager offers, which can trail the
 npm release; update Claude installed with Chocolatey through Chocolatey.
 
 The managed runtimes for Antigravity and for Codex connected through ChatGPT
-first install the release T3 Code tested. When T3 Code finds a newer compatible
+first install the release T2 Code tested. When T2 Code finds a newer compatible
 release, their setup in **Settings → Providers** offers an update.
 
 Add another provider instance for a separate account or configuration. Each
@@ -254,18 +254,18 @@ For provider-specific setup and accounts, see [Codex](./providers-codex.md),
 
 ### Provider check timeouts
 
-If a provider works in its CLI but T3 Code reports a timeout while checking it,
-allow more time in the T3 server's environment. For example, give Codex and
+If a provider works in its CLI but T2 Code reports a timeout while checking it,
+allow more time in the T2 server's environment. For example, give Codex and
 Claude readiness checks 60 seconds:
 
 ```bash
-T3CODE_CODEX_PROBE_TIMEOUT_MS=60000 T3CODE_CLAUDE_PROBE_TIMEOUT_MS=60000 t3 serve
+T2CODE_CODEX_PROBE_TIMEOUT_MS=60000 T2CODE_CLAUDE_PROBE_TIMEOUT_MS=60000 t3 serve
 ```
 
-For a remote environment, set these on the machine running the T3 server.
+For a remote environment, set these on the machine running the T2 server.
 Keep them in your launcher or service configuration to retain them across
 updates, then restart the server. For systemd, add
-`Environment=T3CODE_CODEX_PROBE_TIMEOUT_MS=60000` under `[Service]` in a service
+`Environment=T2CODE_CODEX_PROBE_TIMEOUT_MS=60000` under `[Service]` in a service
 override, reload systemd, and restart the service. Provider instances can also
 set their own overrides in Settings → Providers.
 
@@ -276,17 +276,17 @@ greater than 2147483647; unset or invalid values keep the defaults.
 
 | Provider            | Environment variable                   |
 | ------------------- | -------------------------------------- |
-| Codex               | `T3CODE_CODEX_PROBE_TIMEOUT_MS`        |
-| Claude              | `T3CODE_CLAUDE_PROBE_TIMEOUT_MS`       |
-| Cursor              | `T3CODE_CURSOR_PROBE_TIMEOUT_MS`       |
-| Antigravity         | `T3CODE_ANTIGRAVITY_PROBE_TIMEOUT_MS`  |
-| Grok                | `T3CODE_GROK_PROBE_TIMEOUT_MS`         |
-| Kiro                | `T3CODE_KIRO_PROBE_TIMEOUT_MS`         |
-| fx                  | `T3CODE_FX_PROBE_TIMEOUT_MS`           |
-| Pi                  | `T3CODE_PI_PROBE_TIMEOUT_MS`           |
-| Muse Code           | `T3CODE_MUSE_PROBE_TIMEOUT_MS`         |
-| OpenCode            | `T3CODE_OPENCODE_PROBE_TIMEOUT_MS`     |
-| ACP Registry agents | `T3CODE_ACP_REGISTRY_PROBE_TIMEOUT_MS` |
+| Codex               | `T2CODE_CODEX_PROBE_TIMEOUT_MS`        |
+| Claude              | `T2CODE_CLAUDE_PROBE_TIMEOUT_MS`       |
+| Cursor              | `T2CODE_CURSOR_PROBE_TIMEOUT_MS`       |
+| Antigravity         | `T2CODE_ANTIGRAVITY_PROBE_TIMEOUT_MS`  |
+| Grok                | `T2CODE_GROK_PROBE_TIMEOUT_MS`         |
+| Kiro                | `T2CODE_KIRO_PROBE_TIMEOUT_MS`         |
+| fx                  | `T2CODE_FX_PROBE_TIMEOUT_MS`           |
+| Pi                  | `T2CODE_PI_PROBE_TIMEOUT_MS`           |
+| Muse Code           | `T2CODE_MUSE_PROBE_TIMEOUT_MS`         |
+| OpenCode            | `T2CODE_OPENCODE_PROBE_TIMEOUT_MS`     |
+| ACP Registry agents | `T2CODE_ACP_REGISTRY_PROBE_TIMEOUT_MS` |
 
 Longer deadlines also take longer to report a stalled check. These overrides
 cover readiness and discovery, including OpenCode server startup. Usage and

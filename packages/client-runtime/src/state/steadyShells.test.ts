@@ -1,4 +1,4 @@
-import { EnvironmentId, type OrchestrationV2ShellSnapshot } from "@t3tools/contracts";
+import { EnvironmentId, type OrchestrationV2ShellSnapshot } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";

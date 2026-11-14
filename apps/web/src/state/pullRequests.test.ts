@@ -23,9 +23,9 @@ vi.mock("@effect/atom-react", async (importOriginal) => {
     useAtomValue: (atom: Atom.Atom<unknown>) => registry.get(atom),
   };
 });
-vi.mock("@t3tools/client-runtime/state/pull-requests", async (importOriginal) => {
+vi.mock("@t2code/client-runtime/state/pull-requests", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("@t3tools/client-runtime/state/pull-requests")>();
+    await importOriginal<typeof import("@t2code/client-runtime/state/pull-requests")>();
   return {
     ...actual,
     createPullRequestEnvironmentAtoms: (

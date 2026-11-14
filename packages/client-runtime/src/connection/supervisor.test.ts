@@ -97,8 +97,8 @@ const LAN_ROUTE = {
       connectionId: LAN_TARGET.connectionId,
       environmentId: TARGET.environmentId,
       label: TARGET.label,
-      httpBaseUrl: "http://192.168.1.10:3773/",
-      wsBaseUrl: "ws://192.168.1.10:3773/",
+      httpBaseUrl: "http://192.168.1.10:3772/",
+      wsBaseUrl: "ws://192.168.1.10:3772/",
     }),
   ),
 } satisfies ConnectionRoute;

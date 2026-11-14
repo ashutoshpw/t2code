@@ -33,7 +33,7 @@ const resolved = await Effect.gen(function* () {
     startApp: path.join(scripts, "scenarios/start-app.ts"),
     // e2e gives the app only PATH, HOME and the temp directory. A scenario that needs more names
     // it here: exact names or prefixes ending in `*`, separated by commas.
-    inheritEnv: (env.T3_SCENARIO_INHERIT_ENV ?? "")
+    inheritEnv: (env.T2_SCENARIO_INHERIT_ENV ?? "")
       .split(",")
       .map((name) => name.trim())
       .filter((name) => name !== ""),

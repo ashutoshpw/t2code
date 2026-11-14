@@ -1,6 +1,6 @@
 // @effect-diagnostics nodeBuiltinImport:off
 /**
- * T3's real `t2_background_wait` handler and ThreadManagementService over a Claude session.
+ * T2's real `t2_background_wait` handler and ThreadManagementService over a Claude session.
  * Only the adapter is the eval's: like Claude's, it matches task IDs against the session's
  * running background work, which the case lists in `world.backgroundTasks`.
  */
@@ -13,8 +13,8 @@ import {
   ProviderSessionId,
   ProviderThreadId,
   ThreadId,
-} from "@t3tools/contracts";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+} from "@t2code/contracts";
+import type * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -47,7 +47,7 @@ const providerSessionId = ProviderSessionId.make("provider-session:mcp-tool-use-
 const providerInstanceId = ProviderInstanceId.make("claudeAgent");
 const driver = ProviderDriverKind.make("claudeAgent");
 
-/** Calls T3's `t2_background_wait` with `running` as the session's running background task IDs. */
+/** Calls T2's `t2_background_wait` with `running` as the session's running background task IDs. */
 export const makeBackgroundWait = Effect.fn("evaluateMcpToolUse.makeBackgroundWait")(function* (
   running: ReadonlyArray<string>,
 ) {

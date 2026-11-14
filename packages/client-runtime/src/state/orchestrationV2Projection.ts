@@ -2,7 +2,7 @@ import { applyThreadPullRequestLinkUpdate } from "../threadPullRequests.ts";
 import {
   applyOrchestrationV2ThreadVisit,
   isQueuedProviderThreadPlaceholder,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type {
   OrchestrationV2DomainEvent,
   OrchestrationV2Run,

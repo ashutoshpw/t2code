@@ -98,7 +98,7 @@ export interface OpenCode2Api {
   readonly client: OpenCodeClient;
   readonly usageLimits: (
     directory: string,
-  ) => Effect.Effect<import("@t3tools/contracts").ServerProviderUsageLimits | undefined>;
+  ) => Effect.Effect<import("@t2code/contracts").ServerProviderUsageLimits | undefined>;
   readonly shellJobs?: (
     sessionID: string,
   ) => Effect.Effect<typeof ShellJobs.Type, HttpClientError.HttpClientError | Schema.SchemaError>;

@@ -66,7 +66,7 @@ export class ScratchProjectError extends Schema.TaggedError<ScratchProjectError>
   }
 }
 
-/** Where No project threads keep their folders, whether or not this T3 home allows them. */
+/** Where No project threads keep their folders, whether or not this T2 home allows them. */
 export const scratchFolderRoot = (baseDir: string, path: Path.Path) =>
   path.resolve(baseDir, "scratch");
 

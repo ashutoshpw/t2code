@@ -247,9 +247,9 @@ describe("DesktopLinuxUrlHandler", () => {
     for (const dir of ["/home/alice/Applications", '/home/al ice/My "100%" $Apps\\x']) {
       const previous = dir + "/" + from;
       const previousEntry = DesktopLinuxUrlHandler.renderUrlHandlerDesktopEntry({
-        displayName: "T3 Code (Beta)",
+        displayName: "T2 Code (Beta)",
         execTarget: previous,
-        scheme: "t3code",
+        scheme: "t2code",
       });
       assert.equal(
         DesktopLinuxUrlHandler.replacedVersionedAppImagePath({

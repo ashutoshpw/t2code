@@ -1,9 +1,9 @@
 // @effect-diagnostics nodeBuiltinImport:off - Effect has no incremental digest or free-space query.
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
+import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
 import * as ModelManifest from "./ModelManifest.ts";
 import { resolveProviderCompatibility } from "./providerCompatibility.ts";
-import { cliArchiveTarCommand } from "@t3tools/shared/cliRelease";
-import { compareSemverVersions } from "@t3tools/shared/semver";
+import { cliArchiveTarCommand } from "@t2code/shared/cliRelease";
+import { compareSemverVersions } from "@t2code/shared/semver";
 import * as EffectNodeStream from "@effect/platform-node/NodeStream";
 import { ProviderDriverKind, type ProviderInstallState } from "@t2code/contracts";
 import * as HostProcess from "@t2code/shared/HostProcess";
@@ -397,7 +397,7 @@ export const makeAntigravityInstallation = Effect.fn("AntigravityInstallation.ma
         if (yield* isWithdrawn(installed.version))
           return yield* installationError(
             "resolve",
-            `Antigravity ${installed.version} no longer works with this T3 Code release. Update it in Antigravity setup.`,
+            `Antigravity ${installed.version} no longer works with this T2 Code release. Update it in Antigravity setup.`,
           );
         return installed;
       }

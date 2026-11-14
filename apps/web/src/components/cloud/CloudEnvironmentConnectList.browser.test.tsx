@@ -1,6 +1,6 @@
-import { BearerConnectionTarget } from "@t3tools/client-runtime/connection";
-import type { Discovery } from "@t3tools/client-runtime/relay";
-import { EnvironmentId } from "@t3tools/contracts";
+import { BearerConnectionTarget } from "@t2code/client-runtime/connection";
+import type { Discovery } from "@t2code/client-runtime/relay";
+import { EnvironmentId } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { describe, expect, it, vi } from "vite-plus/test";
 
@@ -71,7 +71,7 @@ function setup(discoveredEnvironments: Array<Discovery.RelayDiscoveredEnvironmen
 }
 
 describe("CloudEnvironmentConnectRows", () => {
-  it("does not offer a T3 Connect route for the desktop's own WSL backend", async () => {
+  it("does not offer a T2 Connect route for the desktop's own WSL backend", async () => {
     setup([
       discovered(primaryEnvironmentId, "This PC"),
       discovered(wslEnvironmentId, "Ubuntu (WSL)"),

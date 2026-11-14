@@ -949,7 +949,7 @@ function acpMcpContext(
     authorization: session.authorizationHeader,
     processEnvironment: {
       // The thread id every process the agent starts inherits, so a tool run
-      // from its shell can find its T3 thread. Claude and Codex sessions set
+      // from its shell can find its T2 thread. Claude and Codex sessions set
       // the same variable (PortScanner.AGENT_THREAD_ENV; a string literal here
       // because this package cannot reach apps/server).
       T2CODE_THREAD_ID: session.threadId,
@@ -2094,7 +2094,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
         const compactionMarkers = yield* Ref.make(new Map<string, symbol>());
         // ACP may patch a completed compaction again; each compaction id marks its session once.
         const completedCompactionIds = yield* Ref.make(new Set<string>());
-        // The next prompt in a compacted session resends T3's instructions and runtime notes.
+        // The next prompt in a compacted session resends T2's instructions and runtime notes.
         // Only root sessions get prompts, so a marker on a child session is never read.
         const markSessionCompacted = Effect.fn("AcpAdapterV2.markSessionCompacted")(function* (
           sessionId: string,
@@ -8475,7 +8475,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
           yield* Ref.set(activeSessionSetup, null);
           yield* Ref.set(activeSelection, null);
           yield* Ref.set(activeInteractionMode, null);
-          // A failed prompt may have been dropped, so the fresh runtime sends T3's notes again.
+          // A failed prompt may have been dropped, so the fresh runtime sends T2's notes again.
           yield* Ref.set(promptInstructionStates, new Map());
           yield* Ref.set(promptRuntimeInstructions, new Map());
           yield* Ref.set(compactionMarkers, new Map());

@@ -124,7 +124,7 @@ export function ApproveAgentSurface() {
     return (
       <Message
         title="Could not load sign-in"
-        description="T3 Connect sign-in did not load. Check your connection, then try again."
+        description="T2 Connect sign-in did not load. Check your connection, then try again."
       >
         <div className="mt-6">
           <Button type="button" onClick={retryClerkLoad}>

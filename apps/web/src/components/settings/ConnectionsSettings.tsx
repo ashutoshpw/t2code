@@ -149,7 +149,7 @@ import {
   RevokeConnectDeviceDialog,
 } from "./RevokeConnectDeviceDialog";
 
-// Sessions T3 Connect minted for a device signed in to the linked account.
+// Sessions T2 Connect minted for a device signed in to the linked account.
 const CLOUD_CONNECT_SESSION_SUBJECT = "cloud-connect";
 const DEFAULT_TAILSCALE_SERVE_PORT = 443;
 const EMPTY_ADVERTISED_ENDPOINTS: ReadonlyArray<AdvertisedEndpoint> = [];
@@ -723,7 +723,7 @@ function ConnectionsSettingsContent({
     if (confirmed === true) await removeSavedBackend(environment);
   };
 
-  // T3 Connect devices waiting for approval have their own list.
+  // T2 Connect devices waiting for approval have their own list.
   const visibleDesktopPairingLinks = desktopPairingLinks.filter(
     (pairingLink) => pairingLink.connectDeviceRequest === undefined,
   );
@@ -738,7 +738,7 @@ function ConnectionsSettingsContent({
   const updateAccessSettings = useUpdateEnvironmentSettings(accessEnvironmentId);
   const [pendingConnectRevoke, setPendingConnectRevoke] =
     useState<ConnectDeviceRevokeRequest | null>(null);
-  // With approval off a revoked T3 Connect device signs straight back in, so offer to turn it
+  // With approval off a revoked T2 Connect device signs straight back in, so offer to turn it
   // on. Older servers have no such setting, and revoking there goes ahead as before.
   const connectApprovalOff =
     accessEnvironment?.serverConfig?.settings.requireConnectDeviceApproval === false;

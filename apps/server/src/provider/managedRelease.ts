@@ -1,4 +1,4 @@
-import { compareSemverVersions, parseSemver } from "@t3tools/shared/semver";
+import { compareSemverVersions, parseSemver } from "@t2code/shared/semver";
 
 // Older pins recorded non-semver versions such as `agy_acp_server_1.1.1`; any
 // other release is an update from those.
@@ -9,7 +9,7 @@ const isNewer = (candidate: string, current: string) =>
 
 /**
  * Picks the release a managed installation's `start` downloads. A fresh install
- * gets T3 Code's pinned release; an existing one moves to the newest known
+ * gets T2 Code's pinned release; an existing one moves to the newest known
  * release above it. Null means nothing newer is known, so `start` re-checks the
  * installed runtime instead of downgrading it.
  */

@@ -1,7 +1,7 @@
 import {
   legacyThreadPullRequestKey,
   threadPullRequestKeyOf,
-} from "@t3tools/client-runtime/thread-pull-requests";
+} from "@t2code/client-runtime/thread-pull-requests";
 import {
   composerPullRequestsFromLinks,
   filterComposerPullRequestMatches,

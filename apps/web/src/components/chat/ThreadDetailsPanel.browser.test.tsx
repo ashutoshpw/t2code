@@ -4,7 +4,7 @@ import {
   ThreadId,
   type ScopedThreadRef,
   type ThreadPullRequestLink,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { expect, it, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";

@@ -6,14 +6,14 @@ const PROVIDER_ENV_PREFIXES = ["ANTHROPIC_", "CLAUDE_", "CODEX_", "OPENAI_", "T2
 
 const KEPT_ENV = new Set([
   // CI sets these so the transfer budget integration test writes its report for the job summary.
-  "T3CODE_TRANSFER_BUDGET_REPORT_PATH",
-  "T3CODE_TRANSFER_BUDGET_RESULT_PATH",
-  "T3CODE_TRANSFER_BUDGET_SCENARIOS_PATH",
+  "T2CODE_TRANSFER_BUDGET_REPORT_PATH",
+  "T2CODE_TRANSFER_BUDGET_RESULT_PATH",
+  "T2CODE_TRANSFER_BUDGET_SCENARIOS_PATH",
   // Opt-in: points the HtmlRender tests at a headless browser, which they skip without.
-  "T3CODE_TEST_HEADLESS_SHELL",
+  "T2CODE_TEST_HEADLESS_SHELL",
 ]);
 
-if (process.env.T3CODE_TEST_KEEP_PROVIDER_ENV !== "1") {
+if (process.env.T2CODE_TEST_KEEP_PROVIDER_ENV !== "1") {
   for (const key of Object.keys(process.env)) {
     if (KEPT_ENV.has(key)) continue;
     if (PROVIDER_ENV_PREFIXES.some((prefix) => key.startsWith(prefix))) {

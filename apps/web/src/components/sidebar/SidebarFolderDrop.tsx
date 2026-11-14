@@ -1,7 +1,7 @@
 import {
   DESKTOP_APP_ACTIVATION_PROTOCOL_VERSION,
   DesktopAppActivationPlatform,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import { FolderPlusIcon } from "lucide-react";
 import { useState, type DragEvent, type ReactNode } from "react";
@@ -72,7 +72,7 @@ export function SidebarFolderDrop(props: { children: ReactNode }) {
         stackedThreadToast({
           type: "error",
           title: `Could not add "${folder.name}"`,
-          description: response?.message ?? "T3 Code could not read the folder's path.",
+          description: response?.message ?? "T2 Code could not read the folder's path.",
         }),
       );
     }

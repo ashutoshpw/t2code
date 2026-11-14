@@ -2,7 +2,7 @@
 import * as NodeFS from "node:fs";
 import * as NodePath from "node:path";
 
-import { THEME_CSS_HOOKS } from "@t3tools/shared/themeCss";
+import { THEME_CSS_HOOKS } from "@t2code/shared/themeCss";
 import { expect, it } from "vite-plus/test";
 
 const sourceDirectory = import.meta.dirname;

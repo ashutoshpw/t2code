@@ -3,7 +3,7 @@ import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
-import type { PullRequestCheck, PullRequestCheckStatus } from "@t3tools/contracts";
+import type { PullRequestCheck, PullRequestCheckStatus } from "@t2code/contracts";
 
 import * as AzureDevOpsPullRequestCli from "./AzureDevOpsPullRequestCli.ts";
 import {

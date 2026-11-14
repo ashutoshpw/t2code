@@ -1148,7 +1148,7 @@ it.effect("builds device cases from product-backed worlds and synthetic prior tu
 );
 
 // Models recover from either result, so this keeps the guard case failing on the old success.
-it.effect("seeds T3's error for a prior background wait whose IDs match nothing", () =>
+it.effect("seeds T2's error for a prior background wait whose IDs match nothing", () =>
   Effect.gen(function* () {
     const cases = NodeFS.readFileSync(
       new URL("./cases/orchestration.ndjson", import.meta.url),

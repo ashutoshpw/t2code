@@ -296,7 +296,7 @@ it.effect("an update the client walks away from still finishes", () => {
   );
 });
 
-it.effect("mints a T3 Connect credential under the host's device approval setting", () =>
+it.effect("mints a T2 Connect credential under the host's device approval setting", () =>
   withService({}, ({ mintCredential, connectCredentialRequests }) =>
     Effect.gen(function* () {
       const proof = yield* signRelayJwt({
@@ -304,7 +304,7 @@ it.effect("mints a T3 Connect credential under the host's device approval settin
         typ: RELAY_MINT_REQUEST_TYP,
         payload: {
           iss: "https://relay.test",
-          aud: "t3-env:environment-1",
+          aud: "t2-env:environment-1",
           sub: "cloud-user-1",
           jti: "mint-jti-1",
           iat: 0,

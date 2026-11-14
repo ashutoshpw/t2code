@@ -1,5 +1,5 @@
-import type { SecretReference, SecretSourceCheckResult } from "@t3tools/contracts";
-import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
+import type { SecretReference, SecretSourceCheckResult } from "@t2code/contracts";
+import * as SecretResolver from "@t2code/secret-provider-core/server/SecretResolver";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -15,7 +15,7 @@ export class SecretCheck extends Context.Service<
      */
     readonly check: (reference: SecretReference) => Effect.Effect<SecretSourceCheckResult>;
   }
->()("t3/secrets/SecretCheck") {}
+>()("@t2code/cli/secrets/SecretCheck") {}
 
 const make = Effect.gen(function* () {
   const resolver = yield* SecretResolver.SecretResolver;

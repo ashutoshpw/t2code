@@ -3,7 +3,7 @@ import type {
   OrchestrationV2ShellSnapshot,
   ThreadId,
   ThreadTitleRegenerationOutcome,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { Atom, AtomRegistry } from "effect/reactivity";
 
 export interface TitleRegenerationRequest {

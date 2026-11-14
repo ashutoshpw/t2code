@@ -124,7 +124,7 @@ describe("tailscale", () => {
     }),
   );
 
-  it.effect("does not treat another T3 server behind the Serve URL as this server", () =>
+  it.effect("does not treat another T2 server behind the Serve URL as this server", () =>
     Effect.gen(function* () {
       const answer = (environmentId: string) =>
         HttpClient.make((request) =>
@@ -133,7 +133,7 @@ describe("tailscale", () => {
               request,
               Response.json({
                 environmentId,
-                label: "T3 server",
+                label: "T2 server",
                 platform: { os: "linux", arch: "x64" },
                 serverVersion: "0.1.9",
                 capabilities: { repositoryIdentity: true },
@@ -248,12 +248,12 @@ describe("tailscale", () => {
   });
 
   it("finds what holds a Serve port's root", () => {
-    const target = { host: "127.0.0.1", port: 3773 };
+    const target = { host: "127.0.0.1", port: 3772 };
     const status = JSON.stringify({
       TCP: { "8443": { TCPForward: "127.0.0.1:22" } },
       Web: {
         "box.tailnet.ts.net:443": {
-          Handlers: { "/": { Proxy: "http://127.0.0.1:3773" }, "/x": { Proxy: "9000" } },
+          Handlers: { "/": { Proxy: "http://127.0.0.1:3772" }, "/x": { Proxy: "9000" } },
         },
         "old.tailnet.ts.net:443": { Handlers: { "/": { Proxy: "http://[::1]:4000" } } },
         "box.tailnet.ts.net:10000": { Handlers: { "/": { Proxy: "http://127.0.0.1:4001" } } },
@@ -436,7 +436,7 @@ describe("tailscale", () => {
         ),
       );
 
-      const fiber = yield* ensureTailscaleServe({ localPort: 3773 }).pipe(
+      const fiber = yield* ensureTailscaleServe({ localPort: 3772 }).pipe(
         Effect.provide(layer),
         Effect.exit,
         Effect.forkChild,
@@ -462,7 +462,7 @@ describe("tailscale", () => {
     });
 
     return Effect.gen(function* () {
-      const exit = yield* ensureTailscaleServe({ localPort: 3773 }).pipe(
+      const exit = yield* ensureTailscaleServe({ localPort: 3772 }).pipe(
         Effect.provide(layer),
         Effect.exit,
       );

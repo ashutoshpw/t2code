@@ -1,9 +1,9 @@
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import {
   findProjectByPath,
   inferProjectTitleFromPath,
-} from "@t3tools/client-runtime/state/projects";
-import type { DesktopAppActivationRequest } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/projects";
+import type { DesktopAppActivationRequest } from "@t2code/contracts";
 
 import { handleDesktopAppActivationRequest } from "../desktopAppActivation";
 import { newProjectId } from "../lib/utils";

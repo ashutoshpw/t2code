@@ -3,7 +3,7 @@ import { IMAGE_DIMENSIONS_HEADER_BYTES, readImageDimensions } from "@t2code/shar
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { decodeHTMLAttribute, decodeHTMLStrict as decodeEntities } from "entities";
 import type JSZip from "jszip";
-import { terminalOutputPlainText } from "@t3tools/shared/terminalOutput";
+import { terminalOutputPlainText } from "@t2code/shared/terminalOutput";
 
 import { type OfficeWorkerResult, type NotebookCell } from "./officePreviewProtocol";
 

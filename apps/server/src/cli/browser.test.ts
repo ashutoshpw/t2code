@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -134,6 +134,6 @@ it.effect.each([
     expect(result.loads).toEqual([LOAD]);
     expect(result.profile).toBe(input.written);
     expect(result.output).toContain(input.said);
-    expect(result.output).toContain("This host is ready for T3's browser.");
+    expect(result.output).toContain("This host is ready for T2's browser.");
   }),
 );

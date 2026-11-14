@@ -469,7 +469,7 @@ export function resolveAccessEnvironmentId(input: {
   );
 }
 
-/** A short name for a T3 Connect device: its label, or what it runs on. */
+/** A short name for a T2 Connect device: its label, or what it runs on. */
 export function connectDeviceName({
   client,
 }: {
@@ -478,7 +478,7 @@ export function connectDeviceName({
   return client?.label ?? client?.os ?? client?.browser ?? "this device";
 }
 
-/** How a T3 Connect device describes itself. It can say anything, so the code is what to trust. */
+/** How a T2 Connect device describes itself. It can say anything, so the code is what to trust. */
 export function describeConnectDeviceClient({
   client,
 }: {

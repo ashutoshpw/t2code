@@ -1160,11 +1160,7 @@ export function extractMcpToolCallIdentity(
   // args; a read of the same path only fetches the tool's docs.
   const devicePath = typeof rawInput?.path === "string" ? rawInput.path : "";
   if (devicePath.startsWith("xd://") && typeof rawInput?.content === "string") {
-<<<<<<< HEAD
     const deviceTool = T2_MCP_TITLE_CALL.exec(devicePath.slice("xd://".length))?.groups?.tool;
-=======
-    const deviceTool = T2_MCP_TITLE_CALL.exec(devicePath.slice("xd://".length))?.groups?.tool;
->>>>>>> 39681c5e3d (fix: rebase seams in ssh tunnel tests, acp tool names and the text generator key)
     if (deviceTool !== undefined && T2_MCP_TOOL_NAMES.has(deviceTool)) {
       const input = acpMcpFallbackInput(rawInput.content);
       return { server: "t2-code", tool: deviceTool, ...(input === undefined ? {} : { input }) };
