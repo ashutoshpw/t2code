@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-import { ANDROID_PLAY_STORE_URL, GITHUB_REPOSITORY_URL, IOS_APP_STORE_URL } from "../lib/site";
+import { ANDROID_PLAY_STORE_URL, GITHUB_REPOSITORY_URL } from "../lib/site";
 import { absoluteUrl, SITE_TAGLINE } from "../lib/seo";
 
 // https://llmstxt.org: a plain index that tells AI agents which domain and links are official.
@@ -18,7 +18,6 @@ The only official websites are https://t3.codes and the web app at https://app.t
 - [Source code](${GITHUB_REPOSITORY_URL}): the MIT-licensed repository
 - [Releases](${GITHUB_REPOSITORY_URL}/releases): release builds and changelogs
 - [npm package](https://www.npmjs.com/package/t3): run \`npx t3@latest\`
-- [iOS app](${IOS_APP_STORE_URL})
 - [Android app](${ANDROID_PLAY_STORE_URL})
 
 ## Policies

@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">T2 Code</h1>
+T2 Code is an "agent harness control surface". It enables control of the agents on your machine with a best-in-class mobile app ([Android](https://play.google.com/store/apps/details?id=codes.t2.mobile)), [web app](https://app.t2.codes) and [Electron-based desktop app](https://github.com/ashutoshpw/t2code/releases).
 
 <p align="center">The open-source control plane for coding agents.</p>
 
