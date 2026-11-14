@@ -19,7 +19,10 @@ export const SERVICE_STATE_FILE = "service-state.json";
 export const SERVICE_UNIT_ENV = "T3_BOOT_SERVICE_UNIT";
 /** Written before explicit stop to distinguish shutdown from update handoff. */
 export const SERVICE_STOP_MARKER_FILE = ".service-stopping";
-/** Marks a repointed unit whose service still runs the old version; launcher startup clears it. */
+/** Written by `t2code update` when the unit was repointed at a new version but the
+    running service was deliberately left on the old one. The launcher removes
+    it when it starts (whoever restarted the service), so while it exists the
+    service is known to be behind its unit and status reports it that way. */
 export const SERVICE_RESTART_PENDING_FILE = ".restart-pending";
 /** Held by a Windows launcher while it runs: Task Scheduler tracks only the task's console host. */
 export const SERVICE_LAUNCHER_LOCK_FILE = "service-launcher.lock";
