@@ -7,7 +7,7 @@ const parse = (url: string) => definition.parseChangeRequestUrl(new URL(url));
 
 describe("GitLab change request URLs", () => {
   it("reads a merge request on any host, nested groups and all", () => {
-    expect(parse("https://gitlab.com/t3tools/platform/t3code/-/merge_requests/42")).toEqual({
+    expect(parse("https://gitlab.com/t3tools/platform/t2code/-/merge_requests/42")).toEqual({
       host: "gitlab.com",
       repository: "t3tools/platform/t3code",
       number: 42,
@@ -27,8 +27,8 @@ describe("GitLab change request URLs", () => {
   });
 
   it("leaves issues and single-segment paths alone", () => {
-    expect(parse("https://gitlab.com/t3tools/t3code/-/issues/12")).toBeNull();
-    expect(parse("https://gitlab.com/t3code/-/merge_requests/12")).toBeNull();
+    expect(parse("https://gitlab.com/t3tools/t2code/-/issues/12")).toBeNull();
+    expect(parse("https://gitlab.com/t2code/-/merge_requests/12")).toBeNull();
   });
 
   it("recognizes only merge request URLs it can parse", () => {

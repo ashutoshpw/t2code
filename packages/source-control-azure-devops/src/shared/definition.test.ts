@@ -12,14 +12,14 @@ const parse = (url: string) => definition.parseChangeRequestUrl(new URL(url));
 
 describe("Azure DevOps change request URLs", () => {
   it("reads both hosted URL forms", () => {
-    expect(parse("https://dev.azure.com/acme/platform/_git/t3code/pullrequest/17")).toEqual({
+    expect(parse("https://dev.azure.com/acme/platform/_git/t2code/pullrequest/17")).toEqual({
       host: "dev.azure.com",
       repository: "acme/platform/_git/t3code",
       number: 17,
       repositoryUrl: "https://dev.azure.com/acme/platform/_git/t3code",
     });
     expect(
-      parse("https://acme.visualstudio.com/platform/_git/t3code/pullrequest/17"),
+      parse("https://acme.visualstudio.com/platform/_git/t2code/pullrequest/17"),
     ).toMatchObject({
       host: "acme.visualstudio.com",
       repository: "platform/_git/t3code",

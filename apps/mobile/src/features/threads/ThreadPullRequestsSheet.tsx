@@ -44,8 +44,8 @@ export function ThreadPullRequestsSheet(
   const title = `Linked ${actions.terminology.plural}`;
 
   const content = (
-    <View className="flex-1 bg-screen">
-      {/* oxlint-disable-next-line t3code/require-registered-list-scroll -- Sheet content; sheets sit outside workspace columns and keep their own header handling. */}
+    <View className="flex-1 android:bg-sheet-solid ios:bg-screen">
+      {/* oxlint-disable-next-line t2code/require-registered-list-scroll -- Sheet content; sheets sit outside workspace columns and keep their own header handling. */}
       <LegendList
         data={lines}
         keyExtractor={linkedPullRequestKey}

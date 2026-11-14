@@ -23,12 +23,12 @@ describe("GitHub change request URLs", () => {
 
   it("claims only the two-segment pull route", () => {
     for (const url of [
-      "https://github.com/t3tools/t3code/issues/123",
-      "https://github.com/t3tools/t3code/pulls/123",
-      "https://github.com/t3tools/t3code/pull/abc",
-      "https://github.com/t3tools/t3code/pull/0",
+      "https://github.com/t3tools/t2code/issues/123",
+      "https://github.com/t3tools/t2code/pulls/123",
+      "https://github.com/t3tools/t2code/pull/abc",
+      "https://github.com/t3tools/t2code/pull/0",
       "https://github.com/group/sub/repo/pull/1",
-      "ftp://github.com/t3tools/t3code/pull/1",
+      "ftp://github.com/t3tools/t2code/pull/1",
     ]) {
       expect(parse(url), url).toBeNull();
     }
@@ -85,13 +85,13 @@ describe("GitHub change request URLs", () => {
   it("turns GitHub's shared issue route into a pull request candidate", () => {
     const candidate = (url: string) =>
       definition.changeRequestUrlFromReferenceAutolink(new URL(url));
-    expect(candidate("https://github.com/pingdotgg/t3code/issues/8600#issuecomment-1")).toBe(
-      "https://github.com/pingdotgg/t3code/pull/8600#issuecomment-1",
+    expect(candidate("https://github.com/pingdotgg/t2code/issues/8600#issuecomment-1")).toBe(
+      "https://github.com/pingdotgg/t2code/pull/8600#issuecomment-1",
     );
     expect(candidate("https://code.github.example.com/acme/web/issues/42")).toBe(
       "https://code.github.example.com/acme/web/pull/42",
     );
-    expect(candidate("https://github.com/pingdotgg/t3code/issues/not-a-number")).toBeNull();
+    expect(candidate("https://github.com/pingdotgg/t2code/issues/not-a-number")).toBeNull();
     expect(candidate("https://code.example.test/acme/web/issues/42")).toBeNull();
   });
 });
