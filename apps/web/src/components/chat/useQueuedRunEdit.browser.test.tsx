@@ -25,6 +25,12 @@ import {
   threadContextReference,
 } from "../../lib/composerContextRecords";
 import { usePromptStashStore } from "../../promptStashStore";
+import { formatInlineContextReference } from "../../lib/composerContextReferences";
+import {
+  environmentContextRecord,
+  environmentContextReference,
+  threadContextReference,
+} from "../../lib/composerContextRecords";
 import { deriveComposerSendState } from "../ChatView.logic";
 import { ComposerPrimaryActions } from "./ComposerPrimaryActions";
 import { AppAtomRegistryProvider, appAtomRegistry } from "../../rpc/atomRegistry";
@@ -129,6 +135,8 @@ function Harness(props: {
       pendingAction={null}
       isRunning={false}
       canInterrupt={false}
+      showPlanFollowUpPrompt={false}
+      promptHasText={draft.prompt.trim().length > 0}
       isSendBusy={result.isSaving}
       sendDisabledReason={null}
       isEnvironmentUnavailable={false}
@@ -138,6 +146,7 @@ function Harness(props: {
       onSubmitMessage={() => void result.saveEdit(savedContent(draft.prompt), () => {})}
       onPreviousPendingQuestion={() => {}}
       onInterrupt={() => {}}
+      onImplementPlanInNewThread={() => {}}
     />
   ) : null;
 }

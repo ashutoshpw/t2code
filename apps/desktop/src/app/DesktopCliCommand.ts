@@ -23,11 +23,6 @@ import { makeComponentLogger } from "./DesktopObservability.ts";
 
 const { logInfo, logWarning } = makeComponentLogger("desktop-cli-command");
 
-// Settings → Install `t2code` command, like VS Code's "Install 'code' command".
-// The app's launcher (see DesktopCliShim) lives in the T2 home, off PATH by
-// default. Installing links it onto the user's PATH; removing undoes exactly
-// what installing did: a link to an app launcher, or a PATH entry we recorded.
-
 export class DesktopCliCommandError extends Schema.TaggedError<DesktopCliCommandError>()(
   "DesktopCliCommandError",
   { message: Schema.String },
@@ -99,7 +94,7 @@ export const make = Effect.gen(function* () {
   const fail = (message: string) => new DesktopCliCommandError({ message });
   const exists = (target: string) => fs.exists(target).pipe(Effect.orElseSucceed(() => false));
   // Read before this launch writes either one: an app that ran before left its launcher or
-  // settings. Its user may have removed t3 or chosen another, so only Settings installs there.
+  // settings. Its user may have removed t2code or chosen another, so only Settings installs there.
   const freshInstall =
     !(yield* exists(launcher)) && !(yield* exists(environment.desktopSettingsPath));
   const writableDirectory = (directory: string) =>
@@ -122,7 +117,7 @@ export const make = Effect.gen(function* () {
 
   // PATH can reach the regular launcher directly; removal still requires isOurLink.
   const runsOurLauncher = Effect.fn("DesktopCliCommand.runsOurLauncher")(
-    // Another T3 home's link is marked too, so compare where it leads, not the marker alone.
+    // Another T2 home's link is marked too, so compare where it leads, not the marker alone.
     function* (candidate: string) {
       const [resolved, ours] = yield* Effect.all([fs.realPath(candidate), fs.realPath(launcher)]);
       if (resolved !== ours) return false;
@@ -152,8 +147,8 @@ export const make = Effect.gen(function* () {
         return stdout;
       }),
     );
-  // Explicit, so an inherited T3_SET=1 can never turn a read into a PATH write.
-  const readUserPath = powershell({ T3_SET: "0" }).pipe(
+  // Explicit, so an inherited T2_SET=1 can never turn a read into a PATH write.
+  const readUserPath = powershell({ T2_SET: "0" }).pipe(
     Effect.map((encoded) => Buffer.from(encoded.trim(), "base64").toString("utf8")),
     Effect.mapError(() => fail("Could not read your PATH, so it was left unchanged.")),
   );
@@ -175,7 +170,6 @@ export const make = Effect.gen(function* () {
     Effect.orElseSucceed(() => false),
   );
 
-  /** The `t2code` a new shell runs, by PATH order, or none. */
   const firstOnPath = Effect.gen(function* () {
     for (const directory of pathEntries(env.PATH, ":")) {
       const candidate = path.join(directory, "t2code");
@@ -246,7 +240,7 @@ export const make = Effect.gen(function* () {
     }
     const launcherPath = (yield* exists(launcher)) ? launcher : null;
     const found = yield* installedAt;
-    // Our link into another T3 home is not this app's command; Install updates it in place.
+    // Our link into another T2 home is not this app's command; Install updates it in place.
     const installed =
       windows || (Option.isSome(found) && (yield* leadsHere(found.value)))
         ? found
@@ -259,8 +253,8 @@ export const make = Effect.gen(function* () {
     const onPath = windows
       ? Option.isSome(installed)
       : Option.isSome(first) && (yield* runsOurLauncher(first.value));
-    // Only a folder missing from PATH, with no other t3 first: with one, the added folder (last
-    // on PATH) would still not run this t3.
+    // Only a folder missing from PATH, with no other t2code first: with one, the added folder (last
+    // on PATH) would still not run this t2code.
     const setup =
       onPath ||
       Option.isSome(shadowedBy) ||
@@ -305,7 +299,7 @@ export const make = Effect.gen(function* () {
       // PATH would split the folder at the `;`, leaving two wrong entries behind.
       if (binDirectory.includes(";")) {
         return yield* fail(
-          `T3 Code cannot put ${binDirectory} on PATH because it has a ";". Run ${launcher} directly.`,
+          `T2 Code cannot put ${binDirectory} on PATH because it has a ";". Run ${launcher} directly.`,
         );
       }
       const entries = pathEntries(yield* readUserPath, ";");
@@ -324,13 +318,13 @@ export const make = Effect.gen(function* () {
       if (Option.getOrUndefined(target) === launcher) return yield* state;
     }
     const shadowedBy = yield* foreignFirstOnPath;
-    // Our own link into another T3 home runs first too; it is the one this install updates.
+    // Our own link into another T2 home runs first too; it is the one this install updates.
     if (Option.isSome(shadowedBy) && shadowedBy.value !== replaced) {
       return yield* fail(
         `Another t2code at ${shadowedBy.value} runs first in a new terminal. Remove it, or run the launcher directly at ${launcher}.`,
       );
     }
-    // An old link of ours is updated where it is, so a t3 that works now keeps working. It is
+    // An old link of ours is updated where it is, so a t2code that works now keeps working. It is
     // removed only once a new link exists elsewhere.
     const onPath = pathEntries(env.PATH, ":").map((entry) => entry.replace(/\/+$/, ""));
     for (const directory of new Set([
@@ -401,22 +395,22 @@ export const make = Effect.gen(function* () {
   const addToPath: DesktopCliCommand["Service"]["addToPath"] = Effect.gen(function* () {
     const installed = yield* installedAt;
     if (Option.isNone(installed) || !(yield* leadsHere(installed.value))) {
-      return yield* fail("Install the t3 command first.");
+      return yield* fail("Install the t2code command first.");
     }
     const setup = startupLine(installed.value);
-    if (setup === undefined) return yield* fail("T3 Code cannot add t3 to this shell's PATH.");
+    if (setup === undefined) return yield* fail("T2 Code cannot add t2code to this shell's PATH.");
     const shadowedBy = yield* foreignFirstOnPath;
     if (Option.isSome(shadowedBy)) {
       return yield* fail(
-        `Another t2 at ${shadowedBy.value} runs first; T2 Code leaves it in place.`,
+        `Another t2code at ${shadowedBy.value} runs first; T2 Code leaves it in place.`,
       );
     }
     if (!(yield* folderOnPath(installed.value)) && !(yield* hasLine(setup))) {
       yield* fs.makeDirectory(path.dirname(setup.path), { recursive: true }).pipe(
         Effect.andThen(
-          fs.writeFileString(setup.path, `\n# Added by T3 Code\n${setup.line}\n`, { flag: "a" }),
+          fs.writeFileString(setup.path, `\n# Added by T2 Code\n${setup.line}\n`, { flag: "a" }),
         ),
-        Effect.mapError(() => fail(`Could not add t3 to ${setup.file}.`)),
+        Effect.mapError(() => fail(`Could not add t2code to ${setup.file}.`)),
       );
     }
     return yield* state;
@@ -428,32 +422,34 @@ export const make = Effect.gen(function* () {
       // Mark first so a failed or removed install is never retried behind the user's back.
       yield* fs.writeFileString(firstLaunchMarker, "");
       if (!freshInstall) {
-        return yield* logInfo("left the t3 command to Settings on an existing install");
+        return yield* logInfo("left the t2code command to Settings on an existing install");
       }
-      // Another T3 home's app owns the existing link; only Install in Settings may take it over.
+      // Another T2 home's app owns the existing link; only Install in Settings may take it over.
       const existing = Option.getOrUndefined(yield* installedAt);
       if (existing !== undefined) {
         const target = yield* fs.readLink(existing).pipe(Effect.option);
         if (Option.getOrUndefined(target) !== launcher) {
-          return yield* logInfo("left another T3 Code app's t3 command in place", {
+          return yield* logInfo("left another T2 Code app's t2code command in place", {
             existing,
           });
         }
       }
-      // A t3 that is not ours in these folders, even off PATH, means the user has one already. On
-      // Windows the app never writes there, so any t3 there is someone else's.
+      // A t2code that is not ours in these folders, even off PATH, means the user has one already. On
+      // Windows the app never writes there, so any t2code there is someone else's.
       for (const directory of userCandidates(environment.homeDirectory)) {
-        for (const name of windows ? ["t3.cmd", "t3.exe"] : ["t3"]) {
+        for (const name of windows ? ["t2code.cmd", "t2code.exe"] : ["t2code"]) {
           const other = path.join(directory, name);
           const present =
             (yield* exists(other)) || Option.isSome(yield* fs.readLink(other).pipe(Effect.option));
           if (present && (windows || !(yield* isOurLink(other)))) {
-            return yield* logInfo("left the t3 command to Settings beside another t3", { other });
+            return yield* logInfo("left the t2code command to Settings beside another t2code", {
+              other,
+            });
           }
         }
       }
       const installed = yield* install;
-      yield* logInfo("installed the t3 command on first launch", {
+      yield* logInfo("installed the t2code command on first launch", {
         installedPath: installed.installedPath,
         onPath: installed.onPath,
       });
@@ -461,7 +457,7 @@ export const make = Effect.gen(function* () {
   ).pipe(
     // Our own messages are short and name only paths; anything else is logged as a category.
     Effect.catch((error) =>
-      logWarning("did not install the t3 command on first launch", {
+      logWarning("did not install the t2code command on first launch", {
         reason: error._tag === "DesktopCliCommandError" ? error.message : "state-write-failed",
       }),
     ),

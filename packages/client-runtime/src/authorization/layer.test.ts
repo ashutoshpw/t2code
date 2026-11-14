@@ -58,7 +58,7 @@ function recordedFetch(responses: ReadonlyArray<RecordedResponse>, descriptor?: 
   let responseIndex = 0;
   const fetchFn = ((input, init) => {
     calls.push([input, init ?? {}]);
-    if (descriptor !== undefined && String(input).endsWith("/.well-known/t3/environment")) {
+    if (descriptor !== undefined && String(input).endsWith("/.well-known/t2/environment")) {
       return Promise.resolve(Response.json(descriptor));
     }
     const response = responses[responseIndex++];
@@ -373,28 +373,28 @@ describe("RemoteEnvironmentAuthorization", () => {
         yield* authorize;
         // Plain HTTP is no reason to read again where the address keeps its host.
         yield* remote.rememberCheckedDescriptor(
-          "http://127.0.0.1:3773",
+          "http://127.0.0.1:3772",
           Option.some(descriptor),
           true,
         );
-        yield* authorizeAt("http://127.0.0.1:3773");
+        yield* authorizeAt("http://127.0.0.1:3772");
         // After a network change, a plain LAN address can belong to another machine.
         yield* remote.rememberCheckedDescriptor(
-          "http://192.168.1.2:3773",
+          "http://192.168.1.2:3772",
           Option.some(descriptor),
           false,
         );
-        yield* authorizeAt("http://192.168.1.2:3773");
+        yield* authorizeAt("http://192.168.1.2:3772");
       }).pipe(Effect.provide(harness.layer));
 
       expect(harness.fetch.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([
         "/api/auth/websocket-ticket/rpc",
         ...Array.from({ length: 4 }, () => [
-          "/.well-known/t3/environment",
+          "/.well-known/t2/environment",
           "/api/auth/websocket-ticket/rpc",
         ]).flat(),
         "/api/auth/websocket-ticket/rpc",
-        "/.well-known/t3/environment",
+        "/.well-known/t2/environment",
         "/api/auth/websocket-ticket/rpc",
       ]);
     }),
@@ -485,8 +485,8 @@ describe("RemoteEnvironmentAuthorization", () => {
               connectionMethod,
             })
             .pipe(Effect.flip, Effect.forkChild);
-        const lan = yield* authorizeAt("http://192.168.1.2:3773");
-        const tailnet = yield* authorizeAt("http://100.101.102.103:3773");
+        const lan = yield* authorizeAt("http://192.168.1.2:3772");
+        const tailnet = yield* authorizeAt("http://100.101.102.103:3772");
         // An SSH forward listens on loopback but reaches a remote host.
         const forwarded = yield* authorizeAt("http://127.0.0.1:4010", "ssh");
 
@@ -536,7 +536,7 @@ describe("RemoteEnvironmentAuthorization", () => {
       // The descriptor is read beside the ticket, so the connect needs no later read.
       expect(authorized.descriptor).toMatchObject({ environmentId: ENVIRONMENT_ID });
       expect(harness.fetch.calls.map(([url]) => String(url)).toSorted()).toEqual([
-        "https://environment.example.test/.well-known/t3/environment",
+        "https://environment.example.test/.well-known/t2/environment",
         "https://environment.example.test/api/auth/websocket-ticket/rpc",
       ]);
     }),

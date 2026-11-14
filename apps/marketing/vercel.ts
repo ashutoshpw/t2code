@@ -42,7 +42,7 @@ export const config: VercelConfig = {
     {
       source: "/mobile",
       has: [{ type: "header", key: "user-agent", value: ".*Android.*" }],
-      destination: "https://play.google.com/store/apps/details?id=com.t3tools.t3code",
+      destination: "https://play.google.com/store/apps/details?id=codes.t2.mobile",
       permanent: false,
     },
     {
