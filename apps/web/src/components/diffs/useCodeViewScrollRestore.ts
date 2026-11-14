@@ -73,7 +73,7 @@ export function useCodeViewScrollRestore(
 ) {
   const [restore] = useState(createCodeViewScrollRestore);
   restore.update(scopeKey, settled, loadMore);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- a loaded batch can leave the viewer's rendered items alone, so no ref or post-render call re-checks the pending position
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- a loaded batch can leave the viewer's rendered items alone, so no ref or post-render call re-checks the pending position
   useEffect(() => restore.flush());
   return restore;
 }

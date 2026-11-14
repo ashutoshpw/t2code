@@ -311,7 +311,7 @@ interface ViewerState {
 }
 
 interface EncoderWindow {
-  __t3Recorder: {
+  __t2Recorder: {
     cursor(x: number, y: number, click: boolean): void;
     frame(data: string, width: number): Promise<boolean>;
     stop(): Promise<{ mimeType: string | null; count: number; bytes: number }>;
@@ -483,7 +483,7 @@ const editingCommand = (key: string, modifiers: number) => {
 };
 
 const TITLE_LIMIT = 512;
-const TITLE_WORLD = "t3-preview-title";
+const TITLE_WORLD = "t2-preview-title";
 // Observe root replacement without subscribing to body subtree mutations.
 const titleChange = (reported: string) => `new Promise((resolve) => {
   const changed = () => document.title.slice(0, ${TITLE_LIMIT}) !== ${JSON.stringify(reported)};
@@ -2177,7 +2177,7 @@ const make = Effect.gen(function* () {
         });
         await encoder.evaluate(
           ([data, width]) =>
-            (globalThis as unknown as EncoderWindow).__t3Recorder.frame(data, width),
+            (globalThis as unknown as EncoderWindow).__t2Recorder.frame(data, width),
           [firstFrame, tab.page.viewportSize()?.width ?? UNATTACHED_FILL_VIEWPORT.width] as const,
         );
         const opened = await tab.page.context().newCDPSession(tab.page);
@@ -2193,7 +2193,7 @@ const make = Effect.gen(function* () {
             const accepted = await encoder
               .evaluate(
                 ([data, width]) =>
-                  (globalThis as unknown as EncoderWindow).__t3Recorder.frame(data, width),
+                  (globalThis as unknown as EncoderWindow).__t2Recorder.frame(data, width),
                 next,
               )
               .catch(() => true);
@@ -2293,7 +2293,7 @@ const make = Effect.gen(function* () {
           }
         }
         const { mimeType, count, bytes } = await recording.encoder.evaluate(() =>
-          (globalThis as unknown as EncoderWindow).__t3Recorder.stop(),
+          (globalThis as unknown as EncoderWindow).__t2Recorder.stop(),
         );
         // Checked before the transfer so an oversized video never lands in this process.
         if (bytes > PROVIDER_SEND_TURN_MAX_FILE_BYTES) {
@@ -2320,7 +2320,7 @@ const make = Effect.gen(function* () {
                 timeout: RECORDING_DOWNLOAD_TIMEOUT_MS,
               }),
               recording.encoder.evaluate(() =>
-                (globalThis as unknown as EncoderWindow).__t3Recorder.download(),
+                (globalThis as unknown as EncoderWindow).__t2Recorder.download(),
               ),
             ]);
             await download.saveAs(stagedPath);
@@ -2336,7 +2336,7 @@ const make = Effect.gen(function* () {
           for (let index = 0; index < count; index += 1) {
             const chunk = await recording.encoder.evaluate(
               (chunkIndex) =>
-                (globalThis as unknown as EncoderWindow).__t3Recorder.chunk(chunkIndex),
+                (globalThis as unknown as EncoderWindow).__t2Recorder.chunk(chunkIndex),
               index,
             );
             chunks.push(Buffer.from(chunk, "base64"));
@@ -2381,7 +2381,7 @@ const make = Effect.gen(function* () {
         void encoder
           ?.evaluate(
             ([px, py, click]) =>
-              (globalThis as unknown as EncoderWindow).__t3Recorder?.cursor(px, py, click),
+              (globalThis as unknown as EncoderWindow).__t2Recorder?.cursor(px, py, click),
             [x, y, next === "click"] as const,
           )
           .catch(constVoid);

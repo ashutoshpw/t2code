@@ -349,7 +349,11 @@ function runCp(args: ReadonlyArray<string>, signal?: AbortSignal): Promise<boole
 }
 
 // macOS fs.copyFile clone flags fall back to full copies.
-async function copyDatabaseFile(source: string, destination: string): Promise<void> {
+async function copyDatabaseFile(
+  source: string,
+  destination: string,
+  signal?: AbortSignal,
+): Promise<void> {
   // oxlint-disable-next-line t2code/no-global-process-runtime -- Standalone launcher has no Effect runtime.
   const platform = process.platform;
   // cp -c replaces files and breaks hard links; copy into hard-linked destinations instead.
@@ -835,7 +839,7 @@ export async function stateDirOwned(baseDir: string): Promise<boolean> {
     "startedAt" in record && typeof record.startedAt === "string" ? record.startedAt : "",
   );
   if (!Number.isFinite(recordedAt)) return true;
-  // oxlint-disable-next-line t3code/no-global-process-runtime -- Standalone launcher has no Effect runtime.
+  // oxlint-disable-next-line t2code/no-global-process-runtime -- Standalone launcher has no Effect runtime.
   const platform = process.platform;
   const { command, args, env } = legacyOwnerStartTimeCommand(pid, platform);
   const output = await new Promise<string | undefined>((resolve) =>
@@ -1533,8 +1537,8 @@ export interface LauncherOptions {
 }
 
 export async function main(options: LauncherOptions = {}): Promise<void> {
-  const baseDir = (options.baseDir ?? process.env.T2CODE_HOME)?.trim();
-  if (baseDir === undefined || baseDir === "") {
+  const baseDir = options.baseDir ?? process.env.T2CODE_HOME;
+  if (baseDir === undefined || baseDir.trim() === "") {
     throw new Error("T2CODE_HOME is required by the T2 Code service launcher.");
   }
   const output =

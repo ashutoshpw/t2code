@@ -6,7 +6,7 @@ import * as NodeFSP from "node:fs/promises";
 const BTRFS_SUPER_MAGIC = 0x9123683e;
 
 async function onBtrfs(target: string): Promise<boolean> {
-  // oxlint-disable-next-line t3code/no-global-process-runtime -- Shared with the standalone launcher.
+  // oxlint-disable-next-line t2code/no-global-process-runtime -- Shared with the standalone launcher.
   if (process.platform !== "linux") return false;
   const stats = await NodeFSP.statfs(target).catch(() => undefined);
   return stats?.type === BTRFS_SUPER_MAGIC;

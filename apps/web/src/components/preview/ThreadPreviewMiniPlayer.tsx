@@ -512,7 +512,7 @@ function MiniPlayerShell({
   const endInterruptedGesture = useEffectEvent(() => {
     finishGesture();
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- window blur ends a gesture whose release went to another window, and unmount ends one in progress
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- window blur ends a gesture whose release went to another window, and unmount ends one in progress
   useEffect(() => {
     window.addEventListener("blur", endInterruptedGesture);
     return () => {

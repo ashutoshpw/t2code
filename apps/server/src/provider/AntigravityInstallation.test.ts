@@ -398,7 +398,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("Antigravity inst
               compatibility: [
                 {
                   driver: "antigravity",
-                  t3CodeRange: ">=0.0.42",
+                  t2CodeRange: ">=0.0.42",
                   ranges: [{ range: ">=1.5.7", status: "broken" }],
                 },
               ],

@@ -584,7 +584,7 @@ export function BranchToolbarBranchSelector({
       input: { cwd: branchCwd, localOnly: true },
     });
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- refs listed while the project was cloning are empty; reload them past the server's snapshot when the clone finishes
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- refs listed while the project was cloning are empty; reload them past the server's snapshot when the clone finishes
   useEffect(() => {
     if (projectCloneDone) refreshRefsAfterClone();
   }, [projectCloneDone]);

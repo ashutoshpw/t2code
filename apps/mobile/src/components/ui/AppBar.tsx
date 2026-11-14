@@ -92,7 +92,7 @@ export function AppBar(props: AppBarProps) {
   const searchBarRef = useRef<SearchBarCommands>(null);
   const nativeSearchText = useRef(search?.value ?? "");
   const searchValue = search?.value;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- the native search bar keeps its own text; a value the caller changes (a reset) has to be pushed into it
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- the native search bar keeps its own text; a value the caller changes (a reset) has to be pushed into it
   useLayoutEffect(() => {
     if (searchValue === undefined || searchValue === nativeSearchText.current) return;
     nativeSearchText.current = searchValue;

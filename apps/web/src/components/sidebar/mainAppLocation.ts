@@ -80,6 +80,8 @@ export function closeAppModal(router: AnyRouter) {
 }
 
 export function useMainAppThreadRef() {
+  // Reads the router so readers re-render with their route component, before the tracked ref goes stale.
+  useRouter();
   return mainAppThreadRef;
 }
 

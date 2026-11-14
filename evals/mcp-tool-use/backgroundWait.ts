@@ -20,7 +20,7 @@ import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as References from "effect/References";
-// oxlint-disable-next-line t3code/no-raw-mcp-registration -- the eval calls the tool McpHttpServer registered and registers none.
+// oxlint-disable-next-line t2code/no-raw-mcp-registration -- the eval calls the tool McpHttpServer registered and registers none.
 import { McpSchema, McpServer } from "effect/ai";
 
 import * as McpHttpServer from "../../apps/server/src/mcp/McpHttpServer.ts";

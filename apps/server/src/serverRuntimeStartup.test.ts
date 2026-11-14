@@ -1,5 +1,4 @@
 import { assert, it } from "@effect/vitest";
-import * as Stream from "effect/Stream";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import {
   DEFAULT_SERVER_SETTINGS,
@@ -20,6 +19,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
 import * as Ref from "effect/Ref";
+import * as Stream from "effect/Stream";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 
@@ -130,6 +130,7 @@ it.effect.each([
       }),
       Layer.mock(ServerSettings.ServerSettingsService)({
         start: Effect.void,
+        subscribeChanges: Effect.succeed(Stream.empty),
         getSettings: Effect.succeed({
           ...DEFAULT_SERVER_SETTINGS,
           defaultModelSelection:

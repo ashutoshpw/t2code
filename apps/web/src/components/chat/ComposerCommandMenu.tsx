@@ -221,7 +221,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
     props.item.type === "pull-request" ? resolvePullRequestState(props.item.pullRequest) : null;
   const descriptionRef = useRef<HTMLSpanElement>(null);
   const [descriptionTruncated, setDescriptionTruncated] = useState(false);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- measures the rendered description so only cut-off text gets a tooltip
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- measures the rendered description so only cut-off text gets a tooltip
   useLayoutEffect(() => {
     const description = descriptionRef.current;
     setDescriptionTruncated(

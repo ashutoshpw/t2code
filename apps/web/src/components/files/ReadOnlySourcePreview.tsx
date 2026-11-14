@@ -24,7 +24,7 @@ export default function ReadOnlySourcePreview(props: {
   const { text, onPostRender } = props;
   const wrapper = useRef<HTMLDivElement>(null);
   const [selection] = useState(() => new SourceSelection());
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- follows the document's selection, which only it reports
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- follows the document's selection, which only it reports
   useEffect(() => {
     const root = () => wrapper.current?.querySelector("diffs-container")?.shadowRoot;
     const sync = () => {

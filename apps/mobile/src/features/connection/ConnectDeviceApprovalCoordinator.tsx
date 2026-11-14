@@ -123,7 +123,7 @@ function EnvironmentApprovalWatcher(props: {
       })),
     );
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- registers this host with the module-level prompt queue and drops its prompts when it goes away
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- registers this host with the module-level prompt queue and drops its prompts when it goes away
   useEffect(() => {
     const environmentId = props.environmentId;
     watchedEnvironments.add(environmentId);
@@ -132,7 +132,7 @@ function EnvironmentApprovalWatcher(props: {
       approvalPrompts.drop((prompt) => prompt.environmentId === environmentId);
     };
   }, [props.environmentId]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- a new request on the access stream opens a native alert
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- a new request on the access stream opens a native alert
   useEffect(() => {
     if (pairingLinks !== undefined) offerPrompts(pairingLinks);
   }, [pairingLinks]);

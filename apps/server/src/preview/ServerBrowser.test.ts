@@ -124,17 +124,12 @@ function makeSession(
       if (method === "Page.getFrameTree") return { frameTree: { frame: { id: "main" } } };
       if (method === "Page.createIsolatedWorld") {
         const worldContexts: Record<string, number> = {
-          "t3-preview-viewport": 9,
-          "t3-preview-title": 11,
-          "t3-preview": 1,
+          "t2-preview-viewport": 9,
+          "t2-preview-title": 11,
+          "t2-preview": 1,
         };
         return {
-          executionContextId:
-            (input as { worldName?: string }).worldName === "t2-preview-viewport"
-              ? 9
-              : (input as { worldName?: string }).worldName === "t2-preview"
-                ? 1
-                : 7,
+          executionContextId: worldContexts[(input as { worldName: string }).worldName] ?? 7,
         };
       }
       // A title watch settles only when the document's title changes.
@@ -1349,7 +1344,7 @@ it.effect.each([{ truncated: false }, { truncated: true }])(
         let stagedPath: string | undefined;
         const download = Promise.withResolvers<{ saveAs: (path: string) => Promise<void> }>();
         const sandbox = NodeVM.createContext({
-          __t3Recorder: {
+          __t2Recorder: {
             frame: async () => true,
             stop: async () => ({ mimeType: "video/webm", count: 1, bytes }),
             chunk: async () => {

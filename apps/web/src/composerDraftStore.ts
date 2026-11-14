@@ -933,6 +933,8 @@ function createEmptyThreadDraft(): ComposerThreadDraftState {
     reviewComments: [],
     threadContexts: [],
     environmentContexts: [],
+    contextDraft: undefined,
+    fanoutRetry: undefined,
     replyTo: null,
     modelSelectionByProvider: {},
     activeProvider: null,

@@ -89,7 +89,7 @@ function ConnectDeviceRequestToasts({
         )
       : null;
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- opens, updates and closes imperative toastManager toasts to match the pending requests
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- opens, updates and closes imperative toastManager toasts to match the pending requests
   useEffect(() => {
     if (requests === null) return;
     // The server publishes no event when a request expires, so the toast ends itself then.
@@ -165,7 +165,7 @@ function ConnectDeviceRequestToasts({
     }
   });
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- closes this environment's imperative toasts when it stops needing approval
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- closes this environment's imperative toasts when it stops needing approval
   useEffect(() => {
     const tracked = toasts.current;
     return () => {

@@ -1543,7 +1543,7 @@ function isMessageRow(row: MessagesTimelineRow) {
 // moves a native selection's ends onto other rows. Pin the selected rows.
 function useSelectedTimelineRowIds(viewport: HTMLElement | null) {
   const [rowIds, setRowIds] = useState<ReadonlyArray<string>>([]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to document selectionchange to track which timeline rows a native selection covers
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- subscribes to document selectionchange to track which timeline rows a native selection covers
   useEffect(() => {
     if (!viewport) return;
     const update = () => {

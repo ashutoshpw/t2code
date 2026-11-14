@@ -2,8 +2,8 @@ import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as HostProcess from "@t2code/shared/HostProcess";
 import { assert, it } from "@effect/vitest";
-import * as Effect from "effect/Effect";
 import * as Console from "effect/Console";
+import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
@@ -11,10 +11,31 @@ import * as TestClock from "effect/testing/TestClock";
 
 import * as BootService from "../cloud/bootService.ts";
 import { runDoctor } from "./doctor.ts";
-import * as DatabaseMaintenance from "../persistence/DatabaseMaintenance.ts";
+import {
+  DatabaseMaintenance,
+  layer as databaseMaintenanceLayer,
+} from "../persistence/DatabaseMaintenance.ts";
 import * as SpacesDatabaseTools from "../spaces/SpacesDatabaseTools.ts";
 import * as SpacesSql from "../spaces/SpacesSql.ts";
 import * as SpacesSqlite from "../spaces/Sqlite.ts";
+
+import * as ProcessRunner from "../processRunner.ts";
+import { acquireServerOwnership } from "../serverOwnership.ts";
+import { makePersistedServerRuntimeState } from "../serverRuntimeState.ts";
+
+// An empty home, so no boot service unit installed on this machine is read.
+const layerHost = Layer.mergeAll(
+  ProcessRunner.layer,
+  // The fork's runDoctor always inspects the Spaces database.
+  SpacesDatabaseTools.layer,
+  Layer.effect(
+    HostProcess.HomeDirectory,
+    Effect.gen(function* () {
+      return yield* (yield* FileSystem.FileSystem).makeTempDirectoryScoped();
+    }),
+  ),
+  Layer.succeed(HostProcess.Environment, {}),
+).pipe(Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)));
 
 it.effect(
   "--fix locks the home while the service is paused, names a server that holds it, keeps the V1 database, and --dry-run changes nothing",
@@ -22,7 +43,7 @@ it.effect(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-doctor-" });
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-doctor-" });
       const serverRuntimeStatePath = path.join(stateDir, "server-runtime.json");
       const calls: string[] = [];
       const services =
@@ -42,8 +63,6 @@ it.effect(
         ).pipe(
           Effect.provide(
             Layer.mergeAll(
-              NodeServices.layer,
-              SpacesDatabaseTools.layer.pipe(Layer.provide(NodeServices.layer)),
               Layer.mock(BootService.BootService)({
                 withStopped: (operation) =>
                   Effect.sync(() => calls.push("pause")).pipe(
@@ -51,7 +70,7 @@ it.effect(
                     Effect.ensuring(Effect.sync(() => calls.push("resume"))),
                   ),
               }),
-              Layer.succeed(DatabaseMaintenance.DatabaseMaintenance, {
+              Layer.succeed(DatabaseMaintenance, {
                 inspect: () =>
                   Effect.succeed({
                     databaseBytes: 2000,
@@ -116,7 +135,13 @@ it.effect("doctor reports Spaces without creating chat or missing Spaces databas
     const spacesPath = path.join(directory, "spaces.sqlite");
     const messages: string[] = [];
     const console = yield* Console.Console;
-    const inspect = runDoctor(chatPath, { fix: true, dryRun: false, interactive: false }).pipe(
+    const inspect = runDoctor(
+      {
+        dbPath: chatPath,
+        serverRuntimeStatePath: path.join(directory, "server-runtime.json"),
+      },
+      { fix: true, dryRun: false, interactive: false },
+    ).pipe(
       Effect.provideService(Console.Console, {
         ...console,
         log: (...args: readonly unknown[]) => messages.push(args.map(String).join(" ")),
@@ -143,12 +168,12 @@ it.effect("doctor reports Spaces without creating chat or missing Spaces databas
   }).pipe(
     Effect.provide(
       Layer.mergeAll(
-        DatabaseMaintenance.layer,
+        databaseMaintenanceLayer,
         SpacesDatabaseTools.layer,
         Layer.mock(BootService.BootService)({
           withStopped: () => Effect.die("Inspection must not pause a service or compact Spaces"),
         }),
-      ).pipe(Layer.provideMerge(NodeServices.layer)),
+      ).pipe(Layer.provideMerge(layerHost)),
     ),
   ),
 );
@@ -173,8 +198,6 @@ it.effect("warns how long reclaiming can take and reports each step with its ela
     ).pipe(
       Effect.provide(
         Layer.mergeAll(
-          NodeServices.layer,
-          SpacesDatabaseTools.layer.pipe(Layer.provide(NodeServices.layer)),
           Layer.mock(BootService.BootService)({
             withStopped: (operation) =>
               Effect.sync(() => output.push("<pause>")).pipe(
@@ -182,7 +205,7 @@ it.effect("warns how long reclaiming can take and reports each step with its ela
                 Effect.ensuring(Effect.sync(() => output.push("<resume>"))),
               ),
           }),
-          Layer.succeed(DatabaseMaintenance.DatabaseMaintenance, {
+          Layer.succeed(DatabaseMaintenance, {
             inspect: () =>
               Effect.succeed({
                 databaseBytes: 12.8 * 1024 ** 3,

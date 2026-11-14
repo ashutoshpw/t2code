@@ -41,6 +41,7 @@ export const layer = Layer.mergeAll(
   ClaudeAdapterV2.layerQueryRunner,
   CodexAdapterV2.layerAppServerClientFactory,
   CursorAgentSdk.layer.pipe(Layer.provideMerge(CursorSdk.layer)),
+  CursorKeychain.layer,
   layerIdAllocator,
   ProviderContinuationRequests.layer,
 );

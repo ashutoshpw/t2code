@@ -201,7 +201,7 @@ export function WorkspaceTitlebarControls(props: {
   const { rightPanelOpen, maximized } = props;
   const controlsRef = useRef<HTMLDivElement | null>(null);
   const previous = useRef({ rightPanelOpen, maximized });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- starts the toggle's slide before the commit that swapped it in paints; the animation is cancelled on change or unmount.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- starts the toggle's slide before the commit that swapped it in paints; the animation is cancelled on change or unmount.
   useLayoutEffect(() => {
     const { rightPanelOpen: wasOpen, maximized: wasMaximized } = previous.current;
     previous.current = { rightPanelOpen, maximized };

@@ -534,7 +534,7 @@ if ! t2_runtime_ready; then
     elif command -v wget >/dev/null 2>&1; then wget -q --timeout=30 --tries=1 "$1" -O "$2"
     else printf 'Remote host needs curl or wget to download %s.\\n' "$T2_ARCHIVE" >&2; exit 1
     fi || {
-      printf 'Could not download t3 %s from %s. If this host cannot reach it, install t3 %s on it with https://t2.codes/install.sh (T2CODE_VERSION=%s; T2CODE_RELEASE_BASE_URL selects a mirror).\\n' "$T2_ARCHIVE_VERSION" "$1" "$T2_ARCHIVE_VERSION" "$T2_ARCHIVE_VERSION" >&2
+      printf 'Could not download t2 %s from %s. If this host cannot reach it, install t2 %s on it with https://t2.codes/install.sh (T2CODE_VERSION=%s; T2CODE_RELEASE_BASE_URL selects a mirror).\\n' "$T2_ARCHIVE_VERSION" "$1" "$T2_ARCHIVE_VERSION" "$T2_ARCHIVE_VERSION" >&2
       exit 1
     }
   }
@@ -864,7 +864,7 @@ if adopt_default_server && [ -n "$ADOPTED_PID" ] && [ -n "$LAUNCHER_ID" ]; then
     printf 'external\\n' >"$SIBLING_DIR/managed"
     rm -f "$SIBLING_DIR/pid"
     RUNNER_CHANGED=1
-    if cmp -s "$RUNNER_FILE" "$SIBLING_DIR/run-t3.sh"; then
+    if cmp -s "$RUNNER_FILE" "$SIBLING_DIR/run-t2.sh"; then
       RUNNER_CHANGED=0
     fi
     break
