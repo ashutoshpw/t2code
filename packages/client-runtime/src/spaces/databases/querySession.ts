@@ -24,6 +24,8 @@ export interface QuerySessionPorts {
   schedule(run: () => void, delayMs: number): () => void;
   /** True while the writer of this data source has a write in flight. */
   busy(): boolean;
+  /** True while the server pushes changes: refreshes ride on them and polling backs off. */
+  live?(): boolean;
 }
 
 export interface QuerySnapshot {
@@ -38,7 +40,12 @@ export interface QuerySnapshot {
   /** `canonicalJson` of the group key (and sub-group key) being continued. */
   readonly loadingBuckets: ReadonlySet<string>;
   /** Rows created here, shown until the next refresh. */
-  readonly placed: ReadonlyArray<{ row: SpaceDatabaseRow; group: string | null }>;
+  readonly placed: ReadonlyArray<{
+    row: SpaceDatabaseRow;
+    group: string | null;
+    /** The server's counts already include the row (it survived a refresh that did not load it). */
+    counted?: boolean;
+  }>;
   /** Card drops shown until the next refresh answers (or the write fails and they are cleared). */
   readonly placements: Readonly<Record<string, RowPlacement>>;
   /** Acknowledged edits the shown rows do not contain yet; merge them under the writer's pending. */
@@ -71,6 +78,10 @@ const IDLE: QuerySnapshot = {
 const PENDING_DELAYS_MS = [400, 800, 1600, 3200] as const;
 /** After the backoff, a slow fixed interval: a large recompute can run for minutes. */
 const PENDING_SLOW_DELAY_MS = 5000;
+/** With a change stream a drain batch arrives as an event; these asks only cover a stalled drain. */
+const LIVE_PENDING_DELAYS_MS = [10_000, 30_000] as const;
+/** Event-driven refreshes of one session are at least this far apart. */
+const EVENT_REFRESH_FLOOR_MS = 1000;
 /** Consecutive follow-up refreshes before the session stops asking until something else refreshes it. */
 export const PENDING_MAX_FOLLOWS = 12;
 const REFRESH_DELAY_MS = 150;
@@ -174,6 +185,9 @@ export class DatabaseQuerySession {
   #pinEpoch = 0;
   #followAttempt = 0;
   #followRun = false;
+  #cooling = false;
+  #eventDriven = false;
+  #cancelCooldown: (() => void) | undefined;
 
   constructor(ports: QuerySessionPorts) {
     this.#ports = ports;
@@ -208,6 +222,7 @@ export class DatabaseQuerySession {
       aggregates: keepWindows === null ? [] : this.#snapshot.aggregates,
       relatedPages: keepWindows === null ? {} : this.#snapshot.relatedPages,
       stale: keepWindows !== null,
+      acked: keepWindows === null ? EMPTY_PENDING_CELL_EDITS : this.#snapshot.acked,
     });
     void this.#loadFirst(input, this.#generation);
   }
@@ -289,10 +304,16 @@ export class DatabaseQuerySession {
     this.#requestRefresh(REFRESH_DELAY_MS);
   }
 
-  /** A counter bump: our own writes are handled through `noteAck`, so ignore it while busy. */
+  /**
+   * A counter bump: our own writes are handled through `noteAck`, so ignore it while busy. Under a
+   * stream of bumps the session refreshes at most once per second.
+   */
   invalidate(): void {
     if (this.#ports.busy()) return;
-    this.refresh();
+    if (this.#ports.live?.() === true) this.#eventDriven = true;
+    this.#requestRefresh(
+      this.#cooling && this.#eventDriven ? EVENT_REFRESH_FLOOR_MS : REFRESH_DELAY_MS,
+    );
   }
 
   /**
@@ -331,6 +352,20 @@ export class DatabaseQuerySession {
       return;
     }
     if (hasEdits) {
+      // An acknowledged edit of the grouping property regroups the row; a kept copy would be stale.
+      const groupProperty = this.#input?.group?.property;
+      const kept = this.#snapshot.placed;
+      const placed =
+        groupProperty === undefined
+          ? kept
+          : kept.filter(
+              (entry) =>
+                entry.counted !== true ||
+                !Object.values(edits).some(
+                  (edit) => edit.pageId === entry.row.page.id && edit.propertyId === groupProperty,
+                ),
+            );
+      if (placed.length !== kept.length) this.#snapshot = { ...this.#snapshot, placed };
       let acked = this.#snapshot.acked;
       for (const edit of Object.values(edits)) acked = queueCellEdit(acked, edit);
       this.#set({ ...this.#snapshot, acked });
@@ -349,6 +384,19 @@ export class DatabaseQuerySession {
         ...this.#snapshot.placed,
         { row, group: group === null ? null : canonicalJson(group) },
       ],
+    });
+  }
+
+  /** A trashed or deleted row must not be kept as an unloaded placement again. */
+  forgetRow(pageId: string): void {
+    if (this.#disposed) return;
+    const { placed, placements } = this.#snapshot;
+    if (!placed.some((entry) => entry.row.page.id === pageId) && !(pageId in placements)) return;
+    const { [pageId]: _dropped, ...rest } = placements;
+    this.#set({
+      ...this.#snapshot,
+      placed: placed.filter((entry) => entry.row.page.id !== pageId),
+      placements: rest,
     });
   }
 
@@ -387,6 +435,7 @@ export class DatabaseQuerySession {
   dispose(): void {
     this.#disposed = true;
     this.#clearTimer();
+    this.#cancelCooldown?.();
     this.#listeners.clear();
   }
 
@@ -415,8 +464,19 @@ export class DatabaseQuerySession {
       this.#timerDelay = 0;
       if (this.#holds > 0 || !this.#refreshWanted) return;
       this.#refreshWanted = false;
+      if (this.#eventDriven) this.#startCooldown();
+      this.#eventDriven = false;
       void this.#runRefresh();
     }, delayMs);
+  }
+
+  #startCooldown() {
+    this.#cancelCooldown?.();
+    this.#cooling = true;
+    this.#cancelCooldown = this.#ports.schedule(() => {
+      this.#cooling = false;
+      this.#cancelCooldown = undefined;
+    }, EVENT_REFRESH_FLOOR_MS);
   }
 
   /** While an answer says computed values are pending, refresh again with a growing delay. */
@@ -425,8 +485,11 @@ export class DatabaseQuerySession {
       this.#followAttempt = 0;
       return;
     }
-    if (this.#followAttempt >= PENDING_MAX_FOLLOWS) return;
-    const delay = PENDING_DELAYS_MS[this.#followAttempt] ?? PENDING_SLOW_DELAY_MS;
+    const live = this.#ports.live?.() === true;
+    if (this.#followAttempt >= (live ? LIVE_PENDING_DELAYS_MS.length : PENDING_MAX_FOLLOWS)) return;
+    const delay = live
+      ? LIVE_PENDING_DELAYS_MS[this.#followAttempt]!
+      : (PENDING_DELAYS_MS[this.#followAttempt] ?? PENDING_SLOW_DELAY_MS);
     this.#followAttempt++;
     this.#followRun = true;
     this.#requestRefresh(delay);
@@ -443,6 +506,7 @@ export class DatabaseQuerySession {
   }
 
   async #loadFirst(input: SpaceDatabaseQueryInput, generation: number) {
+    const epoch = this.#pinEpoch;
     try {
       const result = await this.#ports.query(this.#firstInput(input));
       if (this.#disposed || generation !== this.#generation) return;
@@ -450,6 +514,9 @@ export class DatabaseQuerySession {
       const behind = result.dataRevision < this.#ackedRevision;
       this.#set({
         ...IDLE,
+        ...(this.#pinEpoch === epoch
+          ? {}
+          : { placed: this.#snapshot.placed, placements: this.#snapshot.placements }),
         status: "ready",
         windows: startWindows(input, result),
         aggregates: result.aggregates ?? [],
@@ -570,6 +637,52 @@ export class DatabaseQuerySession {
     return windows;
   }
 
+  /**
+   * Created and dropped cards that a refresh did not load because their column has more rows than
+   * were loaded: they stay shown, once, until a window carries them.
+   */
+  #unloadedPlacements(previous: QueryWindows, next: QueryWindows): QuerySnapshot["placed"] {
+    const kept: Array<QuerySnapshot["placed"][number]> = [];
+    const { placed, placements, acked } = this.#snapshot;
+    const holds = (rows: ReadonlyArray<SpaceDatabaseRow>, id: string) =>
+      rows.some((row) => row.page.id === id);
+    if (next.groups === undefined) return kept;
+    const heldElsewhere = (id: string, group: string | null) =>
+      next.groups?.some(
+        (bucket) => canonicalJson(bucket.key) !== group && holds(bucket.rows, id),
+      ) === true;
+    const bucketOf = (group: string | null) =>
+      next.groups?.find((bucket) => canonicalJson(bucket.key) === group);
+    for (const entry of placed) {
+      if (entry.row.page.id in placements) continue;
+      const bucket = bucketOf(entry.group);
+      if (
+        bucket !== undefined &&
+        bucket.nextCursor !== null &&
+        !holds(bucket.rows, entry.row.page.id) &&
+        !heldElsewhere(entry.row.page.id, entry.group)
+      )
+        kept.push({ ...entry, counted: true });
+    }
+    for (const [pageId, placement] of Object.entries(placements)) {
+      const group = canonicalJson(placement.group);
+      const bucket = bucketOf(group);
+      if (
+        bucket === undefined ||
+        bucket.nextCursor === null ||
+        holds(bucket.rows, pageId) ||
+        heldElsewhere(pageId, group)
+      )
+        continue;
+      const row =
+        previous.groups?.flatMap((entry) => entry.rows).find((entry) => entry.page.id === pageId) ??
+        placed.find((entry) => entry.row.page.id === pageId)?.row;
+      if (row !== undefined)
+        kept.push({ row: applyCellPatches([row], acked)[0]!, group, counted: true });
+    }
+    return kept;
+  }
+
   async #runRefresh() {
     const input = this.#input;
     if (input === null || this.#disposed) return;
@@ -640,7 +753,7 @@ export class DatabaseQuerySession {
         stale: false,
         loadingMore: false,
         loadingBuckets: EMPTY_SET,
-        placed: [],
+        placed: this.#unloadedPlacements(previous, windows),
         placements: NO_PLACEMENTS,
         acked: behind ? this.#snapshot.acked : EMPTY_PENDING_CELL_EDITS,
         error: undefined,

@@ -33,24 +33,61 @@ export const afterBlocksApplied = Effect.fn("SpacesDatabases.afterBlocksApplied"
     const decoded = decodeDatabaseBlock(parseJson(written.payload));
     if (decoded._tag !== "Some") continue;
     const block = decoded.value;
+    const [otherHome] = yield* sql<{
+      readonly database_id: string;
+    }>`SELECT database_id FROM spaces_db_databases
+      WHERE home_block_id = ${block.id} AND database_id <> ${block.content.databaseId}`;
+    if (otherHome !== undefined)
+      return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
     const database = yield* DatabaseStore.getDatabase(block.content.databaseId);
     if (database.space_id !== page.space_id)
       return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
-    if (database.home_block_id === block.id) continue;
+    // A database whose purge has begun is never adopted; the block shows the deleted-database message.
+    if (database.purge_started_at_ms !== null) continue;
+    if (database.home_block_id === block.id) {
+      yield* clearMarks(database.database_id, block);
+      continue;
+    }
     const [home] =
       database.home_block_id === null
         ? []
         : yield* sql<{
             readonly deleted: number;
           }>`SELECT deleted FROM spaces_blocks WHERE block_id = ${database.home_block_id}`;
-    if (home !== undefined && home.deleted === 0) continue;
+    if (home !== undefined && home.deleted === 0) {
+      yield* clearViewMarks(block);
+      continue;
+    }
     if ((yield* Liveness.chain(page.page_id)).includes(database.database_id))
       return yield* new C.SpaceValidationError({ reason: "cycle" });
     yield* sql`UPDATE spaces_db_databases SET home_block_id = ${block.id} WHERE database_id = ${database.database_id}`;
+    yield* clearMarks(database.database_id, block);
     yield* DatabaseStore.touchDatabase(database.database_id, now);
     // A database appearing or reappearing in lists moves the catalog.
     yield* sql`UPDATE spaces_core SET catalog_revision = catalog_revision + 1 WHERE singleton = 1`;
   }
+});
+
+type DatabaseBlock = C.SpaceDatabaseBlock;
+
+/** A view a live block lists, or owns, is not an orphan. */
+const clearViewMarks = Effect.fn("SpacesDatabases.clearViewMarks")(function* (
+  block: DatabaseBlock,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  yield* sql`UPDATE spaces_db_views SET orphaned_at_ms = NULL
+    WHERE orphaned_at_ms IS NOT NULL AND (owner_block_id = ${block.id} OR view_id IN ${sql.in(block.content.viewIds.length === 0 ? [""] : block.content.viewIds)})`;
+});
+
+/** A database or view that a live block names again starts a fresh retention period when it dies again. */
+const clearMarks = Effect.fn("SpacesDatabases.clearMarks")(function* (
+  databaseId: string,
+  block: DatabaseBlock,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  yield* sql`UPDATE spaces_db_databases SET orphaned_at_ms = NULL
+    WHERE database_id = ${databaseId} AND orphaned_at_ms IS NOT NULL AND purge_started_at_ms IS NULL`;
+  yield* clearViewMarks(block);
 });
 
 /**
@@ -69,11 +106,36 @@ export const guardMove = Effect.fn("SpacesDatabases.guardMove")(function* (plan:
   }>`SELECT d.database_id, d.space_id FROM spaces_db_databases d JOIN spaces_blocks b ON b.block_id = d.home_block_id
     WHERE b.deleted = 0 AND (b.page_id IN ${sql.in(pages)} OR b.block_id IN ${sql.in(blocks)})`;
   const destination = plan.destination;
-  if (homes.length === 0 || !destination) return;
+  if (!destination) return;
   const destinationSpace =
     destination.kind === "root"
       ? destination.spaceId
       : plan.pages.get(destination.placement.pageId)!.space_id;
+  if (plan.pages.get(plan.sourcePageId)?.space_id !== destinationSpace) {
+    // A linked block must still name a database of the space it lands in.
+    const payloads = [
+      ...(plan.selectedBlocks.size === 0
+        ? []
+        : yield* sql<{
+            readonly payload: string;
+          }>`SELECT payload FROM spaces_blocks WHERE block_id IN ${sql.in([...plan.selectedBlocks])}
+            AND deleted = 0 AND instr(payload, '"type":"database"') > 0`),
+      ...(plan.movingPages.size === 0
+        ? []
+        : yield* sql<{
+            readonly payload: string;
+          }>`SELECT payload FROM spaces_blocks WHERE page_id IN ${sql.in([...plan.movingPages])}
+            AND deleted = 0 AND instr(payload, '"type":"database"') > 0`),
+    ];
+    for (const { payload } of payloads) {
+      const decoded = decodeDatabaseBlock(parseJson(payload));
+      if (decoded._tag !== "Some") continue;
+      const database = yield* DatabaseStore.getDatabase(decoded.value.content.databaseId);
+      if (database.space_id !== destinationSpace)
+        return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
+    }
+  }
+  if (homes.length === 0) return;
   if (homes.some((home) => home.space_id !== destinationSpace))
     return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
   if (destination.kind === "child") {

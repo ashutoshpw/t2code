@@ -4,6 +4,7 @@ import {
   type AuthEnvironmentScope,
   type AuthSessionState,
   EnvironmentId,
+  WS_METHODS,
 } from "@t2code/contracts";
 import {
   AVAILABLE_CONNECTION_STATE,
@@ -186,8 +187,14 @@ const currentWorld = () => {
 const stubClient = new Proxy(
   {},
   {
-    get: (_target, tag) =>
-      typeof tag === "string" ? (input: unknown) => currentWorld().call(tag, input) : undefined,
+    get: (_target, tag) => {
+      // Streams do not go through the unary wire stand-in; the service's own stream is what a socket carries.
+      if (tag === WS_METHODS.spacesDatabasesSubscribeChanges)
+        return (input: unknown) => currentWorld().service.subscribeDatabaseChanges(input);
+      return typeof tag === "string"
+        ? (input: unknown) => currentWorld().call(tag, input)
+        : undefined;
+    },
   },
 );
 

@@ -63,6 +63,9 @@ const failed = new SpacePageShareAccessError({ reason: "failed" });
 const MAX_CONCURRENT_VIEWER_REQUESTS = 32;
 /** Database work gets its own pool, so anonymous queries can never starve page reads. */
 const MAX_CONCURRENT_DATABASE_REQUESTS = 8;
+const MAX_CONCURRENT_ROW_ASSETS = 8;
+/** Row assets queue for their pool, but only this many: past it an anonymous flood is refused. */
+const MAX_QUEUED_ROW_ASSETS = 256;
 
 /** The request is well formed but does not fit the view it names: the route answers 400. */
 export class SharedDatabaseRequestError extends Schema.TaggedError<SharedDatabaseRequestError>()(
@@ -218,6 +221,25 @@ const make = Effect.gen(function* () {
       .pipe(
         Effect.flatMap((result) => (Option.isSome(result) ? Effect.succeed(result.value) : busy)),
       );
+  const rowAssets = yield* Semaphore.make(MAX_CONCURRENT_ROW_ASSETS);
+  let queuedRowAssets = 0;
+  const rowAssetBounded = <A, E, R>(
+    effect: Effect.Effect<A, E, R>,
+  ): Effect.Effect<A, E | SpacePageShareAccessError, R> =>
+    Effect.suspend((): Effect.Effect<A, E | SpacePageShareAccessError, R> => {
+      if (queuedRowAssets >= MAX_QUEUED_ROW_ASSETS) return Effect.fail(busy);
+      queuedRowAssets++;
+      let queued = true;
+      const leave = Effect.sync(() => {
+        if (queued) {
+          queued = false;
+          queuedRowAssets--;
+        }
+      });
+      return rowAssets
+        .withPermits(1)(leave.pipe(Effect.andThen(effect)))
+        .pipe(Effect.ensuring(leave));
+    });
   const cursorKey = yield* Effect.cached(
     secretStore.getOrCreateRandom(CURSOR_SECRET_NAME, 32).pipe(Effect.orDie),
   );
@@ -330,25 +352,31 @@ const make = Effect.gen(function* () {
       );
   }, bounded);
 
-  const asset = Effect.fn("SpacePageShareService.asset")(function* (
-    token: string,
-    requested: C.SpacePageId | undefined,
-    assetId: C.SpaceAssetId,
-    row?: {
-      readonly blockId: C.SpaceBlockId;
-      readonly viewId: C.SpaceViewId;
-      readonly rowId: C.SpacePageId;
+  const asset = Effect.fn("SpacePageShareService.asset")(
+    function* (
+      token: string,
+      requested: C.SpacePageId | undefined,
+      assetId: C.SpaceAssetId,
+      row?: {
+        readonly blockId: C.SpaceBlockId;
+        readonly viewId: C.SpaceViewId;
+        readonly rowId: C.SpacePageId;
+      },
+    ) {
+      const { share, pageId } = yield* authorize(token, requested);
+      const file =
+        row === undefined
+          ? spaces.resolveSharedAssetFile({ pageId, assetId })
+          : spaces.resolveSharedRowAssetFile({ rootPageId: share.pageId, pageId, assetId, ...row });
+      return yield* file.pipe(
+        Effect.catch((error) => Effect.flatMap(accessFailure(unavailable)(error), Effect.fail)),
+      );
     },
-  ) {
-    const { share, pageId } = yield* authorize(token, requested);
-    const file =
-      row === undefined
-        ? spaces.resolveSharedAssetFile({ pageId, assetId })
-        : spaces.resolveSharedRowAssetFile({ rootPageId: share.pageId, pageId, assetId, ...row });
-    return yield* file.pipe(
-      Effect.catch((error) => Effect.flatMap(accessFailure(unavailable)(error), Effect.fail)),
-    );
-  }, bounded);
+    // A row's asset compiles the view's filter, so it gets its own pool. Covers load in bursts and
+    // the viewer never retries a failed one, so these wait for a permit, up to a bounded queue.
+    (effect, _token, _requested, _assetId, row) =>
+      row === undefined ? bounded(effect) : rowAssetBounded(effect),
+  );
 
   const database = Effect.fn("SpacePageShareService.database")(function* (
     token: string,

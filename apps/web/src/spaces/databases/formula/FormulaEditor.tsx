@@ -1,7 +1,7 @@
 import { knownProperty } from "@t2code/client-runtime/spaces";
 import type { SpacePropertyId } from "@t2code/contracts/spaces";
 import { compile, completions, typeLabel, type FormulaCompletion } from "@t2code/shared/formula";
-import { useDeferredValue, useId, useRef, useState } from "react";
+import { useDeferredValue, useId, useMemo, useRef, useState } from "react";
 
 import {
   AlertDialog,
@@ -68,11 +68,17 @@ function FormulaEditor({
   const sample = useSampleRow(dataSource);
   // Checking is deferred: a long formula never holds up the keystroke that edited it.
   const checked = useDeferredValue(text);
-  const result = compile(checked, schema);
+  // The Compiler leaves plain calls unmemoized; compiling and evaluating run once per settled text, not per caret move.
+  // oxlint-disable-next-line t2code/no-manual-memo -- compile is costly and its result identity feeds the preview memo.
+  const result = useMemo(() => compile(checked, schema), [checked, schema]);
   const settled = checked === text;
   const first = result.diagnostics[0];
   const disabled = !model.permissions.schema;
   const dirty = text !== saved;
+  // A formula the server could not compile, or never compiled, is saved again as it is.
+  const needsCompile =
+    property !== undefined &&
+    (property.computed === undefined || property.computed.error !== undefined);
 
   const items = suggest === "off" ? [] : completions(text, caret, schema);
   const visible =
@@ -81,14 +87,24 @@ function FormulaEditor({
   const shown = visible ? items : [];
   const current = Math.min(active, Math.max(0, shown.length - 1));
 
-  const preview =
-    result.compiled !== null && sample !== null && known?.type === "formula"
-      ? previewText(result.compiled, dataSource, sample.row, {
-          relatedPages: sample.relatedPages,
-          now,
-          timeZone,
-        })
-      : null;
+  const isFormula = known?.type === "formula";
+  const sampleRow = sample?.row;
+  const sampleRelated = sample?.relatedPages;
+  // oxlint-disable-next-line t2code/no-manual-memo -- evaluating the formula is the expensive part; see `result`.
+  const preview = useMemo(
+    () =>
+      result.compiled !== null &&
+      sampleRow !== undefined &&
+      sampleRelated !== undefined &&
+      isFormula
+        ? previewText(result.compiled, dataSource, sampleRow, {
+            relatedPages: sampleRelated,
+            now,
+            timeZone,
+          })
+        : null,
+    [result.compiled, sampleRow, sampleRelated, isFormula, dataSource, now, timeZone],
+  );
 
   const diagnostics =
     refusal?.source === text
@@ -143,7 +159,12 @@ function FormulaEditor({
     if (done !== null) onClose();
   };
   const canSave =
-    !disabled && !saving && dirty && settled && result.diagnostics.length === 0 && !loading;
+    !disabled &&
+    !saving &&
+    (dirty || needsCompile) &&
+    settled &&
+    result.diagnostics.length === 0 &&
+    !loading;
 
   const requestClose = () => (dirty ? setConfirmDiscard(true) : onClose());
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

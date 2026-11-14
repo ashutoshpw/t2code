@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect";
 
 import { ensureDatabaseLimit } from "../CorePolicy.ts";
 import * as SpacesSql from "../SpacesSql.ts";
+import * as Changes from "./Changes.ts";
 import * as Ids from "./Ids.ts";
 import * as Liveness from "./Liveness.ts";
 import { appendPosition } from "./Position.ts";
@@ -52,6 +53,7 @@ export const touchDatabase = Effect.fn("SpacesDatabases.touchDatabase")(function
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   yield* sql`UPDATE spaces_db_databases SET revision = revision + 1, updated_at = ${now} WHERE database_id = ${id}`;
+  yield* Changes.recordDatabase(id);
   const [row] = yield* sql<{
     readonly revision: number;
   }>`SELECT revision FROM spaces_db_databases WHERE database_id = ${id}`;
@@ -64,11 +66,13 @@ export const bumpSchema = Effect.fn("SpacesDatabases.bumpSchema")(function* (
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   yield* sql`UPDATE spaces_db_data_sources SET schema_revision = schema_revision + 1, updated_at = ${now} WHERE data_source_id = ${id}`;
+  yield* Changes.recordDataSource(id);
 });
 
 export const bumpData = Effect.fn("SpacesDatabases.bumpData")(function* (id: string, now: string) {
   const sql = yield* SpacesSql.SpacesSql;
   yield* sql`UPDATE spaces_db_data_sources SET data_revision = data_revision + 1, updated_at = ${now} WHERE data_source_id = ${id}`;
+  yield* Changes.recordDataSource(id);
 });
 
 export const validName = Effect.fn("SpacesDatabases.validName")(function* (name: string) {

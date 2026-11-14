@@ -5,6 +5,7 @@ import {
 } from "@t2code/client-runtime/spaces";
 import type { DatabaseMutations } from "@t2code/client-runtime/state/spaces-database-mutations";
 import type { EnvironmentId } from "@t2code/contracts";
+import type { SpaceDataSourceId } from "@t2code/contracts/spaces";
 
 /** Rows and cells per mutation when the capability has not loaded yet; the server limit applies either way. */
 export const FALLBACK_WRITE_LIMITS = { maxRowsPerMutation: 50, maxCellsPerMutation: 200 };
@@ -24,10 +25,18 @@ export const writerRejects = (error: unknown): boolean =>
 
 export interface WriteFailure {
   readonly id: number;
+  readonly environmentId: EnvironmentId;
+  readonly dataSourceId: SpaceDataSourceId | undefined;
   readonly message: string;
 }
 
-/** The refused writes the row page still has to show; small and newest last. */
+/** The refused writes of one environment; failures are kept for all environments in one store. */
+export const failuresOf = (
+  failures: ReadonlyArray<WriteFailure>,
+  environmentId: EnvironmentId,
+): ReadonlyArray<WriteFailure> => failures.filter((entry) => entry.environmentId === environmentId);
+
+/** The refused writes still to show: the newest few of each environment. */
 export function createWriteFailures(max = 3) {
   const listeners = new Set<() => void>();
   let snapshot: ReadonlyArray<WriteFailure> = [];
@@ -42,7 +51,15 @@ export function createWriteFailures(max = 3) {
       return () => listeners.delete(listener);
     },
     getSnapshot: () => snapshot,
-    add: (message: string) => publish([...snapshot, { id: ++next, message }].slice(-max)),
+    add: (entry: Omit<WriteFailure, "id">) => {
+      const own = failuresOf(snapshot, entry.environmentId);
+      const kept = own.slice(Math.max(0, own.length - (max - 1)));
+      publish([
+        ...snapshot.filter((other) => other.environmentId !== entry.environmentId),
+        ...kept,
+        { id: ++next, ...entry },
+      ]);
+    },
     dismiss: (id: number) => publish(snapshot.filter((entry) => entry.id !== id)),
   };
 }
@@ -73,7 +90,11 @@ export function createCellWriter(args: {
     limits: () => args.limits() ?? FALLBACK_WRITE_LIMITS,
     schedule: args.schedule,
     rejected: writerRejects,
-    report: (error: unknown, _edits: ReadonlyArray<PendingCellEdit>) =>
-      args.failures.add(databaseErrorMessage(error)),
+    report: (error: unknown, edits: ReadonlyArray<PendingCellEdit>) =>
+      args.failures.add({
+        environmentId: args.environmentId,
+        dataSourceId: edits[0]?.dataSourceId,
+        message: databaseErrorMessage(error),
+      }),
   });
 }

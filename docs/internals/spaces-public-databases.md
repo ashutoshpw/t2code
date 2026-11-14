@@ -27,6 +27,9 @@ request. The viewer supplies ids and a window position only.
   wire record into an answer leaks every field added later.
 - Hidden board groups are a courtesy, not a boundary: date views and the row route do not check
   them. The saved filter is the boundary, and the user guide says so.
+- The viewer's time zone sets the day boundary of relative date filters, so a viewer can move
+  "today" by up to a day in either direction. This is accepted: splitting the filter zone from the
+  display zone needs a second date context through the query compiler.
 - Database routes have their own concurrency limit so anonymous queries cannot starve page reads.
 
 See [the share exposure code](../../apps/server/src/spaces/sharedDatabases/Exposure.ts) and

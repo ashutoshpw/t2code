@@ -155,8 +155,13 @@ it.layer(NodeServices.layer)("Spaces database row extras", (it) => {
                 version: 1,
                 content: { assetId: asset },
               });
+              // Saved image blocks always carry an asset reference row; the cover read relies on it.
               return sql`INSERT INTO spaces_blocks (block_id, page_id, parent_id, rank, payload, logical_bytes, deleted)
-                VALUES (${id}, ${withCover}, ${parent}, ${rank}, ${payload}, ${payload.length}, 0)`;
+                VALUES (${id}, ${withCover}, ${parent}, ${rank}, ${payload}, ${payload.length}, 0)`.pipe(
+                Effect.andThen(
+                  sql`INSERT INTO spaces_block_asset_refs (block_id, asset_id) VALUES (${id}, ${asset})`,
+                ),
+              );
             };
             for (const id of ["img-first", "img-second", "img-nested"])
               yield* sql`INSERT INTO spaces_ids (id, kind) VALUES (${id}, 'block')`;

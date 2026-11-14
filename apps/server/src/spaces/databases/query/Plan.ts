@@ -1,7 +1,14 @@
 import * as Effect from "effect/Effect";
 
 import { fingerprint } from "./Cursor.ts";
-import { baseRows, compileFilter, searchCondition } from "./Filter.ts";
+import {
+  baseRows,
+  compileFilter,
+  chooseDriven,
+  DRIVE_BELOW,
+  DRIVE_BELOW_ALL,
+  searchCondition,
+} from "./Filter.ts";
 import { member } from "./Group.ts";
 import { hasCell, noCell } from "./Cells.ts";
 import { type SortExpr, sortExprs } from "./Sort.ts";
@@ -43,8 +50,11 @@ const rowPredicate = Effect.fn("SpacesDatabases.rowPredicate")(function* (
   c: Compile,
   e: Effective,
 ) {
-  const parts: Fragment[] = [baseRows(c)];
-  for (const filter of e.filters) parts.push(yield* compileFilter(c, filter));
+  const firstWindowOnly =
+    e.sorts.length === 0 && e.group === undefined && e.aggregates.length === 0;
+  const chosen = yield* chooseDriven(c, e.filters, firstWindowOnly ? DRIVE_BELOW : DRIVE_BELOW_ALL);
+  const parts: Fragment[] = [baseRows(c, chosen.size > 0)];
+  for (const filter of e.filters) parts.push(yield* compileFilter(c, filter, chosen));
   if (e.search !== "") parts.push(searchCondition(c, e.search));
   parts.push(...(yield* scopeParts(c, e)));
   return c.sql.and(parts);

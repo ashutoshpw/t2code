@@ -15,11 +15,13 @@ import {
   SpaceReceiptEpoch,
   SpacePropertyId,
   type SpaceCapability,
+  type SpaceDatabaseChangeEvent,
 } from "@t2code/contracts/spaces";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as Queue from "effect/Queue";
 import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { Atom, AtomRegistry, AsyncResult } from "effect/reactivity";
@@ -28,10 +30,10 @@ import { vi } from "vite-plus/test";
 import { AVAILABLE_CONNECTION_STATE } from "../connection/model.ts";
 import { EnvironmentRegistry } from "../connection/registry.ts";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
-import { RpcPermissionGuard } from "../rpc/client.ts";
 import type { RpcSession } from "../rpc/session.ts";
 import { createSpacesEnvironmentAtoms } from "./spaces.ts";
-import { createSpacesDatabaseAtoms } from "./spacesDatabases.ts";
+import type { RemoteChanges } from "../spaces/databases/remoteChanges.ts";
+import { createSpacesDatabaseAtoms, type SpacesDatabaseAtoms } from "./spacesDatabases.ts";
 
 vi.mock("./session.ts", () => ({
   createEnvironmentSessionAtoms: () => ({ sessionStateAtom: sessions }),
@@ -69,6 +71,11 @@ const admission = {
   retainUntil: "2030-02-01T00:00:00.000Z",
 };
 const enabled = { version: 2, limits: {}, features: { databases: true } } as SpaceCapability;
+const live = {
+  version: 2,
+  limits: {},
+  features: { databases: true, databaseChanges: true },
+} as SpaceCapability;
 
 const harness = Effect.gen(function* () {
   const registry = AtomRegistry.make();
@@ -76,8 +83,17 @@ const harness = Effect.gen(function* () {
   yield* Effect.addFinalizer(() => Effect.sync(() => registry.dispose()));
   registry.set(sessions(env), AsyncResult.success(operate));
   const sent: string[] = [];
+  const changes = yield* Queue.unbounded<SpaceDatabaseChangeEvent>();
+  const stats = { subscriptions: 0 };
+  // The one-shot debounce of remote changes, run by hand.
+  const scheduled: Array<{ readonly run: () => void; readonly delayMs: number }> = [];
   const transport = {
     client: {
+      [WS_METHODS.spacesDatabasesSubscribeChanges]: () =>
+        Stream.suspend(() => {
+          stats.subscriptions++;
+          return Stream.fromQueue(changes);
+        }),
       [WS_METHODS.spacesDatabasesRowsUpdate]: () =>
         Effect.sync(() => {
           sent.push("rows.update");
@@ -152,19 +168,37 @@ const harness = Effect.gen(function* () {
     }),
   } as unknown as EnvironmentSupervisor["Service"];
   const runtime = Atom.runtime(
-    Layer.merge(
-      Layer.succeed(RpcPermissionGuard, { authorize: () => Effect.void }),
-      Layer.succeed(EnvironmentRegistry, {
-        run: (_id: EnvironmentId, effect: Effect.Effect<unknown>) =>
-          Effect.provideService(effect, EnvironmentSupervisor, supervisor),
-        followStream: (_id: EnvironmentId, stream: Stream.Stream<unknown, unknown, unknown>) =>
-          Stream.provideService(stream, EnvironmentSupervisor, supervisor),
-      } as unknown as EnvironmentRegistry["Service"]),
-    ),
+    Layer.succeed(EnvironmentRegistry, {
+      run: (_id: EnvironmentId, effect: Effect.Effect<unknown>) =>
+        Effect.provideService(effect, EnvironmentSupervisor, supervisor),
+      followStream: (_id: EnvironmentId, stream: Stream.Stream<unknown, unknown, unknown>) =>
+        Stream.provideService(stream, EnvironmentSupervisor, supervisor),
+    } as unknown as EnvironmentRegistry["Service"]),
   );
   const capability = Atom.make<SpaceCapability | undefined>(undefined);
-  const databases = createSpacesDatabaseAtoms(runtime, { capabilityAtom: () => capability });
-  return { registry, sent, capability, databases, runtime };
+  const databases = createSpacesDatabaseAtoms(runtime, {
+    capabilityAtom: () => capability,
+    schedule: (run, delayMs) => {
+      const entry = { run, delayMs };
+      scheduled.push(entry);
+      return () => {
+        const at = scheduled.indexOf(entry);
+        if (at >= 0) scheduled.splice(at, 1);
+      };
+    },
+  });
+  return {
+    registry,
+    sent,
+    capability,
+    databases,
+    runtime,
+    changes,
+    stats,
+    scheduled,
+    supervisor,
+    transport,
+  };
 });
 
 describe("spaces database atoms", () => {
@@ -194,6 +228,53 @@ describe("spaces database atoms", () => {
             });
         }
         expect(sent).toEqual([]);
+      }),
+    ),
+  );
+
+  it.effect("refuses a query without the read grant and answers it with the grant", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { registry, sent, capability, databases } = yield* harness;
+        registry.mount(capability);
+        registry.set(capability, enabled);
+        const rowsQuery = databases.query({
+          environmentId: env,
+          input: {
+            environmentId: env,
+            dataSourceId: source,
+            viewId: view,
+            mode: "rows",
+            timeZone: "UTC",
+          },
+        });
+        registry.mount(rowsQuery);
+        registry.set(
+          sessions(env),
+          AsyncResult.success({ ...operate, scopes: [], permissions: [] }),
+        );
+        const refused = yield* AtomRegistry.getResult(registry, rowsQuery, {
+          suspendOnWaiting: true,
+        }).pipe(Effect.flip);
+        expect(refused).toMatchObject({ _tag: "EnvironmentAuthorizationError" });
+        expect(sent).toEqual([]);
+
+        registry.set(sessions(env), AsyncResult.success(operate));
+        // The refused answer stays cached for its own query, so a second query proves the grant.
+        const granted = databases.query({
+          environmentId: env,
+          input: {
+            environmentId: env,
+            dataSourceId: sibling,
+            viewId: view,
+            mode: "rows",
+            timeZone: "UTC",
+          },
+        });
+        registry.mount(granted);
+        const answer = yield* AtomRegistry.getResult(registry, granted, { suspendOnWaiting: true });
+        expect(answer).toEqual({ rows: [] });
+        expect(sent).toEqual(["query"]);
       }),
     ),
   );
@@ -373,4 +454,165 @@ describe("spaces database atoms", () => {
       }),
     ),
   );
+
+  describe("remote changes", () => {
+    const announce = (
+      event: SpaceDatabaseChangeEvent,
+      changes: Queue.Queue<SpaceDatabaseChangeEvent>,
+    ) => Queue.offer(changes, event);
+    const sourceChange = (id: SpaceDataSourceId, dataRevision: number, schemaRevision = 0) => ({
+      id,
+      databaseId: database,
+      schemaRevision,
+      dataRevision,
+    });
+    const changed = (
+      ...dataSources: ReturnType<typeof sourceChange>[]
+    ): SpaceDatabaseChangeEvent => ({
+      type: "changed",
+      dataSources,
+      databases: [],
+    });
+    // Waits on the registry, not the clock: resolves when the folded stream state satisfies `done`.
+    const untilRemote = (
+      registry: AtomRegistry.AtomRegistry,
+      atom: Atom.Atom<AsyncResult.AsyncResult<RemoteChanges, unknown>>,
+      done: (state: RemoteChanges) => boolean,
+    ) =>
+      Effect.callback<void>((resume) => {
+        let stop = () => {};
+        let finished = false;
+        const check = (result: AsyncResult.AsyncResult<RemoteChanges, unknown>) => {
+          if (finished || result._tag !== "Success" || !done(result.value)) return;
+          finished = true;
+          resume(Effect.void);
+        };
+        stop = registry.subscribe(atom, check, { immediate: true });
+        return Effect.sync(() => stop());
+      });
+    const stream = (databases: SpacesDatabaseAtoms) =>
+      databases.remoteChanges({ environmentId: env, input: { environmentId: env } });
+
+    it.effect(
+      "applies a burst of remote changes as one bump and ignores the echo of an own write",
+      () =>
+        Effect.scoped(
+          Effect.gen(function* () {
+            const { registry, capability, databases, changes, scheduled } = yield* harness;
+            registry.mount(capability);
+            registry.set(capability, live);
+            const trigger = databases.dataSourceLive(env, source);
+            registry.mount(trigger);
+            yield* Queue.offer(changes, { type: "resync" });
+            yield* untilRemote(registry, stream(databases), (state) => state.resyncs === 1);
+            // The server's opening resync costs one refresh and nothing more.
+            expect(scheduled).toHaveLength(1);
+            scheduled.shift()!.run();
+            expect(registry.get(trigger)).toBe(1);
+
+            // Own write: the answer carries revision 1, so the echo of it is not news.
+            yield* Effect.promise(() =>
+              databases.updateRows.run(registry, {
+                environmentId: env,
+                input: { ...metadata, dataSourceId: source, rows: [{ pageId: page, cells: {} }] },
+              }),
+            );
+            const afterOwnWrite = registry.get(trigger);
+            yield* announce(changed(sourceChange(source, 1)), changes);
+            yield* announce(changed(sourceChange(source, 2)), changes);
+            yield* announce(changed(sourceChange(source, 3)), changes);
+            yield* untilRemote(
+              registry,
+              stream(databases),
+              (state) => state.dataSources.get(source)?.dataRevision === 3,
+            );
+            expect(scheduled).toHaveLength(1);
+            scheduled.shift()!.run();
+            expect(registry.get(trigger)).toBe(afterOwnWrite + 1);
+
+            // The same revisions again are already applied.
+            yield* announce(changed(sourceChange(source, 3)), changes);
+            yield* untilRemote(
+              registry,
+              stream(databases),
+              (state) => state.dataSources.size === 1,
+            );
+            expect(scheduled).toHaveLength(0);
+          }),
+        ),
+    );
+
+    it.effect(
+      "moves every trigger on a resync, and once more on a new session's opening resync",
+      () =>
+        Effect.scoped(
+          Effect.gen(function* () {
+            const {
+              registry,
+              capability,
+              databases,
+              changes,
+              scheduled,
+              supervisor,
+              transport,
+              sent,
+            } = yield* harness;
+            registry.mount(capability);
+            registry.set(capability, live);
+            const sources = [source, sibling].map((id) => databases.dataSourceLive(env, id));
+            for (const atom of sources) registry.mount(atom);
+            const databaseQuery = databases.database({
+              environmentId: env,
+              input: { environmentId: env, databaseId: database },
+            });
+            registry.mount(databaseQuery);
+            yield* AtomRegistry.getResult(registry, databaseQuery, { suspendOnWaiting: true }).pipe(
+              Effect.ignore,
+            );
+            expect(sent.filter((call) => call === "get")).toHaveLength(1);
+            yield* Queue.offer(changes, { type: "resync" });
+            yield* untilRemote(registry, stream(databases), (state) => state.resyncs === 1);
+            scheduled.shift()!.run();
+            expect(sources.map((atom) => registry.get(atom))).toEqual([1, 1]);
+            // The mounted database query refetched with the resync.
+            expect(sent.filter((call) => call === "get")).toHaveLength(2);
+
+            // A new session subscribes again and its first event is a resync, which refreshes once more.
+            const reconnected = yield* Queue.unbounded<SpaceDatabaseChangeEvent>();
+            yield* SubscriptionRef.set(
+              supervisor.session,
+              Option.some({
+                ...transport,
+                client: {
+                  ...transport.client,
+                  [WS_METHODS.spacesDatabasesSubscribeChanges]: () => Stream.fromQueue(reconnected),
+                },
+              } as unknown as RpcSession),
+            );
+            expect(scheduled).toHaveLength(0);
+            yield* Queue.offer(reconnected, { type: "resync" });
+            yield* untilRemote(registry, stream(databases), (state) => state.resyncs === 2);
+            expect(scheduled).toHaveLength(1);
+            scheduled.shift()!.run();
+            expect(sources.map((atom) => registry.get(atom))).toEqual([2, 2]);
+          }),
+        ),
+    );
+
+    it.effect("mounts no subscription against a server without the change stream", () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { registry, capability, databases, stats, changes } = yield* harness;
+          registry.mount(capability);
+          registry.set(capability, enabled);
+          registry.mount(databases.dataSourceLive(env, source));
+          expect(stats.subscriptions).toBe(0);
+          registry.set(capability, live);
+          yield* Queue.offer(changes, { type: "resync" });
+          yield* untilRemote(registry, stream(databases), (state) => state.resyncs === 1);
+          expect(stats.subscriptions).toBe(1);
+        }),
+      ),
+    );
+  });
 });

@@ -18,3 +18,13 @@ export const noCell = (sql: Sql, propertyId: string, where?: Fragment, live = fa
 
 /** The matchable text of a text cell: the full folded text, or the key when it was not cut. */
 export const matchText = (sql: Sql) => sql`COALESCE(c.text_full, c.text_key)`;
+
+/** The cells of `propertyId` that satisfy `where` (alias `c`), as a one-column subquery. */
+export const cellLookup = (
+  sql: Sql,
+  dataSourceId: string,
+  propertyId: string,
+  where: Fragment,
+): Fragment =>
+  sql`SELECT c.page_id FROM spaces_db_cells c
+    WHERE c.data_source_id = ${dataSourceId} AND c.property_id = ${propertyId} AND (${where})`;

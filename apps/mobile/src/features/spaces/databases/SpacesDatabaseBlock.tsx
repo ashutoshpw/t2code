@@ -20,6 +20,7 @@ import { AgendaHeader } from "./AgendaHeader";
 import { DATABASES_NEED_NEWER_SERVER, databaseLimitsOf } from "./capability";
 import { DatabaseViewList } from "./DatabaseViewList";
 import { NewRowPill } from "./NewRowPill";
+import { WriteNotices } from "./WriteNotices";
 import { useDatabaseModel, type DatabaseModel } from "./useDatabaseModel";
 import { useViewContent } from "./useViewContent";
 import { ViewSwitcher } from "./ViewSwitcher";
@@ -95,6 +96,9 @@ function BlockViews(props: Parameters<typeof SpacesDatabaseBlock>[0] & { model: 
           {model.database.title || "Untitled database"}
         </Text>
       )}
+      <View className="px-4">
+        <WriteNotices environmentId={props.environmentId} />
+      </View>
       <ViewSwitcher views={views} activeId={active?.id} onSelect={(view) => setActiveId(view.id)} />
       {active === undefined ? (
         <Text className="px-4 py-2 text-base text-foreground-muted">
@@ -121,6 +125,12 @@ function BlockPreview(
 ) {
   const { model, view } = props;
   const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  const openPage = (pageId: SpacePageId) =>
+    navigation.push("SpacesPage", {
+      environmentId: props.environmentId,
+      spaceId: model.database.spaceId,
+      pageId,
+    });
   const dataSource = model.dataSources.find((entry) => entry.id === view.dataSourceId);
   const [month, setMonth] = useState(() => monthOfNow(Date.now(), viewerZone()));
   if (dataSource === undefined)
@@ -133,13 +143,8 @@ function BlockPreview(
       dataSource={dataSource}
       month={month}
       setMonth={setMonth}
-      onOpenRow={(row) =>
-        navigation.push("SpacesPage", {
-          environmentId: props.environmentId,
-          spaceId: model.database.spaceId,
-          pageId: row.page.id,
-        })
-      }
+      onOpenRow={(row) => openPage(row.page.id)}
+      onOpenPage={openPage}
     />
   );
 }
@@ -150,6 +155,7 @@ function PreviewBody(
     month: string;
     setMonth: (month: string) => void;
     onOpenRow: (row: SpaceDatabaseRow) => void;
+    onOpenPage: (pageId: SpacePageId) => void;
   },
 ) {
   const { form, rows, items, context } = useViewContent({
@@ -204,7 +210,9 @@ function PreviewBody(
           model={props.model}
           view={props.view}
           dataSource={props.dataSource}
+          {...(agenda ? { month: props.month } : {})}
           onCreated={rows.retry}
+          onOpenPage={props.onOpenPage}
         />
       </View>
     </View>

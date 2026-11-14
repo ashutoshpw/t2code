@@ -11,8 +11,8 @@ export const HEADER_HEIGHT = ROW_HEIGHT;
 export const FOOTER_HEIGHT = ROW_HEIGHT;
 export const DEFAULT_COLUMN_WIDTH = 200;
 export const TITLE_COLUMN_WIDTH = 280;
-const MIN_COLUMN_WIDTH = 80;
-const MAX_COLUMN_WIDTH = 800;
+export const MIN_COLUMN_WIDTH = 80;
+export const MAX_COLUMN_WIDTH = 800;
 
 export const clampWidth = (width: number) =>
   Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.round(width)));

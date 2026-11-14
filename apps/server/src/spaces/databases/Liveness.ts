@@ -17,6 +17,7 @@ interface Home {
   readonly database_id: string;
   readonly home_page_id: string | null;
   readonly home_deleted: number | null;
+  readonly purging: number | null;
 }
 
 /**
@@ -40,16 +41,49 @@ const walk = Effect.fn("SpacesDatabases.walk")(function* (pageId: string) {
       current = row.owner_page_id;
     } else if (row.data_source_id !== null) {
       const [home] =
-        yield* sql<Home>`SELECT d.database_id, hb.page_id AS home_page_id, hb.deleted AS home_deleted
+        yield* sql<Home>`SELECT d.database_id, hb.page_id AS home_page_id, hb.deleted AS home_deleted,
+        d.purge_started_at_ms IS NOT NULL AS purging
         FROM spaces_db_data_sources s JOIN spaces_db_databases d ON d.database_id = s.database_id
         LEFT JOIN spaces_blocks hb ON hb.block_id = d.home_block_id WHERE s.data_source_id = ${row.data_source_id}`;
       if (!home) return { live: false, databases };
       databases.push(home.database_id);
-      if (home.home_deleted !== 0 || home.home_page_id === null) return { live: false, databases };
+      if (home.purging === 1 || home.home_deleted !== 0 || home.home_page_id === null)
+        return { live: false, databases };
       current = home.home_page_id;
     } else return { live: row.root_order !== null, databases };
   }
   return { live: false, databases };
+});
+
+/**
+ * Whether a page sits inside a database whose home block is gone, ignoring trash: a trashed host
+ * page keeps its home block, so its database comes back with it.
+ */
+export const homeBlockGone = Effect.fn("SpacesDatabases.homeBlockGone")(function* (pageId: string) {
+  const sql = yield* SpacesSql.SpacesSql;
+  let current = pageId;
+  for (let hop = 0; hop <= 2 * limits.maxDepth; hop++) {
+    const [row] =
+      yield* sql<Hop>`SELECT p.trash_batch_id, p.root_order, p.data_source_id, o.owner_block_id,
+      b.page_id AS owner_page_id, b.deleted AS owner_deleted
+      FROM spaces_pages p LEFT JOIN spaces_page_owners o ON o.child_page_id = p.page_id
+      LEFT JOIN spaces_blocks b ON b.block_id = o.owner_block_id WHERE p.page_id = ${current}`;
+    if (!row) return false;
+    if (row.owner_block_id !== null) {
+      if (row.owner_deleted !== 0 || row.owner_page_id === null) return false;
+      current = row.owner_page_id;
+    } else if (row.data_source_id !== null) {
+      const [home] =
+        yield* sql<Home>`SELECT d.database_id, hb.page_id AS home_page_id, hb.deleted AS home_deleted,
+        d.purge_started_at_ms IS NOT NULL AS purging
+        FROM spaces_db_data_sources s JOIN spaces_db_databases d ON d.database_id = s.database_id
+        LEFT JOIN spaces_blocks hb ON hb.block_id = d.home_block_id WHERE s.data_source_id = ${row.data_source_id}`;
+      if (!home || home.purging === 1 || home.home_deleted !== 0 || home.home_page_id === null)
+        return true;
+      current = home.home_page_id;
+    } else return false;
+  }
+  return false;
 });
 
 export const pageLive = Effect.fn("SpacesDatabases.pageLive")(function* (pageId: string) {
@@ -82,7 +116,7 @@ export const databaseLive = Effect.fn("SpacesDatabases.databaseLive")(function* 
   const [home] = yield* sql<{
     readonly page_id: string;
   }>`SELECT b.page_id FROM spaces_db_databases d JOIN spaces_blocks b ON b.block_id = d.home_block_id
-    WHERE d.database_id = ${databaseId} AND b.deleted = 0`;
+    WHERE d.database_id = ${databaseId} AND b.deleted = 0 AND d.purge_started_at_ms IS NULL`;
   return home !== undefined && (yield* pageLive(home.page_id));
 });
 

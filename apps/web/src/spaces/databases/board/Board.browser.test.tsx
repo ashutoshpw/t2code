@@ -157,6 +157,18 @@ describe("dragging", () => {
     expect(fake.callsOf("updateRows")).toHaveLength(0);
   });
 
+  it("puts the card back when the in-column move is refused", async () => {
+    const { fake, screen, card, cardsIn } = await mount();
+    await using _screen = screen;
+    fake.failNext.set("moveRows", { _tag: "SpaceDatabaseError", reason: "not_found" });
+    card("row-1")!.querySelector("button")!.focus();
+    await press(" ");
+    await press("{ArrowDown}");
+    await press(" ");
+    await vi.waitFor(() => expect(fake.callsOf("moveRows")).toHaveLength(1));
+    await vi.waitFor(() => expect(cardsIn("Not started")).toEqual(["row-1", "row-4", "row-7"]));
+  });
+
   it("does not reorder inside a column when the view has sorts", async () => {
     const fake = new FakeDatabase({ quietRowWrites: true, rows: 7 });
     fake.views = fake.views.map((view) => ({

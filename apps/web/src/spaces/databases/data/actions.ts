@@ -453,7 +453,7 @@ export function createDatabaseActions(deps: ActionsDeps): DatabaseActions {
       }
     },
     duplicateView: async (viewId) => {
-      const { model, dataSource, viewIds, block } = deps.state();
+      const { model, viewIds, block } = deps.state();
       const source = model.views.find((view) => view.id === viewId);
       const known = source === undefined ? null : knownView(source);
       if (source === undefined || known === null) {
@@ -462,7 +462,7 @@ export function createDatabaseActions(deps: ActionsDeps): DatabaseActions {
       }
       try {
         const result = await databasePorts.run.createView(registry, model.environmentId, {
-          dataSourceId: dataSource.id,
+          dataSourceId: source.dataSourceId,
           name: `${source.name} (1)`,
           type: known.type,
           ...(known.filter === undefined ? {} : { filter: known.filter }),

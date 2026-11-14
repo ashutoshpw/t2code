@@ -1,10 +1,11 @@
 import { type GroupLabel, serialDay } from "@t2code/client-runtime/spaces";
-import { useState, type CSSProperties, type UIEvent } from "react";
+import { useRef, useState, type CSSProperties, type UIEvent } from "react";
 import type { SpaceGroupBucket } from "@t2code/contracts/spaces";
 
 import { observeResize } from "~/lib/observeResize";
 import { rowTitle } from "@t2code/client-runtime/spaces";
 import { TimelineBar, type TimelineHandlers } from "./TimelineBar";
+import { TimelineEdge } from "./TimelineEdge";
 import { TimelineLineLabel } from "./TimelineLineLabel";
 import { TimelineSide } from "./TimelineSide";
 import type { TimelineGroupHandlers, TimelineLine } from "./timelineLines";
@@ -78,7 +79,9 @@ export function TimelineCanvas(props: TimelineCanvasProps) {
   const [size, setSize] = useState(INITIAL_SIZE);
   const [scroll, setScroll] = useState({ left: 0, top: 0 });
   const tableWidth = props.showTable ? props.tableWidth : 0;
+  const scroller = useRef<HTMLDivElement | null>(null);
   const [attach] = useState(() => (node: HTMLDivElement | null) => {
+    scroller.current = node;
     if (node === null) return;
     const measure = () => {
       setSize((previous) =>
@@ -226,6 +229,16 @@ export function TimelineCanvas(props: TimelineCanvasProps) {
               const x1 = span === null ? 0 : serialToX(scale, span.end);
               const visible = span !== null && x1 >= 0 && x0 <= scale.width;
               const clipped = visible && (x0 < 0 || x1 > scale.width);
+              // `scroll.left` is floored to a step, so these only fire for bars surely out of view.
+              const viewWidth = Math.max(0, size.w - tableWidth);
+              const edge =
+                span === null
+                  ? null
+                  : x1 <= scroll.left
+                    ? "left"
+                    : x0 >= scroll.left + viewWidth + SCROLL_STEP_X
+                      ? "right"
+                      : null;
               return (
                 <div
                   key={row.page.id}
@@ -245,7 +258,21 @@ export function TimelineCanvas(props: TimelineCanvasProps) {
                         handlers.setDates(row.page.id, xToDay(scale, event.clientX - box.left));
                       }}
                     />
-                  ) : visible ? (
+                  ) : null}
+                  {edge === null ? null : (
+                    <TimelineEdge
+                      side={edge}
+                      title={title}
+                      stickyLeft={tableWidth}
+                      onActivate={() =>
+                        scroller.current?.scrollTo({
+                          left: Math.max(0, x0 - viewWidth / 3),
+                          behavior: "instant",
+                        })
+                      }
+                    />
+                  )}
+                  {span === null ? null : visible ? (
                     <TimelineBar
                       pageId={row.page.id}
                       title={title}

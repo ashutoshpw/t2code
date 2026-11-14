@@ -1,3 +1,4 @@
+import "~/index.css";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
@@ -6,7 +7,17 @@ import { DatabaseHarness, fakeController, testHost } from "../test/harness";
 import { computedFake } from "../test/computedFixtures";
 import { readyWhen } from "../test/readyWhen";
 
-const state = vi.hoisted(() => ({ fake: null as unknown }));
+const state = vi.hoisted(() => ({ fake: null as unknown, previews: 0 }));
+vi.mock(import("./preview"), async (original) => {
+  const real = await original();
+  return {
+    ...real,
+    previewText: ((...args: Parameters<typeof real.previewText>) => {
+      state.previews += 1;
+      return real.previewText(...args);
+    }) as typeof real.previewText,
+  };
+});
 
 vi.mock(import("../data/ports"), async () => {
   const { fakePortsModule } = await import("../test/fakeDatabase");
@@ -24,8 +35,8 @@ vi.mock(import("../table/TableView"), async () => ({
   default: (await import("../controls/controlsStub")).default,
 }));
 
-async function openEditor(options: Parameters<typeof computedFake>[0] = {}) {
-  const fake = computedFake(options);
+async function openEditor(options: { readonly fake?: ReturnType<typeof computedFake> } = {}) {
+  const fake = options.fake ?? computedFake();
   state.fake = fake;
   const { controller } = fakeController();
   const screen = await render(
@@ -159,5 +170,38 @@ describe("formula editor", () => {
       (page.getByRole("button", { name: /^Amount/ }).element() as HTMLElement).click(),
     );
     await expect.element(input).toHaveValue('1 + prop("Amount")');
+  });
+
+  it("evaluates the preview once per settled formula, not on every render", async () => {
+    const { screen, input } = await openEditor();
+    await using _screen = screen;
+    await expect.element(page.getByTestId("formula-preview")).toHaveTextContent("10");
+    await userEvent.fill(input, 'prop("Amount") + 1');
+    await expect.element(page.getByTestId("formula-preview")).toHaveTextContent("6");
+    const settled = state.previews;
+    await userEvent.keyboard("{ArrowLeft}{ArrowLeft}{ArrowRight}");
+    await expect.element(page.getByTestId("formula-preview")).toHaveTextContent("6");
+    expect(state.previews).toBe(settled);
+  });
+
+  it("saves a formula that was never compiled without any edit", async () => {
+    const fake = computedFake();
+    const { dbl, ...others } = fake.dataSource.properties as Record<
+      string,
+      Record<string, unknown>
+    >;
+    const { computed: _computed, ...never } = dbl!;
+    fake.dataSource = {
+      ...fake.dataSource,
+      properties: { ...others, dbl: never },
+    } as unknown as typeof fake.dataSource;
+    const { screen } = await openEditor({ fake });
+    await using _screen = screen;
+    await press("Save");
+    await vi.waitFor(() =>
+      expect(schemaCalls(fake).at(-1)?.input.operations).toEqual([
+        { op: "updateProperty", propertyId: "dbl", config: { expression: 'prop("Amount") * 2' } },
+      ]),
+    );
   });
 });

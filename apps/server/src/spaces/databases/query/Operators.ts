@@ -5,7 +5,7 @@ import * as Schema from "effect/Schema";
 import { fold } from "../Fold.ts";
 import type { Property } from "../SchemaStore.ts";
 import { dbError } from "../Types.ts";
-import { hasCell, matchText, noCell } from "./Cells.ts";
+import { cellLookup, hasCell, matchText, noCell } from "./Cells.ts";
 import { type Bounds, instantIso, resolveOperand, resolveWithin } from "./Dates.ts";
 import type { Compile, Fragment } from "./Types.ts";
 
@@ -126,7 +126,8 @@ const spanOf = (c: Compile, operator: string, value: unknown) => {
   return resolveOperand(c.dates, value);
 };
 
-const dateCondition = Effect.fn("SpacesDatabases.dateCondition")(function* (
+/** The predicate on one date cell (alias `c`), in the two encodings the column holds. */
+const dateWhere = Effect.fn("SpacesDatabases.dateWhere")(function* (
   c: Compile,
   property: Property,
   operator: string,
@@ -137,23 +138,112 @@ const dateCondition = Effect.fn("SpacesDatabases.dateCondition")(function* (
   const operand = spanOf(c, operator, value);
   if (operand === undefined) return yield* dbError("invalid_filter", property.id);
   const day: Bounds = operand.day;
-  if (property.type !== "date") {
-    const column = property.type === "created_time" ? sql`p.created_at` : sql`p.updated_at`;
-    return sql`(${compare(
-      c,
-      operator,
-      column,
-      { lo: instantIso(day.iLo), hi: instantIso(day.iHi) },
-      operand.instant === undefined ? undefined : instantIso(operand.instant),
-    )})`;
-  }
   const v = part === "end" ? sql`COALESCE(c.time_end, c.time_start)` : sql`c.time_start`;
   const dateOnly = compare(c, operator, v, { lo: day.fLo, hi: day.fHi });
   const timed = compare(c, operator, v, { lo: day.iLo, hi: day.iHi }, operand.instant);
-  return hasCell(
+  return sql`((c.flags & 1) = 0 AND (${dateOnly})) OR ((c.flags & 1) = 1 AND (${timed}))`;
+});
+
+/** A creation or edit time: one column of the page, not a cell. */
+const pageTimeCondition = Effect.fn("SpacesDatabases.pageTimeCondition")(function* (
+  c: Compile,
+  property: Property,
+  operator: string,
+  value: unknown,
+) {
+  const { sql } = c;
+  const operand = spanOf(c, operator, value);
+  if (operand === undefined) return yield* dbError("invalid_filter", property.id);
+  const day: Bounds = operand.day;
+  const column = property.type === "created_time" ? sql`p.created_at` : sql`p.updated_at`;
+  return sql`(${compare(
+    c,
+    operator,
+    column,
+    { lo: instantIso(day.iLo), hi: instantIso(day.iHi) },
+    operand.instant === undefined ? undefined : instantIso(operand.instant),
+  )})`;
+});
+
+/**
+ * The cell predicate (alias `c`) of a positive comparison on a stored scalar property: a number
+ * comparison, a select or status equality, a multi-select membership or a date comparison. These
+ * can start a row search from the cell indexes; everything else has no such form.
+ */
+const positiveWhere = Effect.fn("SpacesDatabases.positiveWhere")(function* (
+  c: Compile,
+  property: Property,
+  operator: string,
+  value: unknown,
+  part: "start" | "end",
+) {
+  const { sql } = c;
+  switch (property.type) {
+    case "number":
+      return operator in comparisons
+        ? sql`c.num ${sql.literal(comparisons[operator as keyof typeof comparisons])} ${Number(value)}`
+        : undefined;
+    case "select":
+    case "status":
+    case "multi_select":
+      return operator === "equals" || operator === "contains"
+        ? sql`c.ref = ${String(value)}`
+        : undefined;
+    case "date":
+      return yield* dateWhere(c, property, operator, value, part);
+    default:
+      return undefined;
+  }
+});
+
+/** Whether `positiveWhere` has a form for the condition, without compiling it. */
+export const isDrivable = (property: Property, operator: string) => {
+  switch (property.type) {
+    case "number":
+      return operator in comparisons;
+    case "select":
+    case "status":
+    case "multi_select":
+      return operator === "equals" || operator === "contains";
+    case "date":
+      return operator !== "is_empty" && operator !== "is_not_empty";
+    default:
+      return false;
+  }
+};
+
+/** Number and date properties hold one cell, so conjuncts on one property can share a lookup. */
+export const isSingleValued = (property: Property) =>
+  property.type === "number" || property.type === "date";
+
+/** The cell lookup of conjuncts on one property: its cells (alias `c`) that satisfy all of them. */
+export const drivenLookup = Effect.fn("SpacesDatabases.drivenLookup")(function* (
+  c: Compile,
+  conditions: readonly {
+    readonly property: Property;
+    readonly operator: string;
+    readonly value: unknown;
+    readonly part: "start" | "end" | undefined;
+  }[],
+) {
+  const { sql } = c;
+  const [first] = conditions;
+  const wheres: Fragment[] = [];
+  for (const entry of conditions) {
+    const where = yield* positiveWhere(
+      c,
+      entry.property,
+      entry.operator,
+      entry.value,
+      entry.part ?? "start",
+    );
+    if (where !== undefined) wheres.push(where);
+  }
+  return cellLookup(
     sql,
-    property.id,
-    sql`((c.flags & 1) = 0 AND (${dateOnly})) OR ((c.flags & 1) = 1 AND (${timed}))`,
+    c.snapshot.source.data_source_id,
+    first!.property.id,
+    sql.and(wheres.map((where) => sql`(${where})`)),
   );
 });
 
@@ -195,9 +285,14 @@ export const condition = Effect.fn("SpacesDatabases.compileCondition")(function*
         ? hasCell(sql, property.id, sql`+c.ref = ${String(value)}`, true)
         : noCell(sql, property.id, sql`+c.ref = ${String(value)}`, true);
     case "date":
+      return hasCell(
+        sql,
+        property.id,
+        yield* dateWhere(c, property, operator, value, part ?? "start"),
+      );
     case "created_time":
     case "last_edited_time":
-      return yield* dateCondition(c, property, operator, value, part ?? "start");
+      return yield* pageTimeCondition(c, property, operator, value);
     default:
       return yield* dbError("property_not_queryable", property.id);
   }

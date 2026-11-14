@@ -1,6 +1,6 @@
 import type { SpaceDataSource, SpaceDatabaseRow } from "@t2code/contracts/spaces";
 
-import { EditableFakeDatabase } from "../controls/controlsFake";
+import { EditableFakeDatabase } from "./editableDatabase";
 import { fixtureDataSource, fixtureRows, fixtureView } from "./fixtures";
 
 /** The fixture data source plus a formula "Double" = Amount * 2, over rows with Amount 5 and 10. */

@@ -1,3 +1,4 @@
+import "~/index.css";
 import { type CellTextContext, cellPlainText, knownProperty } from "@t2code/client-runtime/spaces";
 import type { SpaceCellValue, SpaceDatabaseProperty } from "@t2code/contracts/spaces";
 import { describe, expect, it } from "vite-plus/test";

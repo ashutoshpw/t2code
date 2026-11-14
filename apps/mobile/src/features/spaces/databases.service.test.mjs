@@ -523,6 +523,53 @@ it.effect("shows a calendar month as an agenda from a range query", () =>
   ),
 );
 
+it.effect("adds a row from a calendar month that is not this month so the month returns it", () =>
+  fixture((c) =>
+    Effect.promise(async () => {
+      c.permissions(true, true);
+      const seeded = await seed(c);
+      const viewId = await seeded.view({
+        name: "Calendar",
+        type: "calendar",
+        layout: { datePropertyId: ids.due },
+      });
+      const shown = await form(c, seeded, viewId);
+      const add = (month, title) =>
+        addRow({
+          environmentId: c.environmentId,
+          registry: c.registry,
+          mutations: c.mutations,
+          writer: c.writer,
+          canWrite: () => true,
+          view: shown.saved,
+          dataSource: shown.dataSource,
+          title,
+          now: Date.UTC(2026, 10, 11),
+          zone: ZONE,
+          month,
+        });
+      expect((await add("2026-12-01", "In December")).ok).toBe(true);
+      expect((await add("2026-11-01", "In November")).ok).toBe(true);
+      const titlesOf = async (month) => {
+        const session = c.viewSession();
+        session.setInput(
+          formQueryInput(shown.form, shown.saved, {
+            environmentId: c.environmentId,
+            timeZone: ZONE,
+            month,
+          }),
+        );
+        const ready = await c.settled(session, (snapshot) => snapshot.status === "ready");
+        session.setInput(null);
+        return ready.windows.rows.map((row) => row.cells.title);
+      };
+      expect(await titlesOf("2026-12-01")).toContain("In December");
+      expect(await titlesOf("2026-12-01")).not.toContain("In November");
+      expect(await titlesOf("2026-11-01")).toContain("In November");
+    }),
+  ),
+);
+
 it.effect("opens a row with its properties and resolves its page with the host as ancestor", () =>
   fixture((c) =>
     Effect.promise(async () => {
@@ -783,7 +830,7 @@ it.effect("adds a row from a filtered view so that the view returns it", () =>
         now: Date.UTC(2026, 10, 11),
         zone: ZONE,
       });
-      expect(result).toEqual({ ok: true });
+      expect(result.ok).toBe(true);
       session.refresh();
       for (const task of Array.from(c.timers)) task();
       const after = await c.settled(session, (snapshot) => snapshot.windows?.total === 16);

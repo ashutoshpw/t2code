@@ -38,6 +38,7 @@ const countRows = Effect.fn("SpacesDatabases.countBuckets")(function* (
   levels: 1 | 2,
   spec: GroupSpec,
   property: Property,
+  parents: readonly KeyValue[] = [],
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const key = levels === 1 ? "g" : "sg";
@@ -53,6 +54,22 @@ const countRows = Effect.fn("SpacesDatabases.countBuckets")(function* (
     enumerated || levels === 2 ? sql`` : sql` LIMIT ${databaseLimits.maxGroupBuckets + 1}`;
   const by = levels === 1 ? sql`g` : sql`g, sg`;
   const columns = levels === 1 ? sql`g` : sql`g, sg`;
+  if (levels === 2 && !enumerated) {
+    // Only the shown parents, and at most maxGroupBuckets + 1 sub-buckets of each, in bucket order.
+    const named = parents.filter((parent) => parent !== null);
+    const wanted =
+      named.length === parents.length
+        ? sql`g IN (SELECT value FROM json_each(${canonical(named)}))`
+        : sql`(g IS NULL OR g IN (SELECT value FROM json_each(${canonical(named)})))`;
+    const within =
+      spec.by.kind === "page" ? sql`(so IS NULL), so${direction}, sg` : sql`sg${direction}`;
+    return yield* sql<Raw>`${filteredRows(plan, levels, false)}
+      SELECT g, sg, so, n, sample FROM (
+        SELECT g, sg, so, COUNT(DISTINCT page_id) AS n, MIN(page_id) AS sample,
+          row_number() OVER (PARTITION BY g ORDER BY (sg IS NULL), ${within}) AS rn
+        FROM f WHERE ${wanted} GROUP BY g, sg)
+      WHERE rn <= ${databaseLimits.maxGroupBuckets + 1}${ordering}`;
+  }
   return yield* sql<Raw>`${filteredRows(plan, levels, false)}
     SELECT ${columns}, COUNT(DISTINCT page_id) AS n, MIN(page_id) AS sample FROM f GROUP BY ${by}${ordering}${limit}`;
 });
@@ -88,31 +105,46 @@ const arrange = (
   return nodes;
 };
 
-/** The label of text and page buckets: the plain text of one member, or the target's title. */
+/** A bucket to label, under the id its label is returned by. */
+interface LabelTarget {
+  readonly id: string;
+  readonly node: Node;
+}
+
+/**
+ * The label of text and page buckets: the plain text of one member, or the target's title. One
+ * statement for every bucket of a level, however many parents there are.
+ */
 const labels = Effect.fn("SpacesDatabases.bucketLabels")(function* (
-  plan: Plan,
   spec: GroupSpec,
-  all: readonly Node[],
+  all: readonly LabelTarget[],
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const result = new Map<string, string>();
-  const nodes = all.filter((node) => node.raw !== null);
+  const targets = all.filter((target) => target.node.raw !== null);
   if (spec.by.kind !== "page" && spec.by.kind !== "exact") return result;
-  const pageIds = nodes.flatMap((node) => {
-    const id = spec.by.kind === "page" ? node.raw : node.sample;
-    return typeof id === "string" ? [id] : [];
-  });
+  const pageOf = ({ node }: LabelTarget) => (spec.by.kind === "page" ? node.raw : node.sample);
+  const pageIds = [
+    ...new Set(
+      targets.flatMap((target) => {
+        const id = pageOf(target);
+        return typeof id === "string" ? [id] : [];
+      }),
+    ),
+  ];
   if (pageIds.length === 0) return result;
+  // One bound parameter, so a level with tens of thousands of buckets still is one statement.
+  const listed = canonical(pageIds);
   if (spec.by.kind === "page" || spec.type === "title") {
     const titles = yield* sql<{
       readonly page_id: string;
       readonly title: string;
-    }>`SELECT page_id, title FROM spaces_pages WHERE page_id IN ${sql.in(pageIds)}`;
+    }>`SELECT page_id, title FROM spaces_pages WHERE page_id IN (SELECT value FROM json_each(${listed}))`;
     const byPage = new Map(titles.map((row) => [row.page_id, row.title] as const));
-    for (const node of nodes) {
-      const id = spec.by.kind === "page" ? node.raw : node.sample;
+    for (const target of targets) {
+      const id = pageOf(target);
       const title = typeof id === "string" ? byPage.get(id) : undefined;
-      if (title !== undefined) result.set(String(node.raw), title);
+      if (title !== undefined) result.set(target.id, title);
     }
     return result;
   }
@@ -120,16 +152,16 @@ const labels = Effect.fn("SpacesDatabases.bucketLabels")(function* (
     readonly page_id: string;
     readonly value: string | null;
   }>`SELECT page_id, value FROM spaces_db_cells WHERE property_id = ${spec.propertyId}
-    AND page_id IN ${sql.in(pageIds)} AND ord = 0`;
+    AND page_id IN (SELECT value FROM json_each(${listed})) AND ord = 0`;
   const byPage = new Map(cells.map((row) => [row.page_id, row.value] as const));
-  for (const node of nodes) {
+  for (const { id, node } of targets) {
     const stored = node.sample === null ? undefined : byPage.get(node.sample);
     if (stored === undefined || stored === null) continue;
     const value = parseJson(stored);
-    if (typeof value === "string") result.set(String(node.raw), value);
+    if (typeof value === "string") result.set(id, value);
     else if (Array.isArray(value))
       result.set(
-        String(node.raw),
+        id,
         plainRuns(
           value.flatMap((run) =>
             typeof run === "object" &&
@@ -200,7 +232,16 @@ export const groups = Effect.fn("SpacesDatabases.groups")(function* (
   const { nodes: top, truncated } = cut(topFound);
   let truncatedSub = false;
   if (sub && subProperty) {
-    const rows = read(yield* countRows(plan, 2, sub, subProperty), "sg");
+    const rows = read(
+      yield* countRows(
+        plan,
+        2,
+        sub,
+        subProperty,
+        top.map((node) => node.raw),
+      ),
+      "sg",
+    );
     const byParent = new Map<KeyValue, typeof rows>();
     for (const row of rows) byParent.set(row.parent, [...(byParent.get(row.parent) ?? []), row]);
     for (const node of top) {
@@ -276,12 +317,21 @@ export const groups = Effect.fn("SpacesDatabases.groups")(function* (
         )
       : undefined;
 
-  const topLabels = yield* labels(plan, spec, top);
-  const subLabels = new Map<string, string>();
-  if (sub)
-    for (const parent of top)
-      for (const [id, label] of yield* labels(plan, sub, parent.children))
-        subLabels.set(`${String(parent.raw)}\u0000${id}`, label);
+  const topLabels = yield* labels(
+    spec,
+    top.map((node) => ({ id: String(node.raw), node })),
+  );
+  const subLabels = sub
+    ? yield* labels(
+        sub,
+        top.flatMap((parent) =>
+          parent.children.map((node) => ({
+            id: `${String(parent.raw)}\u0000${String(node.raw)}`,
+            node,
+          })),
+        ),
+      )
+    : new Map<string, string>();
 
   const printFor = (leaf: Leaf) =>
     Cursor.fingerprint({

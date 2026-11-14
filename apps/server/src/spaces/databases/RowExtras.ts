@@ -28,20 +28,29 @@ const childCounts = Effect.fn("SpacesDatabases.childCounts")(function* (
   return counts;
 });
 
-/** The first top-level image block of each page in one window. */
+/**
+ * The first top-level image block of each page in one window. Only blocks with a row in the
+ * asset reference table are read for their payload, so a page of a thousand text blocks costs
+ * a thousand key lookups, not a thousand JSON parses; the first image per page is cut in SQL.
+ */
 const covers = Effect.fn("SpacesDatabases.covers")(function* (pageIds: readonly string[]) {
   const sql = yield* SpacesSql.SpacesSql;
   const first = new Map<string, string>();
   for (let start = 0; start < pageIds.length; start += CHUNK) {
     const found = yield* sql<{
       readonly page_id: string;
-      readonly asset_id: string | null;
-    }>`SELECT page_id, json_extract(payload, '$.content.assetId') AS asset_id FROM spaces_blocks
-      WHERE page_id IN ${sql.in(pageIds.slice(start, start + CHUNK))} AND deleted = 0
-      AND parent_id IS NULL AND json_extract(payload, '$.type') = 'image'
-      ORDER BY page_id, rank, block_id`;
-    for (const row of found)
-      if (row.asset_id !== null && !first.has(row.page_id)) first.set(row.page_id, row.asset_id);
+      readonly asset_id: string;
+    }>`WITH assets AS MATERIALIZED (
+        SELECT b.page_id AS page_id, r.asset_id AS asset_id, b.rank AS rank, b.block_id AS block_id,
+          b.payload AS payload
+        FROM spaces_blocks b CROSS JOIN spaces_block_asset_refs r ON r.block_id = b.block_id
+        WHERE b.page_id IN ${sql.in(pageIds.slice(start, start + CHUNK))} AND b.deleted = 0
+        AND b.parent_id IS NULL)
+      SELECT page_id, asset_id FROM (
+        SELECT page_id, asset_id, row_number() OVER (PARTITION BY page_id ORDER BY rank, block_id) AS n
+        FROM assets WHERE json_extract(payload, '$.type') = 'image')
+      WHERE n = 1`;
+    for (const row of found) first.set(row.page_id, row.asset_id);
   }
   return first;
 });

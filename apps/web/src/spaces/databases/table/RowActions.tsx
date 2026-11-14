@@ -11,7 +11,8 @@ import { memo } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpacePageId } from "@t2code/contracts/spaces";
 
-import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
+import { Menu, MenuItem, MenuPopup, MenuShortcut, MenuTrigger } from "~/components/ui/menu";
+import { isMacPlatform } from "~/lib/utils";
 import { toastManager } from "~/components/ui/toast";
 import type { GridHandlers } from "./tableTypes";
 
@@ -84,6 +85,7 @@ export const RowActions = memo(function RowActions({
             <button
               type="button"
               aria-label="Row actions"
+              aria-keyshortcuts="Shift+F10 ContextMenu"
               tabIndex={-1}
               className={`${BUTTON} w-5 ${REVEAL}`}
               onClick={(event) => event.stopPropagation()}
@@ -93,6 +95,11 @@ export const RowActions = memo(function RowActions({
           <MoreHorizontalIcon className="size-3.5" />
         </MenuTrigger>
         <MenuPopup align="end">
+          <MenuItem onClick={() => grid.open(pageId)}>
+            <ExpandIcon />
+            Open
+            <MenuShortcut>{isMacPlatform(navigator.platform) ? "⌘↵" : "Ctrl+Enter"}</MenuShortcut>
+          </MenuItem>
           <MenuItem onClick={() => grid.open(pageId, "side_peek")}>
             <PanelRightIcon />
             Open in side peek

@@ -38,6 +38,7 @@ import {
   WsSpacesDatabasesListRpc,
   WsSpacesDatabasesGetRpc,
   WsSpacesDatabasesQueryRpc,
+  WsSpacesDatabasesSubscribeChangesRpc,
   WsSpacesDatabasesRowsGetRpc,
   WsSpacesDatabasesCreateRpc,
   WsSpacesDatabasesUpdateRpc,
@@ -130,6 +131,9 @@ export const group = RpcGroup.make(
   WsSpacesDatabasesListRpc.setPayload(strictPayload(C.SpaceDatabaseListInput)),
   WsSpacesDatabasesGetRpc.setPayload(strictPayload(C.SpaceDatabaseGetInput)),
   WsSpacesDatabasesQueryRpc.setPayload(strictPayload(C.SpaceDatabaseQueryInput)),
+  WsSpacesDatabasesSubscribeChangesRpc.setPayload(
+    strictPayload(C.SpaceDatabaseChangesSubscribeInput),
+  ),
   WsSpacesDatabasesRowsGetRpc.setPayload(strictPayload(C.SpaceDatabaseRowGetInput)),
   WsSpacesDatabasesCreateRpc.setPayload(
     strictPayload(C.SpaceDatabaseCreateInput, (input) => ({ operation: "createDatabase", input })),
@@ -219,6 +223,8 @@ export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: str
     [WS_METHODS.spacesDatabasesList]: (input) => service.listDatabases(input),
     [WS_METHODS.spacesDatabasesGet]: (input) => service.getDatabase(input),
     [WS_METHODS.spacesDatabasesQuery]: (input) => service.queryDatabase(input),
+    [WS_METHODS.spacesDatabasesSubscribeChanges]: (input) =>
+      service.subscribeDatabaseChanges(input),
     [WS_METHODS.spacesDatabasesRowsGet]: (input) => service.getDatabaseRows(input),
     [WS_METHODS.spacesDatabasesCreate]: (input) => service.createDatabase(input),
     [WS_METHODS.spacesDatabasesUpdate]: (input) => service.updateDatabase(input),

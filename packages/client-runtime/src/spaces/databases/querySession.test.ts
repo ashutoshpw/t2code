@@ -26,7 +26,7 @@ const input = (extra: Partial<SpaceDatabaseQueryInput> = {}) =>
     ...extra,
   }) as unknown as SpaceDatabaseQueryInput;
 
-function setup(options: { busy?: boolean } = {}) {
+function setup(options: { busy?: boolean; live?: boolean } = {}) {
   const calls: SpaceDatabaseQueryInput[] = [];
   const pending: Array<{
     input: SpaceDatabaseQueryInput;
@@ -61,6 +61,7 @@ function setup(options: { busy?: boolean } = {}) {
       return () => void timers.delete(id);
     },
     busy: () => options.busy === true,
+    live: () => options.live === true,
   } as never);
   const fire = () => {
     for (const [id, timer] of Array.from(timers)) {
@@ -128,6 +129,37 @@ describe("DatabaseQuerySession", () => {
     await free.settle({});
     free.session.invalidate();
     expect(free.timers.size).toBe(1);
+  });
+
+  it("refreshes at most once a second under a stream of bumps", async () => {
+    const { session, calls, timers, fire, settle } = setup({ live: true });
+    session.setInput(input());
+    await settle({ rows: [row("a")] });
+    session.invalidate();
+    expect([...timers.values()].map((timer) => timer.delay)).toEqual([150]);
+    fire();
+    await settle({ rows: [row("a")] });
+    expect(calls).toHaveLength(2);
+    for (let bump = 0; bump < 5; bump++) session.invalidate();
+    // One cooldown timer and one coalesced refresh, which waits out the second.
+    expect([...timers.values()].map((timer) => timer.delay)).toEqual([1000, 1000]);
+    fire();
+    await settle({ rows: [row("a")] });
+    expect(calls).toHaveLength(3);
+  });
+
+  it("asks twice for pending values while the server pushes changes, then waits for an event", async () => {
+    const { session, calls, timers, fire, settle } = setup({ live: true });
+    session.setInput(input());
+    await settle({ rows: [row("a")], computedPending: true });
+    expect([...timers.values()].map((timer) => timer.delay)).toEqual([10_000]);
+    fire();
+    await settle({ rows: [row("a")], computedPending: true });
+    expect([...timers.values()].map((timer) => timer.delay)).toEqual([30_000]);
+    fire();
+    await settle({ rows: [row("a")], computedPending: true });
+    expect(timers.size).toBe(0);
+    expect(calls).toHaveLength(3);
   });
 
   it("adopts the next revision silently and refreshes when the edit matters", async () => {
@@ -198,6 +230,136 @@ describe("DatabaseQuerySession", () => {
     expect(session.getSnapshot().windows?.groups?.[0]?.rows).toHaveLength(4);
   });
 
+  it("keeps a new card and a dropped card visible in a column that is only partly loaded", async () => {
+    const { session, fire, settle } = setup();
+    const bucket = (key: string, rows: string[], nextCursor: unknown) => ({
+      key,
+      count: 30,
+      rows: rows.map((id) => row(id)),
+      nextCursor,
+    });
+    session.setInput(input({ mode: "groups", rowsPerGroup: 25 }));
+    const loaded = Array.from({ length: 25 }, (_, index) => `r${index}`);
+    await settle({
+      groups: [bucket("todo", loaded, "c1"), bucket("done", ["x"], null)] as never,
+    });
+    session.placeRow(row("new"), "todo" as never);
+    session.setPlacement("x", { group: "todo" as never, beforeRowId: null });
+    session.refresh();
+    fire();
+    await settle({
+      groups: [bucket("todo", loaded, "c1"), bucket("done", [], null)] as never,
+    });
+    const placed = session.getSnapshot().placed;
+    expect(placed.map((entry) => entry.row.page.id).sort()).toEqual(["new", "x"]);
+    expect(placed.every((entry) => entry.counted === true && entry.group === '"todo"')).toBe(true);
+    // The next refresh that does load the row drops its placed copy.
+    session.refresh();
+    fire();
+    await settle({
+      groups: [bucket("todo", [...loaded.slice(0, 23), "new", "x"], null)] as never,
+    });
+    expect(session.getSnapshot().placed).toEqual([]);
+  });
+
+  it("does not keep a card again once its row sits in another column or is trashed", async () => {
+    const { session, fire, settle } = setup();
+    const bucket = (key: string, rows: string[], nextCursor: unknown) => ({
+      key,
+      count: 30,
+      rows: rows.map((id) => row(id)),
+      nextCursor,
+    });
+    session.setInput(input({ mode: "groups", rowsPerGroup: 25 }));
+    const loaded = Array.from({ length: 25 }, (_, index) => `r${index}`);
+    const refresh = async (done: string[]) => {
+      session.refresh();
+      fire();
+      await settle({
+        groups: [bucket("todo", loaded, "c1"), bucket("done", done, "c2")] as never,
+      });
+    };
+    await settle({ groups: [bucket("todo", loaded, "c1"), bucket("done", [], "c2")] as never });
+    session.placeRow(row("moved"), "todo" as never);
+    session.placeRow(row("gone"), "todo" as never);
+    await refresh([]);
+    expect(session.getSnapshot().placed).toHaveLength(2);
+    session.forgetRow("gone");
+    await refresh(["moved"]);
+    expect(session.getSnapshot().placed).toEqual([]);
+  });
+
+  it("keeps a card dragged into another partly loaded column in the new column", async () => {
+    const { session, fire, settle } = setup();
+    const bucket = (key: string, rows: string[], nextCursor: unknown) => ({
+      key,
+      count: 40,
+      rows: rows.map((id) => row(id)),
+      nextCursor,
+    });
+    session.setInput(input({ mode: "groups", rowsPerGroup: 25 }));
+    const ids = (prefix: string) => Array.from({ length: 25 }, (_, index) => `${prefix}${index}`);
+    const buckets = () => ({
+      groups: [bucket("todo", ids("t"), "c1"), bucket("done", ids("d"), "c2")] as never,
+    });
+    await settle(buckets());
+    session.placeRow(row("new"), "todo" as never);
+    session.refresh();
+    fire();
+    await settle(buckets());
+    expect(session.getSnapshot().placed.map((entry) => entry.group)).toEqual(['"todo"']);
+    session.setPlacement("new", { group: "done" as never, beforeRowId: null });
+    session.refresh();
+    fire();
+    await settle(buckets());
+    expect(
+      session.getSnapshot().placed.map((entry) => [entry.row.page.id, entry.group, entry.counted]),
+    ).toEqual([["new", '"done"', true]]);
+  });
+
+  it("drops a kept card on an acked edit of the group property, but never a flat placed row", async () => {
+    const edit = (pageId: string, propertyId: string) =>
+      ({ dataSourceId: "s", pageId, propertyId, value: "v", seq: 1 }) as never;
+    const flat = setup();
+    flat.session.setInput(input());
+    await flat.settle({ rows: [row("a"), row("b")] });
+    flat.session.placeRow(row("new"), null);
+    flat.session.noteAck({
+      dataRevision: 2,
+      affects: true,
+      structural: false,
+      edits: [edit("new", "title")],
+    });
+    expect(flat.session.getSnapshot().placed.map((entry) => entry.row.page.id)).toEqual(["new"]);
+
+    const { session, fire, settle } = setup();
+    session.setInput(
+      input({ mode: "groups", rowsPerGroup: 25, group: { property: "status" as never } }),
+    );
+    const rows = Array.from({ length: 25 }, (_, index) => row(`r${index}`));
+    const groups = () => [{ key: "todo", count: 30, rows, nextCursor: "c1" }] as never;
+    await settle({ groups: groups() });
+    session.placeRow(row("new"), "todo" as never);
+    session.refresh();
+    fire();
+    await settle({ groups: groups() });
+    expect(session.getSnapshot().placed).toHaveLength(1);
+    session.noteAck({
+      dataRevision: 2,
+      affects: true,
+      structural: false,
+      edits: [edit("new", "title")],
+    });
+    expect(session.getSnapshot().placed).toHaveLength(1);
+    session.noteAck({
+      dataRevision: 3,
+      affects: true,
+      structural: false,
+      edits: [edit("new", "status")],
+    });
+    expect(session.getSnapshot().placed).toEqual([]);
+  });
+
   it("refreshes from the top to the loaded depth, keeps row identity and clears placed rows", async () => {
     const { session, calls, fire, settle } = setup();
     session.setInput(input());
@@ -258,6 +420,24 @@ describe("DatabaseQuerySession", () => {
     await settle({ rows: [row("a")] });
     session.refresh();
     fire();
+    session.setPlacement("a", { group: { kind: "empty" }, beforeRowId: null });
+    await settle({ rows: [row("a")] });
+    expect(Object.keys(session.getSnapshot().placements)).toEqual(["a"]);
+  });
+
+  it("keeps an acknowledged edit across a key change that keeps the windows", async () => {
+    const { session, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a", "old")] });
+    const edit = { dataSourceId: "s", pageId: "a", propertyId: "title", value: "new", seq: 1 };
+    session.noteAck({ dataRevision: 2, affects: true, structural: false, edits: [edit] as never });
+    session.setInput(input({ search: "x" }));
+    expect(Object.values(session.getSnapshot().acked)).toHaveLength(1);
+  });
+
+  it("does not let the first window clear a placement made while it was loading", async () => {
+    const { session, settle } = setup();
+    session.setInput(input());
     session.setPlacement("a", { group: { kind: "empty" }, beforeRowId: null });
     await settle({ rows: [row("a")] });
     expect(Object.keys(session.getSnapshot().placements)).toEqual(["a"]);

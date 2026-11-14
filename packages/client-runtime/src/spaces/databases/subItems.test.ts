@@ -27,28 +27,31 @@ const base = {
   timeZone: "UTC",
 } as unknown as SpaceDatabaseQueryInput;
 
-function setup() {
+function setup(options?: { readonly maxExpanded?: number }) {
   const calls: SpaceDatabaseQueryInput[] = [];
   const children: Record<string, SpaceDatabaseRow[]> = {
     a: [row("a1"), row("a2")],
     b: [row("b1")],
   };
-  const tree = new SubItemTree({
-    query: async (input) => {
-      calls.push(input);
-      const parent = input.scope?.parentRowId ?? "";
-      return {
-        dataSourceId: "s",
-        schemaRevision: 1,
-        dataRevision: 1,
-        rows: children[parent] ?? [],
-        relatedPages: {},
-        nextCursor: null,
-      } as unknown as SpaceDatabaseQueryResult;
+  const tree = new SubItemTree(
+    {
+      query: async (input) => {
+        calls.push(input);
+        const parent = input.scope?.parentRowId ?? "";
+        return {
+          dataSourceId: "s",
+          schemaRevision: 1,
+          dataRevision: 1,
+          rows: children[parent] ?? [],
+          relatedPages: {},
+          nextCursor: null,
+        } as unknown as SpaceDatabaseQueryResult;
+      },
+      schedule: () => () => {},
+      busy: () => false,
     },
-    schedule: () => () => {},
-    busy: () => false,
-  });
+    options,
+  );
   return { tree, calls };
 }
 
@@ -92,6 +95,13 @@ describe("SubItemTree", () => {
     const before = tree.getSnapshot();
     tree.noteAck({ dataRevision: 2, affects: false, structural: false });
     expect(tree.getSnapshot()).toBe(before);
+  });
+
+  it("collapses the least recently expanded parent past the cap", async () => {
+    const { tree } = setup({ maxExpanded: 2 });
+    tree.setBase(base);
+    for (const id of ["a", "b", "c"]) tree.expand(id as never);
+    expect(["a", "b", "c"].map((id) => tree.isExpanded(id))).toEqual([false, true, true]);
   });
 
   it("ignores everything after dispose", async () => {

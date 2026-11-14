@@ -11,7 +11,7 @@ import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dn
 import { CSS } from "@dnd-kit/utilities";
 import { PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { computedInfoOf } from "@t2code/client-runtime/spaces";
-import { useRef, type PointerEvent } from "react";
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { SpacePropertyId } from "@t2code/contracts/spaces";
 
 import { cn } from "~/lib/utils";
@@ -21,7 +21,7 @@ import { PropertyTypeIcon } from "../primitives/PropertyTypeIcon";
 import { useDatabase, useDatabaseActions } from "../shell/context";
 import { columnVar, draggedWidth, widthValue } from "./columnResize";
 import { reorderedPropertyIds } from "./columnOrder";
-import { HEADER_HEIGHT } from "./gridWindow";
+import { HEADER_HEIGHT, MAX_COLUMN_WIDTH, MIN_COLUMN_WIDTH, clampWidth } from "./gridWindow";
 import type { TableColumn } from "./tableTypes";
 
 // Module constants: dnd-kit rebuilds its sensors when the options object changes.
@@ -54,6 +54,29 @@ function HeaderCell({
     disabled: !movable,
   });
   const drag = useRef<Drag | null>(null);
+  // A width typed by keyboard, saved once when the key is released or the handle loses focus.
+  const [keyed, setKeyed] = useState<number | null>(null);
+  const keyedWidth = useRef<number | null>(null);
+  const resizeByKey = (event: KeyboardEvent<HTMLElement>) => {
+    const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (direction === 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const next = clampWidth(
+      (keyedWidth.current ?? column.width) + direction * (event.shiftKey ? 64 : 16),
+    );
+    keyedWidth.current = next;
+    setKeyed(next);
+    event.currentTarget
+      .closest<HTMLElement>("[data-grid-root]")
+      ?.style.setProperty(columnVar(column.id), `${next}px`);
+  };
+  const saveKeyed = () => {
+    const width = keyedWidth.current;
+    keyedWidth.current = null;
+    setKeyed(null);
+    if (width !== null && width !== column.width) onResize(column.id, width);
+  };
   const finish = (event: PointerEvent<HTMLElement>) => {
     const state = drag.current;
     drag.current = null;
@@ -109,6 +132,15 @@ function HeaderCell({
           role="separator"
           aria-orientation="vertical"
           aria-label={`Resize ${column.name}`}
+          tabIndex={0}
+          aria-valuenow={keyed ?? column.width}
+          aria-valuemin={MIN_COLUMN_WIDTH}
+          aria-valuemax={MAX_COLUMN_WIDTH}
+          onKeyDown={resizeByKey}
+          onKeyUp={(event) => {
+            if (event.key === "ArrowLeft" || event.key === "ArrowRight") saveKeyed();
+          }}
+          onBlur={saveKeyed}
           className="absolute inset-y-0 end-0 z-[1] w-1.5 cursor-col-resize touch-none hover:bg-ring/40"
           onPointerDown={(event) => {
             // Keeps the drag-to-reorder sensor and the menu trigger out of the resize.

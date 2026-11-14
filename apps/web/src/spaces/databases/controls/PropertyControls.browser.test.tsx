@@ -1,10 +1,11 @@
+import "~/index.css";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { toastManager } from "~/components/ui/toast";
 import { render } from "../../../../test/render";
 import { DatabaseHarness, fakeController, testHost } from "../test/harness";
-import { EditableFakeDatabase } from "./controlsFake";
+import { EditableFakeDatabase } from "../test/editableDatabase";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
 
