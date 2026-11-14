@@ -57,7 +57,7 @@ function showStarPrompt(environmentId: EnvironmentId) {
     toastManager.update(id, { actionProps: { children: "Open GitHub", onClick: openInBrowser } });
   };
   const id = toastManager.add({
-    title: "Enjoying T3 Code?",
+    title: "Enjoying T2 Code?",
     description: "Give us a star on GitHub to let us know!",
     timeout: 0,
     onClose: dismiss,

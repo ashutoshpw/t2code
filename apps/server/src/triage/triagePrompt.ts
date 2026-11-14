@@ -138,7 +138,8 @@ of \`main\` for that work, never the tag-pinned diagnosis clone.
   \`steps\`, \`version\`, \`environment\`, \`evidence\`, \`related\`, \`workaround\` and
   \`agent\`. Keep the full encoded URL below 6,000 characters by shortening any
   fields as needed. Give the user any omitted text to paste into the form before
-  submitting. Print the URL, and open it in their browser only after they approve.- If the user pasted screenshots, remind them to drag the images into the issue
+  submitting. Print the URL, and open it in their browser only after they approve.
+- If the user pasted screenshots, remind them to drag the images into the issue
   after it is created; they cannot be attached from here.
 
 ## 9. Redact

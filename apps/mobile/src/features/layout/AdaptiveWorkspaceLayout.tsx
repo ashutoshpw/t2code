@@ -159,7 +159,6 @@ export function Inspector(props: {
     deactivateRef.current = registerWorkspaceInspector(content, route?.key, props.revealKey);
   });
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- Navigation focus events own the inspector registration lifetime.
   useEffect(() => {
     if (navigation === undefined) return;
     const focus = () => {

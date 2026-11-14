@@ -247,8 +247,8 @@ else
   elif [ "$fetch_status" -ne 0 ]; then
     fail "could not download the release checksums"
   fi
-  grep -q " \*\{0,1\}${archive}\$" "${staging}/SHA256SUMS" \
-    || fail "${archive} is not listed in SHA256SUMS"
+  expected="$(grep " \*\{0,1\}${archive}\$" "${staging}/SHA256SUMS" | cut -d' ' -f1)"
+  [ -n "$expected" ] || fail "${archive} is not listed in SHA256SUMS"
   download "${base_url}/v${version}/${archive}" "${staging}/${archive}"
 
   step "Verifying the download..."

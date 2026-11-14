@@ -40,9 +40,9 @@ describe("check:changed", () => {
   it("runs the server tests for the one guide they read and leaves other docs inert", () => {
     const packages = readWorkspace();
     assert.isTrue(
-      decide(["docs/user/t3-connect-troubleshooting.md"], packages, false).outputs.test_server,
+      decide(["docs/user/t2-connect-troubleshooting.md"], packages, false).outputs.test_server,
     );
-    assert.deepStrictEqual(docReaderTests(["docs/user/t3-connect-troubleshooting.md"]), [
+    assert.deepStrictEqual(docReaderTests(["docs/user/t2-connect-troubleshooting.md"]), [
       "apps/server/src/cloud/ConnectReachability.test.ts",
     ]);
     assert.deepStrictEqual(decide(["docs/user/install.md"], packages, false).affected, []);

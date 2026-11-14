@@ -173,7 +173,7 @@ describe("AntigravityAdapterV2 compaction", () => {
                 command: process.execPath,
                 args: [mockAgentPath],
                 cwd: input.cwd,
-                env: { T3_ACP_ANTIGRAVITY: "1" },
+                env: { T2_ACP_ANTIGRAVITY: "1" },
               },
             }).pipe(
               Effect.provideService(SecureRandom.SecureRandom, crypto),
@@ -1101,7 +1101,7 @@ describe("AntigravityAdapterV2 runtime mode ceiling", () => {
               command: process.execPath,
               args: [mockAgentPath],
               cwd: input.cwd,
-              env: { T3_ACP_ANTIGRAVITY: "1" },
+              env: { T2_ACP_ANTIGRAVITY: "1" },
             },
           }).pipe(
             Effect.provideService(SecureRandom.SecureRandom, crypto),
@@ -1173,10 +1173,10 @@ describe("AntigravityAdapterV2 session system prompt", () => {
                 args: [mockAgentPath],
                 cwd: input.cwd,
                 env: {
-                  T3_ACP_ANTIGRAVITY: "1",
-                  T3_ACP_AGENT_VERSION: agentVersion,
-                  T3_ACP_REQUEST_LOG_PATH: requestLog,
-                  T3_ACP_HANG_PROMPT_FOREVER: "1",
+                  T2_ACP_ANTIGRAVITY: "1",
+                  T2_ACP_AGENT_VERSION: agentVersion,
+                  T2_ACP_REQUEST_LOG_PATH: requestLog,
+                  T2_ACP_HANG_PROMPT_FOREVER: "1",
                 },
               },
             }).pipe(
