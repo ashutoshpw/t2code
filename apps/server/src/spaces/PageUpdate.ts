@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect";
 import { isoNow } from "./databases/Types.ts";
 import * as CellStore from "./databases/CellStore.ts";
 import * as DatabaseStore from "./databases/DatabaseStore.ts";
+import * as PageChanges from "./PageChanges.ts";
 import * as PageStore from "./PageStore.ts";
 import * as RevisionStore from "./RevisionStore.ts";
 import * as SearchStore from "./SearchStore.ts";
@@ -25,6 +26,7 @@ export const apply = Effect.fn("SpacesPages.applyUpdate")(function* (
   const now = isoNow(nowMs);
   if (titleChanged) yield* SearchStore.writeTitle(page.page_id, next.title);
   yield* sql`UPDATE spaces_pages SET title = ${next.title}, icon = ${next.icon}, revision = revision + 1, updated_at = ${now} WHERE page_id = ${page.page_id}`;
+  yield* PageChanges.recordPage(page.page_id, page.space_id, { tree: true });
   yield* RevisionStore.capture(
     {
       pageId: page.page_id,

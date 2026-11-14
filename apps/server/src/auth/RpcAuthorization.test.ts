@@ -515,6 +515,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesRecentsList,
       WS_METHODS.spacesPagesGet,
       WS_METHODS.spacesBlocksRead,
+      WS_METHODS.spacesBlocksReadSubtree,
       WS_METHODS.spacesReceiptsGet,
       WS_METHODS.spacesStructureInspect,
       WS_METHODS.spacesReferencesResolve,
@@ -528,6 +529,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesDatabasesGet,
       WS_METHODS.spacesDatabasesQuery,
       WS_METHODS.spacesDatabasesSubscribeChanges,
+      WS_METHODS.spacesPagesSubscribeChanges,
       WS_METHODS.spacesDatabasesRowsGet,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
@@ -545,6 +547,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
             "spaces.pages.create": deniedHandler,
             "spaces.pages.update": deniedHandler,
             "spaces.blocks.apply": deniedHandler,
+            "spaces.blocks.unsync": deniedHandler,
             "spaces.pages.createChild": deniedHandler,
             "spaces.pages.move": deniedHandler,
             "spaces.blocks.move": deniedHandler,
@@ -697,6 +700,10 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
         generation: 0,
         mutations: [],
       }),
+      client[WS_METHODS.spacesBlocksUnsync]({
+        ...common,
+        sourceBlockId: C.SpaceBlockId.make("block"),
+      }),
     ] as ReadonlyArray<
       Effect.Effect<
         unknown,
@@ -732,6 +739,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
       WS_METHODS.spacesPagesCreate,
       WS_METHODS.spacesPagesUpdate,
       WS_METHODS.spacesBlocksApply,
+      WS_METHODS.spacesBlocksUnsync,
       WS_METHODS.spacesPagesCreateChild,
       WS_METHODS.spacesPagesMove,
       WS_METHODS.spacesBlocksMove,
@@ -767,6 +775,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
             "spaces.recents.list": deniedHandler,
             "spaces.pages.get": deniedHandler,
             "spaces.blocks.read": deniedHandler,
+            "spaces.blocks.readSubtree": deniedHandler,
             "spaces.receipts.get": deniedHandler,
             "spaces.structure.inspect": deniedHandler,
             "spaces.references.resolve": deniedHandler,
@@ -778,6 +787,8 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
             "spaces.databases.query": deniedHandler,
             "spaces.databases.rows.get": deniedHandler,
             "spaces.databases.subscribeChanges": () =>
+              Stream.fromEffect(Effect.sync(() => void handled++)).pipe(Stream.drain),
+            "spaces.pages.subscribeChanges": () =>
               Stream.fromEffect(Effect.sync(() => void handled++)).pipe(Stream.drain),
           }),
           RpcAuthorization.layer([AuthOrchestrationOperateScope]),
@@ -815,6 +826,10 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
         target: { kind: "page", pageId },
       }),
       client[WS_METHODS.spacesBlocksRead]({ environmentId, pageId, revision: 0 }),
+      client[WS_METHODS.spacesBlocksReadSubtree]({
+        environmentId,
+        blockId: C.SpaceBlockId.make("block"),
+      }),
       client[WS_METHODS.spacesReceiptsGet]({
         request: {
           operation: "createSpace",
@@ -844,6 +859,13 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
       environmentId,
     }).pipe(Stream.runDrain, Effect.flip);
     expect(subscription).toMatchObject({
+      _tag: "EnvironmentAuthorizationError",
+      requiredPermission: AuthOrchestrationReadScope,
+    });
+    const pageSubscription = yield* client[WS_METHODS.spacesPagesSubscribeChanges]({
+      environmentId,
+    }).pipe(Stream.runDrain, Effect.flip);
+    expect(pageSubscription).toMatchObject({
       _tag: "EnvironmentAuthorizationError",
       requiredPermission: AuthOrchestrationReadScope,
     });

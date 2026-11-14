@@ -17,6 +17,8 @@ import {
   WsSpacesPagesUpdateRpc,
   WsSpacesBlocksReadRpc,
   WsSpacesBlocksApplyRpc,
+  WsSpacesBlocksReadSubtreeRpc,
+  WsSpacesBlocksUnsyncRpc,
   WsSpacesReceiptsGetRpc,
   WsSpacesAssetsUploadCreateRpc,
   WsSpacesAssetsUploadGetRpc,
@@ -39,6 +41,7 @@ import {
   WsSpacesDatabasesGetRpc,
   WsSpacesDatabasesQueryRpc,
   WsSpacesDatabasesSubscribeChangesRpc,
+  WsSpacesPagesSubscribeChangesRpc,
   WsSpacesDatabasesRowsGetRpc,
   WsSpacesDatabasesCreateRpc,
   WsSpacesDatabasesUpdateRpc,
@@ -99,6 +102,10 @@ export const group = RpcGroup.make(
       input,
     })),
   ),
+  WsSpacesBlocksReadSubtreeRpc.setPayload(strictPayload(C.SpaceReadSubtreeInput)),
+  WsSpacesBlocksUnsyncRpc.setPayload(
+    strictPayload(C.SpaceUnsyncInput, (input) => ({ operation: "unsyncBlocks", input })),
+  ),
   WsSpacesReceiptsGetRpc.setPayload(strictPayload(C.SpaceReceiptLookupInput)),
   WsSpacesPagesCreateChildRpc.setPayload(
     strictPayload(C.SpaceCreateChildPageInput, (input) => ({
@@ -134,6 +141,7 @@ export const group = RpcGroup.make(
   WsSpacesDatabasesSubscribeChangesRpc.setPayload(
     strictPayload(C.SpaceDatabaseChangesSubscribeInput),
   ),
+  WsSpacesPagesSubscribeChangesRpc.setPayload(strictPayload(C.SpacePageChangesSubscribeInput)),
   WsSpacesDatabasesRowsGetRpc.setPayload(strictPayload(C.SpaceDatabaseRowGetInput)),
   WsSpacesDatabasesCreateRpc.setPayload(
     strictPayload(C.SpaceDatabaseCreateInput, (input) => ({ operation: "createDatabase", input })),
@@ -209,6 +217,8 @@ export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: str
     [WS_METHODS.spacesPagesUpdate]: (input) => service.updatePage(input),
     [WS_METHODS.spacesBlocksRead]: (input) => service.readBlocks(input),
     [WS_METHODS.spacesBlocksApply]: (input) => service.applyBlockBatch(input),
+    [WS_METHODS.spacesBlocksReadSubtree]: (input) => service.readSubtree(input),
+    [WS_METHODS.spacesBlocksUnsync]: (input) => service.unsyncBlocks(input),
     [WS_METHODS.spacesReceiptsGet]: (input) => service.lookupMutationReceipt(input),
     [WS_METHODS.spacesPagesCreateChild]: (input) => service.createChildPage(input),
     [WS_METHODS.spacesPagesMove]: (input) => service.movePage(input),
@@ -225,6 +235,7 @@ export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: str
     [WS_METHODS.spacesDatabasesQuery]: (input) => service.queryDatabase(input),
     [WS_METHODS.spacesDatabasesSubscribeChanges]: (input) =>
       service.subscribeDatabaseChanges(input),
+    [WS_METHODS.spacesPagesSubscribeChanges]: (input) => service.subscribePageChanges(input),
     [WS_METHODS.spacesDatabasesRowsGet]: (input) => service.getDatabaseRows(input),
     [WS_METHODS.spacesDatabasesCreate]: (input) => service.createDatabase(input),
     [WS_METHODS.spacesDatabasesUpdate]: (input) => service.updateDatabase(input),

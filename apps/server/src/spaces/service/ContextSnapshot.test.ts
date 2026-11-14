@@ -515,6 +515,84 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
     ),
   );
 
+  it.effect("expands a synced copy once from its original page and lists the source", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const { service, common, page, library, request } = yield* boot();
+        const host = yield* rootPage(service, common, library.defaultSpaceId, "Host");
+        const synced = {
+          ...block("original", 1),
+          type: "synced_block",
+          content: {},
+        };
+        yield* service.applyBlockBatch(
+          request("seed-original", 0, [
+            { kind: "insert", block: synced },
+            { kind: "insert", block: block("source-text", 1, synced.id) },
+          ]),
+        );
+        const ref = (id: string, sourceBlockId: string, order: number) => ({
+          ...block(id, order),
+          type: "synced_ref",
+          content: { sourceBlockId },
+        });
+        yield* service.applyBlockBatch({
+          ...common,
+          mutationId: C.SpaceMutationId.make("seed-copies"),
+          pageId: host.id,
+          baseRevision: host.revision,
+          generation: 0,
+          mutations: [
+            { kind: "insert", block: ref("copy-1", "original", 1) },
+            { kind: "insert", block: ref("copy-2", "original", 2) },
+            { kind: "insert", block: ref("copy-gone", "gone", 3) },
+            {
+              kind: "insert",
+              block: { ...synced, id: "gone", order: "00000000000000000000000000000009" },
+            },
+          ],
+        });
+        yield* service.applyBlockBatch({
+          ...common,
+          mutationId: C.SpaceMutationId.make("drop-original"),
+          pageId: host.id,
+          baseRevision: host.revision + 1,
+          generation: 1,
+          mutations: [{ kind: "delete", blockId: C.SpaceBlockId.make("gone") }],
+        });
+        const captured = yield* service.captureContextSnapshot({
+          ...env,
+          contextId: "synced_ctx",
+          target: { kind: "page", pageId: host.id },
+        });
+        assert.equal(captured.status, "captured");
+        if (captured.status !== "captured") return;
+        assert.equal(
+          captured.record.snapshot.text,
+          [
+            "[synced from Page]",
+            "source-text",
+            "[synced from Page]",
+            "[synced block unavailable]",
+          ].join("\n"),
+        );
+        assert.deepEqual(
+          captured.record.snapshot.sources.map((source) => source.pageId),
+          [host.id, page.id],
+        );
+        const original = yield* service.captureContextSnapshot({
+          ...env,
+          contextId: "original_ctx",
+          target: { kind: "page", pageId: page.id },
+        });
+        assert.equal(
+          original.status === "captured" && original.record.snapshot.text,
+          "source-text",
+        );
+      }),
+    ),
+  );
+
   it.effect("accepts children under a toggle and includes them in context snapshots", () =>
     fixture(() =>
       Effect.gen(function* () {

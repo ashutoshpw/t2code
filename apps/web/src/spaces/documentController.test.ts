@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { EnvironmentId } from "@t2code/contracts";
 import type { SpaceDocumentDraft, SpaceDraftStore } from "@t2code/client-runtime/spaces";
 import {
@@ -412,4 +412,120 @@ it("does not fail a structural refresh for a page that was just trashed", async 
     documents.refreshStructure(key.environmentId, [key.pageId]),
   ).resolves.toBeUndefined();
   opened.release();
+});
+
+describe("Spaces document live refresh", () => {
+  function liveDocument() {
+    const server = { revision: 1, title: "Page" };
+    const calls = { getPage: 0, readBlocks: 0 };
+    const gate: { current: ReturnType<typeof deferred<void>> | null } = { current: null };
+    const doc = controller(key, {
+      getPage: async () => {
+        calls.getPage++;
+        const base = metadata();
+        return { ...base, page: { ...base.page, revision: server.revision, title: server.title } };
+      },
+      readBlocks: async (input) => {
+        calls.readBlocks++;
+        await gate.current?.promise;
+        return {
+          revision: input.revision,
+          blocks: [block(`revision-${input.revision}`)],
+          nextCursor: null,
+        };
+      },
+    });
+    const signal = (changeSeq: number, revision: number, bodyRevision = revision) => ({
+      changeSeq,
+      resyncSeq: 0,
+      revision,
+      bodyRevision,
+    });
+    return { doc, server, calls, gate, signal };
+  }
+
+  it("re-reads a clean document when a newer body is announced", async () => {
+    const { doc, server, calls, signal } = liveDocument();
+    await doc.open();
+    server.revision = 2;
+    const before = calls.readBlocks;
+    await doc.liveRefresh(signal(1, 2));
+    expect(calls.readBlocks).toBe(before + 1);
+    expect(doc.session.getSnapshot()).toMatchObject({
+      baseRevision: 2,
+      blocks: [block("revision-2")],
+    });
+    expect(doc.getSnapshot().error).toBeNull();
+  });
+
+  it("holds a dirty document untouched", async () => {
+    const { doc, server, calls, signal } = liveDocument();
+    await doc.open();
+    doc.session.apply([{ kind: "replace", block: block("local draft") }]);
+    server.revision = 2;
+    const reads = calls.readBlocks;
+    await doc.liveRefresh(signal(1, 2));
+    expect(calls.readBlocks).toBe(reads);
+    expect(doc.session.getSnapshot()).toMatchObject({
+      dirty: true,
+      baseRevision: 1,
+      blocks: [block("local draft")],
+    });
+  });
+
+  it("reads only the page for a metadata-only change", async () => {
+    const { doc, server, calls, signal } = liveDocument();
+    await doc.open();
+    server.revision = 2;
+    server.title = "Renamed";
+    const reads = calls.readBlocks;
+    const pages = calls.getPage;
+    await doc.liveRefresh(signal(1, 2, 1));
+    expect(calls.readBlocks).toBe(reads);
+    expect(calls.getPage).toBe(pages + 1);
+    expect(doc.getSnapshot().metadata?.page).toMatchObject({ revision: 2, title: "Renamed" });
+    expect(doc.session.getSnapshot().baseRevision).toBe(1);
+  });
+
+  it("runs one follow-up refresh for the latest signal announced during a load", async () => {
+    const { doc, server, calls, gate, signal } = liveDocument();
+    await doc.open();
+    server.revision = 2;
+    gate.current = deferred<void>();
+    const reads = calls.readBlocks;
+    const running = doc.liveRefresh(signal(1, 2));
+    await Promise.resolve();
+    await doc.liveRefresh(signal(2, 3));
+    await doc.liveRefresh(signal(3, 4));
+    server.revision = 4;
+    gate.current.resolve();
+    await running;
+    await vi.waitFor(() => expect(doc.session.getSnapshot().baseRevision).toBe(4));
+    expect(calls.readBlocks).toBe(reads + 2);
+  });
+
+  it("reads no blocks for a resync when the revision is unchanged", async () => {
+    const { doc, calls } = liveDocument();
+    await doc.open();
+    const reads = calls.readBlocks;
+    await doc.liveRefresh({ changeSeq: 0, resyncSeq: 1 });
+    expect(calls.readBlocks).toBe(reads);
+    expect(calls.getPage).toBeGreaterThan(1);
+  });
+
+  it("keeps the snapshot and stays writable when a live read fails", async () => {
+    const { doc, server, signal } = liveDocument();
+    await doc.open();
+    server.revision = 2;
+    const failing = controller(key, {
+      getPage: async () => {
+        throw new Error("offline");
+      },
+    });
+    await failing.open().catch(() => {});
+    await doc.liveRefresh(signal(1, 2));
+    doc.session.apply([{ kind: "replace", block: block("still writable") }]);
+    expect(doc.getSnapshot().error).toBeNull();
+    expect(doc.session.getSnapshot().dirty).toBe(true);
+  });
 });

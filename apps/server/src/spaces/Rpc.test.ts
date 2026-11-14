@@ -992,6 +992,30 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("encoded Spaces R
     ),
   );
 
+  it.effect("streams page changes only to read-scoped callers of this environment", () =>
+    fixture(
+      Effect.gen(function* () {
+        const readable = yield* encodedServer([AuthOrchestrationReadScope]);
+        const opened = yield* readable.request(WS_METHODS.spacesPagesSubscribeChanges, env);
+        assert.equal(opened._tag, "Chunk");
+        assert.deepEqual(opened._tag === "Chunk" ? opened.values : [], [{ type: "resync" }]);
+        const elsewhere = yield* readable.request(WS_METHODS.spacesPagesSubscribeChanges, {
+          environmentId: EnvironmentId.make("elsewhere"),
+        });
+        assert.equal(
+          (typedFailure(elsewhere) as { readonly _tag: string })._tag,
+          "SpaceEnvironmentMismatchError",
+        );
+        const operateOnly = yield* encodedServer([AuthOrchestrationOperateScope]);
+        const refused = yield* operateOnly.request(WS_METHODS.spacesPagesSubscribeChanges, env);
+        assert.equal(
+          (typedFailure(refused) as { readonly _tag: string })._tag,
+          "EnvironmentAuthorizationError",
+        );
+      }),
+    ),
+  );
+
   it.effect("round-trips the database methods through strict encoded envelopes", () =>
     fixture(
       Effect.gen(function* () {

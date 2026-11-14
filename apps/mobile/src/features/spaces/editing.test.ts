@@ -95,6 +95,27 @@ function event(text: string, revision: number, composing = false) {
 }
 
 describe("production native page editing boundary", () => {
+  it("refuses to edit or delete blocks inside tabs on mobile", async () => {
+    const test = setup();
+    const tabs = {
+      ...block,
+      id: SpaceBlockId.make("tabs"),
+      type: "tabs",
+      content: {},
+    } as SpaceBlock;
+    const pane = {
+      ...block,
+      id: SpaceBlockId.make("pane"),
+      parentId: tabs.id,
+      type: "tab_pane",
+      content: { title: "One" },
+    } as SpaceBlock;
+    const inside = { ...block, id: SpaceBlockId.make("inside"), parentId: pane.id } as SpaceBlock;
+    await test.session.hydrate({ revision: 1, blocks: [tabs, pane, inside] });
+    expect(() => test.editing.focus(Symbol(), inside.id)).toThrow("read-only on mobile");
+    expect(test.editing.canDeleteCoreBlock(inside.id)).toBe(false);
+  });
+
   it("retains a newer rejected native revision through older commits and recovers only consistent content without leaking across owners", async () => {
     const test = setup();
     await test.session.hydrate({ revision: 40, blocks: [block] });

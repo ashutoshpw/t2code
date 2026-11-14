@@ -3,6 +3,11 @@ import {
   SpaceDatabaseBlock,
   SpaceKnownBlock,
   SpaceKnownMark,
+  SpaceSyncedBlock,
+  SpaceSyncedRefBlock,
+  SpaceTabPaneBlock,
+  SpaceTabsBlock,
+  SPACE_LIST_CONTAINER_TYPES,
   type SpaceBlock,
   type SpaceBlockId,
   type SpaceMark,
@@ -14,6 +19,16 @@ import {
 
 const decodeKnownBlock = Schema.decodeUnknownOption(SpaceKnownBlock, { onExcessProperty: "error" });
 const decodeDatabaseBlock = Schema.decodeUnknownOption(SpaceDatabaseBlock, {
+  onExcessProperty: "error",
+});
+const decodeTabsBlock = Schema.decodeUnknownOption(SpaceTabsBlock, { onExcessProperty: "error" });
+const decodeTabPaneBlock = Schema.decodeUnknownOption(SpaceTabPaneBlock, {
+  onExcessProperty: "error",
+});
+const decodeSyncedBlock = Schema.decodeUnknownOption(SpaceSyncedBlock, {
+  onExcessProperty: "error",
+});
+const decodeSyncedRef = Schema.decodeUnknownOption(SpaceSyncedRefBlock, {
   onExcessProperty: "error",
 });
 const decodeKnownMark = Schema.decodeUnknownOption(SpaceKnownMark, { onExcessProperty: "error" });
@@ -34,6 +49,28 @@ export function isSameSpaceDatabaseBlock(a: SpaceBlock, b: SpaceBlock): boolean 
     a.content.databaseId === b.content.databaseId
   );
 }
+export function isSpaceTabsBlock(value: unknown): value is SpaceTabsBlock {
+  return Option.isSome(decodeTabsBlock(value));
+}
+export function isSpaceTabPaneBlock(value: unknown): value is SpaceTabPaneBlock {
+  return Option.isSome(decodeTabPaneBlock(value));
+}
+export function isSpaceSyncedBlock(value: unknown): value is SpaceSyncedBlock {
+  return Option.isSome(decodeSyncedBlock(value));
+}
+export function isSpaceSyncedRef(value: unknown): value is SpaceSyncedRefBlock {
+  return Option.isSome(decodeSyncedRef(value));
+}
+function isSpaceContainerExtension(
+  value: unknown,
+): value is SpaceTabsBlock | SpaceTabPaneBlock | SpaceSyncedBlock {
+  return isSpaceTabsBlock(value) || isSpaceTabPaneBlock(value) || isSpaceSyncedBlock(value);
+}
+function isSpaceExtensionBlock(
+  value: unknown,
+): value is SpaceTabsBlock | SpaceTabPaneBlock | SpaceSyncedBlock | SpaceSyncedRefBlock {
+  return isSpaceContainerExtension(value) || isSpaceSyncedRef(value);
+}
 function isKnownSpaceMark(value: unknown): value is SpaceKnownMark {
   return Option.isSome(decodeKnownMark(value));
 }
@@ -51,10 +88,12 @@ export function isSafeSpaceLink(href: string): boolean {
 }
 
 export function isSpaceListItem(block: SpaceBlock): boolean {
-  return (
-    isKnownSpaceBlock(block) &&
-    ["bulleted_item", "numbered_item", "todo_item", "toggle"].includes(block.type)
-  );
+  return isKnownSpaceBlock(block) && SPACE_LIST_CONTAINER_TYPES.some((type) => type === block.type);
+}
+
+/** A list item, or a strictly decoded tabs, tab pane or synced block. */
+export function spaceBlockHoldsChildren(block: SpaceBlock): boolean {
+  return isSpaceListItem(block) || isSpaceContainerExtension(block);
 }
 
 export function spaceBlockRuns(block: SpaceBlock): SpaceRichText | null {
@@ -77,6 +116,7 @@ function hasSupportedRuns(runs: SpaceRichText, mobile: boolean): boolean {
 }
 
 export function canEditSpaceBlock(block: SpaceBlock): boolean {
+  if (isSpaceExtensionBlock(block)) return true;
   if (!isKnownSpaceBlock(block)) return false;
   const known: SpaceKnownBlock = block;
   return (
@@ -262,6 +302,8 @@ export function copySpaceBlocks(
     throw new Error("Duplicate block ID");
   if (
     blocks.some((block) => {
+      if (isSpaceSyncedBlock(block)) return true;
+      if (isSpaceExtensionBlock(block)) return false;
       if (!isKnownSpaceBlock(block) || block.type === "child_page") return true;
       const known: SpaceKnownBlock = block;
       return (
@@ -296,6 +338,12 @@ export function copySpaceBlocks(
       }),
     }));
   return blocks.map((block) => {
+    if (isSpaceExtensionBlock(block))
+      return {
+        ...block,
+        id: ids.get(block.id)!,
+        parentId: block.parentId === null ? null : (ids.get(block.parentId) ?? block.parentId),
+      };
     if (!isKnownSpaceBlock(block)) throw new Error("Unknown block");
     const known: SpaceKnownBlock = block;
     const content =

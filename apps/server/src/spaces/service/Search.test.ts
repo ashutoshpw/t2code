@@ -574,6 +574,9 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             contextCapture: true,
             databases: true,
             databaseChanges: true,
+            pageChanges: true,
+            tabs: true,
+            syncedBlocks: true,
           });
           const value = {
             ...block("search-moving"),
@@ -900,5 +903,55 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           );
         }),
       ),
+  );
+
+  it.effect("indexes the text of a synced original on its own page only", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const { service, common, page, library, request } = yield* boot();
+        const host = yield* rootPage(service, common, library.defaultSpaceId, "search-host");
+        const original = {
+          ...block("search-original", 1),
+          type: "synced_block",
+          content: {},
+        };
+        yield* service.applyBlockBatch(
+          request("search-synced", 0, [
+            { kind: "insert", block: original },
+            {
+              kind: "insert",
+              block: {
+                ...block("search-inside", 1, original.id),
+                content: { runs: [{ text: "syncedneedle", marks: [] }] },
+              },
+            },
+          ]),
+        );
+        yield* service.applyBlockBatch({
+          ...common,
+          mutationId: C.SpaceMutationId.make("search-copy"),
+          pageId: host.id,
+          baseRevision: host.revision,
+          generation: 0,
+          mutations: [
+            {
+              kind: "insert",
+              block: {
+                ...block("search-copy", 1),
+                type: "synced_ref",
+                content: { sourceBlockId: original.id },
+              },
+            },
+          ],
+        });
+        const pending = yield* Effect.flip(service.search({ ...env, query: "syncedneedle" }));
+        assert.equal(pending._tag, "SpaceSearchUnavailableError");
+        const found = yield* service.search({ ...env, query: "syncedneedle" });
+        assert.deepEqual(
+          found.items.map((item) => [item.page.id, item.blockId]),
+          [[page.id, C.SpaceBlockId.make("search-inside")]],
+        );
+      }),
+    ),
   );
 });

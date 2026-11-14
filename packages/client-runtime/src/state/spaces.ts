@@ -11,9 +11,10 @@ import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { createSpacesDatabaseAtoms } from "./spacesDatabases.ts";
+import { createSpacesPageAtoms } from "./spacesPages.ts";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
 import { readSpacePageLocation, SpaceLocationError } from "../spaces/pageLocation.ts";
-import type { SpacePageId, SpacePageSummary } from "@t2code/contracts/spaces";
+import type { SpaceBlockId, SpacePageId, SpacePageSummary } from "@t2code/contracts/spaces";
 import { request, requestGuarded } from "../rpc/client.ts";
 import {
   createEnvironmentCommand,
@@ -68,9 +69,27 @@ export function createSpacesEnvironmentAtoms<R, E>(
   );
   const pageShare = (environmentId: EnvironmentId, pageId: SpacePageId) =>
     pageShares(`${environmentId}\n${pageId}`);
+  const syncedSourcePages = Atom.family((_key: string) =>
+    Atom.make<SpacePageId | undefined>(undefined).pipe(Atom.keepAlive),
+  );
   const databases = createSpacesDatabaseAtoms(runtime, options);
+  const pages = createSpacesPageAtoms(runtime, {
+    ...(options ? { capabilityAtom: options.capabilityAtom } : {}),
+    changed,
+  });
+  // A copy refreshes with the library and, once an answer named the original's page, with that page's live signal.
+  const syncedTrigger = Atom.family((key: string) => {
+    const [environmentId] = JSON.parse(key) as [EnvironmentId, SpaceBlockId];
+    return Atom.make((get) => {
+      const pageId = get(syncedSourcePages(key));
+      const live = pageId === undefined ? undefined : get(pages.pageLive(environmentId, pageId));
+      return get(changed(environmentId)) + (live ? live.changeSeq + live.resyncSeq : 0);
+    });
+  });
   return {
     changed,
+    pageLive: pages.pageLive,
+    treeLive: pages.treeLive,
     libraryChanged,
     databases,
     /**
@@ -191,6 +210,25 @@ export function createSpacesEnvironmentAtoms<R, E>(
       tag: WS_METHODS.spacesBlocksRead,
       idleTtlMs: 0,
       staleTimeMs: 0,
+    }),
+    /** The original behind a synced copy: its blocks, copies and page; refreshes with live changes to its page. */
+    readSubtree: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:readSubtree",
+      tag: WS_METHODS.spacesBlocksReadSubtree,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+      refreshTrigger: ({ environmentId, input }) =>
+        syncedTrigger(JSON.stringify([environmentId, input.blockId])),
+      onAnswer: ({ environmentId, input }, value, registry) => {
+        const atom = syncedSourcePages(JSON.stringify([environmentId, input.blockId]));
+        return Effect.sync(() =>
+          registry.set(atom, value.status === "found" ? value.page.id : undefined),
+        );
+      },
+    }),
+    unsync: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:unsync",
+      tag: WS_METHODS.spacesBlocksUnsync,
     }),
     receipt: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:spaces:receipt",

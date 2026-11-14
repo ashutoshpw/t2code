@@ -174,6 +174,7 @@ describe("command permissions", () => {
             WS_METHODS.spacesPagesCreate,
             WS_METHODS.spacesPagesUpdate,
             WS_METHODS.spacesBlocksApply,
+            WS_METHODS.spacesBlocksUnsync,
             WS_METHODS.spacesPagesCreateChild,
             WS_METHODS.spacesPagesMove,
             WS_METHODS.spacesBlocksMove,

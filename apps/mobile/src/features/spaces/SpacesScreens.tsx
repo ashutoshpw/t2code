@@ -1,3 +1,4 @@
+import { useAtomValue } from "@effect/atom-react";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
@@ -178,6 +179,8 @@ function PageLibrary({
   access: SpacesReadAccess;
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  // Holds the page change stream open while the list shows; its moves refresh the list through `changed`.
+  useAtomValue(spacesEnvironment.treeLive(environmentId));
   const pages = useMemo(
     () =>
       new SpacePageNavigation({

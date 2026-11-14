@@ -3,9 +3,15 @@ import {
   canEditSpaceBlock,
   isKnownSpaceBlock,
   isSpaceListItem,
+  isSpaceSyncedBlock,
+  isSpaceSyncedRef,
+  isSpaceTabPaneBlock,
+  isSpaceTabsBlock,
+  spaceBlockHoldsChildren,
   spaceBlockRuns,
   mediaAssetId,
 } from "@t2code/client-runtime/spaces";
+import { spaceNestingAllowed } from "@t2code/contracts/spaces";
 import type {
   SpaceBlock,
   SpaceBlockId,
@@ -110,6 +116,11 @@ export function spaceBlockNode(
 ): ProseMirrorNode {
   const attrs = { block };
   const runs = spaceBlockRuns(block);
+  if (!readOnly && isSpaceTabsBlock(block)) return schema.nodes.tabs!.create(attrs, children);
+  if (!readOnly && isSpaceTabPaneBlock(block)) return schema.nodes.tabPane!.create(attrs, children);
+  if (!readOnly && isSpaceSyncedBlock(block))
+    return schema.nodes.syncedBlock!.create(attrs, children);
+  if (!readOnly && isSpaceSyncedRef(block)) return schema.nodes.syncedRef!.create(attrs);
   if (!readOnly && canEditSpaceEditorBlock(block) && mediaAssetId(block))
     return schema.nodes.spaceMedia!.create(attrs, richTextNodes(spaceEditorRuns(block)!, schema));
   if (!readOnly && canEditSpaceEditorBlock(block) && runs) {
@@ -145,18 +156,30 @@ export function spaceWindowDocument(
   const byId = new Map(window.blocks.map((block) => [block.id, block]));
   if (byId.size !== window.blocks.length) throw new Error("Duplicate block ID");
   const readOnlyIds = new Set<SpaceBlockId>();
+  const misplaced = new Set<SpaceBlockId>();
+  for (const block of window.blocks) {
+    const nearest = block.parentId === null ? undefined : byId.get(block.parentId);
+    const placed =
+      block.type === "tab_pane"
+        ? isSpaceTabPaneBlock(block) && nearest?.type === "tabs"
+        : !nearest || spaceNestingAllowed(block.type, [nearest.type]);
+    if (!placed) misplaced.add(block.id);
+  }
   for (const block of window.blocks) {
     const seen = new Set([block.id]);
     let parent = block.parentId;
+    if (misplaced.has(block.id)) readOnlyIds.add(block.id);
     while (parent !== null && byId.has(parent)) {
       if (seen.has(parent)) throw new Error("Block parent cycle");
       seen.add(parent);
       if (seen.size > maxDepth) throw new Error("Editor nesting limit exceeded");
       const ancestor = byId.get(parent)!;
-      if (!isSpaceListItem(ancestor) || !canEditSpaceEditorBlock(ancestor))
+      if (
+        !spaceBlockHoldsChildren(ancestor) ||
+        !canEditSpaceEditorBlock(ancestor) ||
+        misplaced.has(ancestor.id)
+      )
         readOnlyIds.add(block.id);
-      if (isKnownSpaceBlock(ancestor) && !isSpaceListItem(ancestor))
-        throw new Error("Only list items contain blocks");
       parent = ancestor.parentId;
     }
   }
@@ -190,7 +213,8 @@ export function spaceDocumentBlocks(doc: ProseMirrorNode): readonly SpaceBlock[]
     const original = node.attrs.block as SpaceBlock;
     if (!original?.id) throw new Error("Missing canonical block identity");
     let block = { ...original, parentId };
-    if (node.type.name !== "spaceAtom") {
+    const container = ["tabs", "tabPane", "syncedBlock"].includes(node.type.name);
+    if (node.type.name !== "spaceAtom" && node.type.name !== "syncedRef" && !container) {
       if (node.type.name === "code") {
         const content = {
           text: node.textContent,
@@ -218,7 +242,8 @@ export function spaceDocumentBlocks(doc: ProseMirrorNode): readonly SpaceBlock[]
       }
     }
     result.push(block);
-    if (isSpaceListItem(original) && node.type.name !== "spaceAtom")
+    if (container) node.forEach((child) => walk(child, original.id));
+    else if (isSpaceListItem(original) && node.type.name !== "spaceAtom")
       node.forEach((child, _offset, i) => {
         if (i > 0) walk(child, original.id);
       });

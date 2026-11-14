@@ -1,9 +1,8 @@
 import * as C from "@t2code/contracts/spaces";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
-import * as Queue from "effect/Queue";
-import * as Stream from "effect/Stream";
 
+import { makeChangeHub } from "../ChangeHub.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 
 /** A mailbox holding more ids than this collapses to `resync`, which bounds memory per subscriber. */
@@ -71,7 +70,6 @@ export const resolve = Effect.fn("SpacesDatabaseChanges.resolve")(function* (
 });
 
 interface Mailbox {
-  readonly signal: Queue.Queue<void>;
   readonly dataSources: Map<string, DataSourceChange>;
   readonly databases: Map<string, number>;
   overflow: boolean;
@@ -136,41 +134,11 @@ const take = (mailbox: Mailbox): ReadonlyArray<C.SpaceDatabaseChangeEvent> => {
   }));
 };
 
-export interface ChangeHub {
-  /** Never waits, so a slow subscriber cannot hold the write lock. */
-  readonly publish: (batch: ChangeBatch) => Effect.Effect<void>;
-  /** Emits `resync` first, then one event per batch the subscriber's mailbox collected. */
-  readonly subscribe: Stream.Stream<C.SpaceDatabaseChangeEvent>;
-}
-
-export const makeHub = (): ChangeHub => {
-  const mailboxes = new Set<Mailbox>();
-  const publish = (batch: ChangeBatch) =>
-    Effect.sync(() => {
-      if (batch.dataSources.length === 0 && batch.databases.length === 0) return;
-      for (const mailbox of mailboxes) {
-        merge(mailbox, batch);
-        Queue.offerUnsafe(mailbox.signal, undefined);
-      }
-    });
-  const subscribe = Stream.unwrap(
-    Effect.gen(function* () {
-      const signal = yield* Queue.sliding<void>(1);
-      const mailbox: Mailbox = {
-        signal,
-        dataSources: new Map(),
-        databases: new Map(),
-        overflow: false,
-      };
-      yield* Effect.acquireRelease(
-        Effect.sync(() => void mailboxes.add(mailbox)),
-        () => Effect.sync(() => void mailboxes.delete(mailbox)),
-      );
-      const rest = Stream.fromEffectRepeat(
-        Queue.take(signal).pipe(Effect.map(() => take(mailbox))),
-      ).pipe(Stream.flatMap((events) => Stream.fromArray(events)));
-      return Stream.concat(Stream.make<[C.SpaceDatabaseChangeEvent]>({ type: "resync" }), rest);
-    }),
-  );
-  return { publish, subscribe };
-};
+export const makeHub = () =>
+  makeChangeHub<ChangeBatch, Mailbox, C.SpaceDatabaseChangeEvent>({
+    empty: () => ({ dataSources: new Map(), databases: new Map(), overflow: false }),
+    isEmpty: (batch) => batch.dataSources.length === 0 && batch.databases.length === 0,
+    merge,
+    take,
+    resync: { type: "resync" },
+  });

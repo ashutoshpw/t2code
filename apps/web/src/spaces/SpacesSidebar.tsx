@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react";
+import { useAtomMount } from "@effect/atom-react";
 import { Link, useParams, useSearch } from "@tanstack/react-router";
 import { EnvironmentId } from "@t2code/contracts";
 import { SpaceId, type SpaceCursor, type SpacePageSummary } from "@t2code/contracts/spaces";
@@ -204,6 +205,8 @@ function SpaceWindows({ environmentId }: { environmentId: EnvironmentId }) {
 }
 
 function LibraryNavigation({ environmentId }: { environmentId: EnvironmentId }) {
+  // Keeps the page change stream open while Spaces is; its tree changes refresh the lists below.
+  useAtomMount(spacesEnvironment.treeLive(environmentId));
   const capability = useEnvironment(environmentId)?.serverConfig?.environment.capabilities.spaces;
   const search = useSearch({ strict: false });
   const { isMobile, setOpenMobile } = useSidebar();

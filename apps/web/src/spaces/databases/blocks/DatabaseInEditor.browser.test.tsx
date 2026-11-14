@@ -175,18 +175,18 @@ describe("database block handle menu", () => {
     return readyWhen({ screen, onBatch }, async () => {
       await userEvent.hover(screen.getByRole("tablist", { name: "Database views" }));
       await userEvent.click(screen.getByRole("button", { name: "Block menu" }));
-      await userEvent.click(screen.getByRole("menuitem", { name: item }));
+      await userEvent.click(page.getByRole("menuitem", { name: item }));
     });
   }
 
   it("keeps the delete confirmation open after the menu closes and deletes on confirm", async () => {
     const { screen, onBatch } = await openMenu("Delete database");
     await using _screen = screen;
-    await expect.element(screen.getByText("Delete this database?")).toBeVisible();
+    await expect.element(page.getByText("Delete this database?")).toBeVisible();
     expect(onBatch).not.toHaveBeenCalled();
     // A native click: Base UI's inert layer swallows synthesized pointer events over the dialog.
     await vi.waitFor(() =>
-      (screen.getByRole("button", { name: "Delete database" }).element() as HTMLElement).click(),
+      (page.getByRole("button", { name: "Delete database" }).element() as HTMLElement).click(),
     );
     await vi.waitFor(() => expect(onBatch).toHaveBeenCalled());
     expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).not.toContain('"type":"database"');
@@ -196,9 +196,9 @@ describe("database block handle menu", () => {
     const { screen, onBatch } = await openMenu("Delete database");
     await using _screen = screen;
     await vi.waitFor(() =>
-      (screen.getByRole("button", { name: "Cancel" }).element() as HTMLElement).click(),
+      (page.getByRole("button", { name: "Cancel" }).element() as HTMLElement).click(),
     );
-    await expect.element(screen.getByText("Delete this database?")).not.toBeInTheDocument();
+    await expect.element(page.getByText("Delete this database?")).not.toBeInTheDocument();
     expect(onBatch).not.toHaveBeenCalled();
     await expect.element(screen.getByRole("tablist", { name: "Database views" })).toBeVisible();
   });
@@ -207,7 +207,7 @@ describe("database block handle menu", () => {
     const { screen, onBatch } = await openMenu("Delete linked view", linkedDatabase);
     await using _screen = screen;
     await vi.waitFor(() => expect(onBatch).toHaveBeenCalled());
-    expect(screen.getByText("Delete this database?").query()).toBeNull();
+    expect(page.getByText("Delete this database?").query()).toBeNull();
     expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).not.toContain('"type":"database"');
   });
 

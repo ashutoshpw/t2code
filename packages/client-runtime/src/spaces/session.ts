@@ -7,6 +7,7 @@ import type {
   SpaceMutationAdmission,
 } from "@t2code/contracts/spaces";
 
+import { spaceNestingAllowed } from "@t2code/contracts/spaces";
 import * as Schema from "effect/Schema";
 
 import {
@@ -15,6 +16,7 @@ import {
   isSameSpaceDatabaseBlock,
   isSpaceDatabaseBlock,
   isSpaceListItem,
+  spaceBlockHoldsChildren,
 } from "./values.ts";
 import { decodeSpaceDocumentDraft, spaceDraftMaxBytes, spaceJsonBytes } from "./draft.ts";
 import {
@@ -129,10 +131,26 @@ function validateWindow(blocks: readonly SpaceBlock[], max: number) {
       const parent = byId.get(parentId);
       if (!parent) break;
       if (isKnownSpaceBlock(parent) && !isSpaceListItem(parent))
-        throw new Error("Only list items contain blocks");
+        throw new Error("Only containers hold blocks");
       parentId = parent.parentId;
     }
+    const parent = block.parentId === null ? undefined : byId.get(block.parentId);
+    const tabbed = block.type === "tab_pane" || parent?.type === "tabs";
+    if (
+      tabbed &&
+      (block.parentId === null || parent) &&
+      !spaceNestingAllowed(block.type, parent ? [parent.type] : [])
+    )
+      throw new Error("Block nesting is not allowed");
   }
+}
+
+function canNest(blocks: readonly SpaceBlock[], block: SpaceBlock) {
+  if (block.parentId === null) return spaceNestingAllowed(block.type, []);
+  const parent = blocks.find((item) => item.id === block.parentId);
+  return (
+    !!parent && spaceBlockHoldsChildren(parent) && spaceNestingAllowed(block.type, [parent.type])
+  );
 }
 
 export class SpaceDocumentSession {
@@ -387,11 +405,8 @@ export class SpaceDocumentSession {
           throw new Error("Insert requires a fresh block ID");
         if (!canEditSpaceBlock(mutation.block) && !isSpaceDatabaseBlock(mutation.block))
           throw new Error("Cannot insert opaque content as a copy");
-        if (
-          mutation.block.parentId !== null &&
-          !blocks.some((block) => block.id === mutation.block.parentId && isSpaceListItem(block))
-        )
-          throw new Error("New parent must be a loaded list item");
+        if (!canNest(blocks, mutation.block))
+          throw new Error("New parent must be a loaded container");
         reserved.add(id);
         blocks.push(mutation.block);
       } else {
@@ -412,12 +427,8 @@ export class SpaceDocumentSession {
           } else if (!canEditSpaceBlock(current) || !canEditSpaceBlock(mutation.block))
             throw new Error("Opaque blocks are read-only");
           const oldParent = blocks[index]!.parentId;
-          if (
-            mutation.block.parentId !== oldParent &&
-            mutation.block.parentId !== null &&
-            !blocks.some((block) => block.id === mutation.block.parentId && isSpaceListItem(block))
-          )
-            throw new Error("New parent must be a loaded list item");
+          if (mutation.block.parentId !== oldParent && !canNest(blocks, mutation.block))
+            throw new Error("New parent must be a loaded container");
           blocks[index] = mutation.block;
         }
       }

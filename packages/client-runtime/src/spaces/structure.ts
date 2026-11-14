@@ -1,6 +1,6 @@
 import { EnvironmentId } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
-import { isSpaceListItem } from "./values.ts";
+import { isSpaceListItem, spaceBlockHoldsChildren as holds } from "./values.ts";
 import { spaceJsonBytes } from "./draft.ts";
 import {
   isPageIcon,
@@ -262,8 +262,7 @@ export class SpaceRootReorder {
         Array.isArray(owner.content) ||
         !("pageId" in owner.content) ||
         owner.content.pageId !== pageId ||
-        (owner.parentId !== null &&
-          !body.blocks.some((b) => b.id === owner.parentId && isSpaceListItem(b)))
+        (owner.parentId !== null && !body.blocks.some((b) => b.id === owner.parentId && holds(b)))
       )
         throw new Error("The actual source owner row or known list container is unavailable");
       const siblings = body.blocks.filter((b) => b.parentId === owner.parentId),
@@ -419,7 +418,7 @@ export class SpaceRootReorder {
         body.pageId !== placement.pageId ||
         body.nextCursor !== null ||
         (placement.parentId !== null &&
-          !body.blocks.some((b) => b.id === placement.parentId && isSpaceListItem(b))) ||
+          !body.blocks.some((b) => b.id === placement.parentId && holds(b))) ||
         (placement.beforeBlockId !== null &&
           !body.blocks.some(
             (b) => b.id === placement.beforeBlockId && b.parentId === placement.parentId,
@@ -498,8 +497,7 @@ export class SpaceRootReorder {
           !body ||
           body.pageId !== p.pageId ||
           body.nextCursor !== null ||
-          (p.parentId !== null &&
-            !body.blocks.some((b) => b.id === p.parentId && isSpaceListItem(b))) ||
+          (p.parentId !== null && !body.blocks.some((b) => b.id === p.parentId && holds(b))) ||
           (p.beforeBlockId !== null &&
             !body.blocks.some((b) => b.id === p.beforeBlockId && b.parentId === p.parentId))
         )
@@ -586,7 +584,7 @@ export class SpaceRootReorder {
         roots.some(
           (b) =>
             b.parentId !== null &&
-            !body.blocks.some((parent) => parent.id === b.parentId && isSpaceListItem(parent)),
+            !body.blocks.some((parent) => parent.id === b.parentId && holds(parent)),
         )
       )
         throw new Error("Selected roots must follow document order and use permitted parent lists");
@@ -618,7 +616,7 @@ export class SpaceRootReorder {
             ? { pageId: sourcePageId, parentId: before.id, beforeBlockId: null }
             : null,
         outdent:
-          contiguous && parent
+          contiguous && parent && parent.type !== "tab_pane"
             ? {
                 pageId: sourcePageId,
                 parentId: parent.parentId,
@@ -642,7 +640,7 @@ export class SpaceRootReorder {
         body.pageId !== destination.pageId ||
         body.nextCursor !== null ||
         (destination.parentId !== null &&
-          !body.blocks.some((b) => b.id === destination.parentId && isSpaceListItem(b))) ||
+          !body.blocks.some((b) => b.id === destination.parentId && holds(b))) ||
         (destination.beforeBlockId !== null &&
           !body.blocks.some(
             (b) => b.id === destination.beforeBlockId && b.parentId === destination.parentId,

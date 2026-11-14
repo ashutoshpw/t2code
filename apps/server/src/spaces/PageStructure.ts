@@ -5,8 +5,10 @@ import * as C from "@t2code/contracts/spaces";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 
+import * as BlockKinds from "./BlockKinds.ts";
 import * as BlockStore from "./BlockStore.ts";
 import { byteLength, canonical, ensureLimit, limits } from "./CorePolicy.ts";
+import * as PageChanges from "./PageChanges.ts";
 import * as PageStore from "./PageStore.ts";
 import * as RevisionStore from "./RevisionStore.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
@@ -112,19 +114,14 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     }
     return seen.size;
   });
-  const listAncestry = Effect.fnUntraced(function* (pageId: string, parentId: string | null) {
-    const seen = new Set<string>();
-    let current = parentId;
-    while (current !== null) {
-      if (seen.has(current)) return yield* invalid("cycle");
-      seen.add(current);
-      yield* ensureLimit("maxDepth", seen.size + 1);
-      const row = yield* block(current);
-      if (row.page_id !== pageId || !BlockStore.isListContainer(BlockStore.storedBlockFromRow(row)))
-        return yield* invalid("invalid_parent");
-      current = row.parent_id;
-    }
-  });
+  const listAncestry = (pageId: string, parentId: string | null) =>
+    BlockKinds.containerAncestry(pageId, parentId, (id) =>
+      Effect.map(block(id), (row) => ({
+        pageId: row.page_id,
+        parentId: row.parent_id,
+        block: BlockStore.storedBlockFromRow(row),
+      })),
+    );
   const subtree = Effect.fnUntraced(function* (id: C.SpacePageId) {
     const queue = [{ id, depth: 1, eligible: true }];
     const members = new Set<C.SpacePageId>();
@@ -191,6 +188,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
   const selectedBlocks = new Set<string>();
   const selectedRoots = input.target.kind === "blocks" ? [...input.target.blockIds] : [];
   const movingBlocks = selectedRoots.length > 0;
+  const movingTypes: Array<{ readonly depth: number; readonly type: string }> = [];
   let blockHeight = 0;
   if (input.target.kind === "blocks") {
     const selected = new Set<string>(input.target.blockIds);
@@ -205,6 +203,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
       const row = yield* block(id);
       if (row.page_id !== input.target.pageId) return yield* invalid("invalid_parent");
       yield* listAncestry(row.page_id, row.parent_id);
+      movingTypes.push({ depth, type: BlockStore.storedBlockFromRow(row).type });
       if (BlockStore.storedBlockFromRow(row).type === "child_page") {
         const [owner] = yield* sql<{
           readonly child_page_id: C.SpacePageId;
@@ -295,7 +294,9 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
       selectedBlocks.has(destination.placement.parentId)
     )
       return yield* invalid("cycle");
-    yield* listAncestry(parent.page_id, destination.placement.parentId);
+    const nested = yield* listAncestry(parent.page_id, destination.placement.parentId);
+    const moved = movingBlocks ? movingTypes : [{ depth: 1, type: "child_page" }];
+    if (!C.spaceMovesAllowed(moved, nested)) return yield* invalid("invalid_parent");
     if (movingBlocks) {
       yield* root(parent.space_id);
       let listDepth = 0;
@@ -484,9 +485,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     recoveryPages,
   };
 });
-
 export type Plan = Effect.Success<ReturnType<typeof plan>>;
-
 export const guardsMatch = Effect.fnUntraced(function* (
   plan: Plan,
   supplied: C.SpaceStructureGuards,
@@ -510,7 +509,6 @@ export const guardsMatch = Effect.fnUntraced(function* (
     plan.guards.roots.every((row) => roots.get(row.spaceId) === row.rootOrderRevision)
   );
 });
-
 export const apply = Effect.fn("SpacesStructure.apply")(function* (
   plan: Plan,
   mutationId: string,
@@ -682,6 +680,7 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
     });
     yield* sql`INSERT INTO spaces_ids(id,kind) VALUES (${pageId},'page')`;
     yield* sql`INSERT INTO spaces_pages(page_id,space_id,title,root_order,created_at,updated_at) VALUES (${pageId},${spaceId},${title},NULL,${timestamp},${timestamp})`;
+    yield* PageChanges.recordPage(pageId, spaceId, { tree: true });
   }
   if (!plan.source && !plan.movingBlocks) yield* SearchStore.writeTitle(pageId, title!);
   for (const row of writes.values()) {
@@ -774,6 +773,7 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
       trash,
     });
     yield* sql`UPDATE spaces_pages SET space_id=${memberSpace},root_order=${rootRank},revision=revision+1,body_revision=revision+1,block_count=${counter.count},block_bytes=${counter.bytes},updated_at=${timestamp},trash_batch_id=${trash?.batchId ?? null},trash_root_id=${trash?.rootPageId ?? null},trashed_at_ms=${trash?.trashedAtMs ?? null},trash_origin=${trash?.origin ?? null} WHERE page_id=${id}`;
+    yield* PageChanges.recordPage(id, memberSpace, { tree: true });
   }
   const historyBudget = RevisionStore.createCaptureBudget();
   if (!plan.source && !plan.movingBlocks)

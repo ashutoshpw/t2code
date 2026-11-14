@@ -16,6 +16,7 @@ import {
   decodePageCreateResult,
   decodePageUpdateResult,
   decodeApplyResult,
+  decodeUnsyncResult,
   decodeCreateChildResult,
   decodeMovePageResult,
   isServiceError,
@@ -80,6 +81,9 @@ export const make = (rt: Runtime) => {
   });
   const applyBlockBatch = Effect.fn("SpacesService.applyBlockBatch")(function* (input: unknown) {
     return decodeApplyResult((yield* mutate("applyBlockBatch", input)).result);
+  });
+  const unsyncBlocks = Effect.fn("SpacesService.unsyncBlocks")(function* (input: unknown) {
+    return decodeUnsyncResult((yield* mutate("unsyncBlocks", input)).result);
   });
   const createChildPage = Effect.fn("SpacesService.createChildPage")(function* (input: unknown) {
     return decodeCreateChildResult((yield* mutate("createChildPage", input)).result);
@@ -146,6 +150,7 @@ export const make = (rt: Runtime) => {
     createPage,
     updatePage,
     applyBlockBatch,
+    unsyncBlocks,
     createChildPage,
     movePage,
     moveBlocks,

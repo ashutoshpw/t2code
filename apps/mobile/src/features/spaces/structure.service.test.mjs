@@ -44,10 +44,10 @@ vi.mock("../../state/spaces.ts", () => ({
   createSpacesImageViewer: () => null,
   getMobileSpaceUploads: () => ({}),
   useSpacesReadAccess: () => pageView.access,
-  spacesEnvironment: {},
+  spacesEnvironment: { pageLive: () => ({}) },
 }));
 
-vi.mock("../../state/atom-registry.ts", () => ({ appAtomRegistry: {} }));
+vi.mock("../../state/atom-registry.ts", () => ({ appAtomRegistry: { subscribe: () => () => {} } }));
 
 vi.mock("../../state/environments.ts", () => ({ useEnvironments: () => ({}) }));
 

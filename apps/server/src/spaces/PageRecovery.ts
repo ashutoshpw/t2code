@@ -4,6 +4,7 @@ import * as Effect from "effect/Effect";
 
 import { storedBlockFromRow, type BlockRow } from "./BlockStore.ts";
 import { canonical, historyLimits, limits } from "./CorePolicy.ts";
+import * as PageChanges from "./PageChanges.ts";
 import * as PageStore from "./PageStore.ts";
 import type { Plan } from "./PageStructure.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
@@ -157,6 +158,7 @@ export const purge = Effect.fn("SpacesRecovery.purge")(function* (
     yield* Reconciliation.issue("history", canonical([key.pageId, key.revision]), null);
   for (const id of bodies.keys()) yield* Reconciliation.issue("block", id, null);
   for (const id of pageIds) {
+    yield* PageChanges.recordPage(id, source.space_id, { tree: true, removed: true });
     yield* sql`DELETE FROM spaces_page_owners WHERE child_page_id=${id}`;
   }
   for (const id of pageIds) {
@@ -183,6 +185,7 @@ export const purge = Effect.fn("SpacesRecovery.purge")(function* (
       blockBytes: bytes,
     });
     yield* sql`UPDATE spaces_pages SET revision=revision+1,body_revision=revision+1,block_count=${count},block_bytes=${bytes},updated_at=${timestamp} WHERE page_id=${parent.page_id}`;
+    yield* PageChanges.recordPage(parent.page_id, parent.space_id, { tree: true });
     yield* RevisionStore.capture(
       {
         pageId: parent.page_id,

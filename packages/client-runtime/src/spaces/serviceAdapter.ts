@@ -1,5 +1,6 @@
 import {
   SpaceMutationId,
+  type SpaceBlockId,
   type SpaceApplyBlockBatchInput,
   type SpaceApplyBlockBatchResult,
   type SpacePageGetInput,
@@ -13,7 +14,9 @@ import type { SpaceSaveRequest, SpaceSessionAdapter } from "./session.ts";
 import { spaceJsonBytes } from "./draft.ts";
 
 export interface SpaceServicePorts {
-  readonly getPage: (input: SpacePageGetInput) => Promise<SpacePageGetResult>;
+  readonly getPage: (
+    input: SpacePageGetInput,
+  ) => Promise<Pick<SpacePageGetResult, "mutationAdmission">>;
   readonly applyBlockBatch: (
     input: SpaceApplyBlockBatchInput,
   ) => Promise<SpaceApplyBlockBatchResult>;
@@ -27,6 +30,8 @@ export interface SpaceServicePorts {
 export function createSpaceServiceSessionAdapter(
   key: SpacePageTarget,
   ports: SpaceServicePorts,
+  /** `subtreeRootId` confines saves to the descendants of one synced block on the page. */
+  scope: { readonly subtreeRootId?: SpaceBlockId } = {},
 ): SpaceSessionAdapter {
   function input(request: SpaceSaveRequest): SpaceApplyBlockBatchInput {
     if (
@@ -43,6 +48,7 @@ export function createSpaceServiceSessionAdapter(
       baseRevision: request.baseRevision,
       generation: request.generation,
       mutations: request.mutations,
+      ...(scope.subtreeRootId === undefined ? {} : { subtreeRootId: scope.subtreeRootId }),
     };
     spaceJsonBytes({ operation: "applyBlockBatch", input: value }, 1024 * 1024);
     return value;

@@ -1,7 +1,14 @@
 import * as Schema from "effect/Schema";
 
 import { IsoDateTime, TrimmedNonEmptyString } from "./baseSchemas.ts";
-import { SpaceBlockWindow, SpaceCursor, SpacePageIcon, SpacePageId } from "./spaces.ts";
+import {
+  SpaceBlock,
+  SpaceBlockId,
+  SpaceBlockWindow,
+  SpaceCursor,
+  SpacePageIcon,
+  SpacePageId,
+} from "./spaces.ts";
 
 /**
  * A page share lets anyone holding the link read one Spaces page and its sub-pages over T2
@@ -98,6 +105,16 @@ export const SpaceSharedPage = Schema.Struct({
   }),
   /** At most one authenticated-reader window; follow `nextCursor` for the rest. */
   window: SpaceBlockWindow,
+  /** The originals of synced copies in this window: the original first, then its descendants. */
+  synced: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({
+        sourceBlockId: SpaceBlockId,
+        blocks: Schema.Array(SpaceBlock),
+        complete: Schema.Boolean,
+      }),
+    ),
+  ),
   nextCursor: Schema.optionalKey(SpaceCursor),
   /** From the shared root down to this page, both included. */
   breadcrumb: Schema.Array(SpaceSharedPageRef),

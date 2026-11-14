@@ -5,6 +5,7 @@ import * as AssetReferences from "../assets/References.ts";
 import * as Reconciliation from "../assets/Reconciliation.ts";
 import * as BlockStore from "../BlockStore.ts";
 import * as Hooks from "../databases/Hooks.ts";
+import * as PageChanges from "../PageChanges.ts";
 import * as PageStore from "../PageStore.ts";
 import * as ReferenceStore from "../ReferenceStore.ts";
 import * as RevisionStore from "../RevisionStore.ts";
@@ -21,6 +22,7 @@ export const applyBatch = Effect.fn("SpacesService.applyBatch")(function* (input
   readonly mutationId: string;
   readonly nowMs: number;
   readonly requestBytes: number;
+  readonly scope?: { readonly rootId: string };
 }) {
   const sql = yield* SpacesSql.SpacesSql;
   const { page } = input;
@@ -30,10 +32,12 @@ export const applyBatch = Effect.fn("SpacesService.applyBatch")(function* (input
     page.block_count,
     page.block_bytes,
     input.requestBytes,
+    input.scope,
   );
   if (!result.changed) return { changed: false, revision: page.revision };
   const now = isoNow(input.nowMs);
   yield* sql`UPDATE spaces_pages SET revision = revision + 1, body_revision = revision + 1, block_count = ${result.count}, block_bytes = ${result.bytes}, updated_at = ${now} WHERE page_id = ${page.page_id}`;
+  yield* PageChanges.recordPage(page.page_id, page.space_id);
   yield* RevisionStore.capture(
     {
       pageId: page.page_id,

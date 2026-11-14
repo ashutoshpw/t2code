@@ -62,6 +62,9 @@ export const make = (rt: Runtime) => {
               contextCapture: true,
               databases: true,
               databaseChanges: true,
+              pageChanges: true,
+              tabs: true,
+              syncedBlocks: true,
             },
           } satisfies C.SpaceCapability;
         }),

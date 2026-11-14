@@ -12,8 +12,6 @@ interface HighlightedBlock {
   readonly decorations: ReadonlyArray<{ from: number; to: number; color: string }>;
 }
 
-const composerCodeBlockHighlightKey = new PluginKey<DecorationSet>("composerCodeBlockHighlight");
-
 // Tokenizing larger fences can stall the main thread.
 const MAX_HIGHLIGHTED_CODE_BLOCK_LENGTH = 20_000;
 
@@ -24,15 +22,40 @@ const DEFERRED_HIGHLIGHT_DELAY_MS = 300;
 function shouldHighlightCodeBlock(code: string): boolean {
   return code.length <= MAX_HIGHLIGHTED_CODE_BLOCK_LENGTH;
 }
-function blockSignature(node: ProseMirrorNode, theme: DiffThemeName): string {
-  return [theme, String(node.attrs.language ?? ""), node.textContent].join("\u0000");
+
+interface CodeBlockHighlightOptions {
+  name: string;
+  isCode(node: ProseMirrorNode): boolean;
+  /** Shiki language id for the block, read from wherever the document stores it. */
+  language(node: ProseMirrorNode): string;
+  resolveTheme(): DiffThemeName;
+  /** Top-level blocks are found with `doc.forEach`; nested ones need a full walk. */
+  nested: boolean;
 }
 
-/** Code blocks are always top-level; avoid walking the whole draft per keystroke. */
-function collectCodeBlocks(state: EditorState): Array<{ node: ProseMirrorNode; pos: number }> {
+function blockSignature(
+  options: CodeBlockHighlightOptions,
+  node: ProseMirrorNode,
+  theme: DiffThemeName,
+): string {
+  return [theme, options.language(node), node.textContent].join("\u0000");
+}
+
+function collectCodeBlocks(
+  options: CodeBlockHighlightOptions,
+  state: EditorState,
+): Array<{ node: ProseMirrorNode; pos: number }> {
   const blocks: Array<{ node: ProseMirrorNode; pos: number }> = [];
-  state.doc.forEach((node, pos) => {
-    if (node.type.name === "codeBlock") blocks.push({ node, pos });
+  if (!options.nested) {
+    // Composer code blocks are top-level; avoid walking the whole draft per keystroke.
+    state.doc.forEach((node, pos) => {
+      if (options.isCode(node)) blocks.push({ node, pos });
+    });
+    return blocks;
+  }
+  state.doc.descendants((node, pos) => {
+    if (options.isCode(node)) blocks.push({ node, pos });
+    return !node.isTextblock;
   });
   return blocks;
 }
@@ -40,8 +63,19 @@ function collectCodeBlocks(state: EditorState): Array<{ node: ProseMirrorNode; p
 export function composerCodeBlockHighlight(options: {
   resolveTheme: () => DiffThemeName;
 }): Extension {
-  return Extension.create({
+  return codeBlockHighlight({
     name: "composerCodeBlockHighlight",
+    isCode: (node) => node.type.name === "codeBlock",
+    language: (node) => languageOfInfoString(String(node.attrs.language ?? "")),
+    nested: false,
+    resolveTheme: options.resolveTheme,
+  });
+}
+
+export function codeBlockHighlight(options: CodeBlockHighlightOptions): Extension {
+  const pluginKey = new PluginKey<DecorationSet>(options.name);
+  return Extension.create({
+    name: options.name,
 
     addProseMirrorPlugins() {
       // Prune obsolete signatures each scan so the cache is bounded by the document without evicting live
@@ -52,22 +86,23 @@ export function composerCodeBlockHighlight(options: {
 
       return [
         new Plugin<DecorationSet>({
-          key: composerCodeBlockHighlightKey,
+          key: pluginKey,
 
           state: {
-            init: () => DecorationSet.empty,
+            init: (_config, state) =>
+              buildDecorations(options, state, cache, options.resolveTheme(), DecorationSet.empty),
             apply(transaction, value, _oldState, newState) {
               const mapped = value.map(transaction.mapping, transaction.doc);
-              if (!transaction.docChanged && !transaction.getMeta(composerCodeBlockHighlightKey)) {
+              if (!transaction.docChanged && !transaction.getMeta(pluginKey)) {
                 return mapped;
               }
-              return buildDecorations(newState, cache, options.resolveTheme(), mapped);
+              return buildDecorations(options, newState, cache, options.resolveTheme(), mapped);
             },
           },
 
           props: {
             decorations(state) {
-              return composerCodeBlockHighlightKey.getState(state);
+              return pluginKey.getState(state);
             },
           },
 
@@ -86,8 +121,10 @@ export function composerCodeBlockHighlight(options: {
               if (!themeChanged && view.state.doc === scannedDoc) return;
               clearTimeout(deferredRefresh);
               scannedDoc = view.state.doc;
-              const blocks = collectCodeBlocks(view.state);
-              const signatures = new Set(blocks.map(({ node }) => blockSignature(node, theme)));
+              const blocks = collectCodeBlocks(options, view.state);
+              const signatures = new Set(
+                blocks.map(({ node }) => blockSignature(options, node, theme)),
+              );
               live = signatures;
               for (const signature of cache.keys()) {
                 if (!live.has(signature)) cache.delete(signature);
@@ -95,7 +132,7 @@ export function composerCodeBlockHighlight(options: {
               const missing = blocks.filter(
                 ({ node }) =>
                   shouldHighlightCodeBlock(node.textContent) &&
-                  !cache.has(blockSignature(node, theme)),
+                  !cache.has(blockSignature(options, node, theme)),
               );
               const pending =
                 deferLong && !themeChanged
@@ -111,7 +148,7 @@ export function composerCodeBlockHighlight(options: {
               }
               if (pending.length === 0) {
                 if (themeChanged) {
-                  view.dispatch(view.state.tr.setMeta(composerCodeBlockHighlightKey, true));
+                  view.dispatch(view.state.tr.setMeta(pluginKey, true));
                 }
                 return;
               }
@@ -119,9 +156,8 @@ export function composerCodeBlockHighlight(options: {
               void Promise.allSettled(
                 pending.map(async ({ node }) => {
                   // Stored info includes metadata after the language; Shiki needs only the name.
-                  const language =
-                    languageOfInfoString(String(node.attrs.language ?? "")) || "text";
-                  const signature = blockSignature(node, theme);
+                  const language = options.language(node) || "text";
+                  const signature = blockSignature(options, node, theme);
                   // Cache failure as plain text to clear retained colors.
                   const highlighter = await getSyntaxHighlighterPromise(language).catch(() => null);
                   // An older request must not bypass the debounce if its text returns.
@@ -135,7 +171,7 @@ export function composerCodeBlockHighlight(options: {
                 }),
               ).then(() => {
                 if (disposed || live !== signatures) return;
-                view.dispatch(view.state.tr.setMeta(composerCodeBlockHighlightKey, true));
+                view.dispatch(view.state.tr.setMeta(pluginKey, true));
               });
             };
 
@@ -194,15 +230,16 @@ export function tokenizeBlock(
 }
 
 function buildDecorations(
+  options: CodeBlockHighlightOptions,
   state: EditorState,
   cache: Map<string, HighlightedBlock>,
   theme: DiffThemeName,
   previous: DecorationSet,
 ): DecorationSet {
   const decorations: Decoration[] = [];
-  for (const { node, pos } of collectCodeBlocks(state)) {
+  for (const { node, pos } of collectCodeBlocks(options, state)) {
     if (!shouldHighlightCodeBlock(node.textContent)) continue;
-    const highlighted = cache.get(blockSignature(node, theme));
+    const highlighted = cache.get(blockSignature(options, node, theme));
     if (!highlighted) {
       // A mapped token can span split fences and the paragraph between them.
       const start = pos + 1;
@@ -219,7 +256,7 @@ function buildDecorations(
       continue;
     }
     // Token offsets index the block's text, which lines up with document
-    // positions only because `codeBlock` is `text*` with no marks — one
+    // positions only because the code node is `text*` with no marks — one
     // unmarked text node, so `content.size === textContent.length`. Allowing
     // marks or hard breaks in the code block would desync these silently.
     if (node.content.size !== node.textContent.length) continue;

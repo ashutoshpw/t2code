@@ -1,8 +1,14 @@
 import { Profiler } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { userEvent } from "vite-plus/test/browser";
+import { page, userEvent } from "vite-plus/test/browser";
 import { EnvironmentId } from "@t2code/contracts";
-import { SpaceBlockId, SpaceId, SpacePageId, SpaceReceiptEpoch } from "@t2code/contracts/spaces";
+import {
+  SpaceBlockId,
+  SpaceId,
+  SpacePageId,
+  SpaceReceiptEpoch,
+  type SpaceBlock,
+} from "@t2code/contracts/spaces";
 
 import { render } from "../../test/render";
 import { SpaceEditorAdapter } from "./adapter";
@@ -10,25 +16,27 @@ import { SpaceDocumentController } from "./documentController";
 import { SpaceEditor } from "./SpaceEditor";
 import { SpaceEditorBridge } from "./editorBridge";
 
-function adapter(blocks = true) {
+function adapter(blocks: boolean | readonly SpaceBlock[] = true) {
   let sequence = 0;
   return new SpaceEditorAdapter({
     target: { environmentId: EnvironmentId.make("env"), pageId: SpacePageId.make("page") },
     window: {
       revision: 0,
       completeParents: [null],
-      blocks: !blocks
-        ? []
-        : [
-            {
-              id: SpaceBlockId.make("first"),
-              parentId: null,
-              order: "a",
-              type: "paragraph",
-              version: 1,
-              content: { runs: [{ text: "Hello page", marks: [] }] },
-            },
-          ],
+      blocks: Array.isArray(blocks)
+        ? blocks
+        : !blocks
+          ? []
+          : [
+              {
+                id: SpaceBlockId.make("first"),
+                parentId: null,
+                order: "a",
+                type: "paragraph",
+                version: 1,
+                content: { runs: [{ text: "Hello page", marks: [] }] },
+              },
+            ],
     },
     maxBlocks: 50,
     maxDepth: 8,
@@ -246,11 +254,11 @@ describe("SpaceEditor", () => {
     await using screen = await render(<SpaceEditor adapter={adapter()} />, { router: false });
     await userEvent.hover(screen.getByText("Hello page"));
     await userEvent.click(screen.getByRole("button", { name: "Block menu" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Duplicate" }));
+    await userEvent.click(page.getByRole("menuitem", { name: "Duplicate" }));
     expect(screen.getByText("Hello page").elements()).toHaveLength(2);
     await userEvent.hover(screen.getByText("Hello page").first());
     await userEvent.click(screen.getByRole("button", { name: "Block menu" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Delete block" }));
+    await userEvent.click(page.getByRole("menuitem", { name: "Delete block" }));
     expect(screen.getByText("Hello page").elements()).toHaveLength(1);
   });
 
@@ -287,5 +295,56 @@ describe("SpaceEditor", () => {
     await userEvent.keyboard("abc");
     await expect.element(screen.getByText("Hello pageabc")).toBeVisible();
     expect(commits.mock.calls.length).toBe(before);
+  });
+
+  it("changes a code block's language from its menu and keeps typing in the code text", async () => {
+    const onBatch = vi.fn();
+    const block: SpaceBlock = {
+      id: SpaceBlockId.make("code"),
+      parentId: null,
+      order: "a",
+      type: "code",
+      version: 1,
+      content: { text: "let x", language: "" },
+    };
+    // The bare editor renders no links or navigation.
+    await using screen = await render(
+      <SpaceEditor adapter={adapter([block])} onBatch={onBatch} />,
+      {
+        router: false,
+      },
+    );
+    await userEvent.click(screen.getByRole("combobox", { name: /Code language/ }));
+    await userEvent.click(page.getByRole("option", { name: "TypeScript" }));
+    await vi.waitFor(() =>
+      expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain("typescript"),
+    );
+    await userEvent.keyboard("!");
+    await vi.waitFor(() =>
+      expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain("let x!"),
+    );
+    expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain("typescript");
+  });
+
+  it("changes a callout's icon from its icon button", async () => {
+    const onBatch = vi.fn();
+    const block: SpaceBlock = {
+      id: SpaceBlockId.make("callout"),
+      parentId: null,
+      order: "a",
+      type: "callout",
+      version: 1,
+      content: { icon: "💡", runs: [{ text: "Heads up", marks: [] }] },
+    };
+    // The bare editor renders no links or navigation.
+    await using screen = await render(
+      <SpaceEditor adapter={adapter([block])} onBatch={onBatch} />,
+      {
+        router: false,
+      },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Change callout icon" }));
+    await userEvent.click(page.getByRole("button", { name: "Use 📌" }));
+    await vi.waitFor(() => expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain("📌"));
   });
 });

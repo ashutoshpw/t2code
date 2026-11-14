@@ -26,6 +26,8 @@ export interface SpaceEditorOptions {
   readonly canChangeStructure?: () => boolean;
   readonly canUndo?: () => boolean;
   readonly canEditMedia?: () => boolean;
+  /** A synced editor: the document is exactly this block and its descendants. */
+  readonly rootBlockId?: SpaceBlockId;
 }
 export interface SpaceEditorBatch {
   readonly baseRevision: number;

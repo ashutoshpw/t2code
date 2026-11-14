@@ -12,8 +12,12 @@ import {
   copySpaceBlocks,
   editSpaceMobileText,
   isKnownSpaceBlock,
+  canEditSpaceBlock,
   isSpaceListItem,
+  isSpaceSyncedBlock,
+  isSpaceSyncedRef,
   joinSpaceTextBlocks,
+  spaceBlockHoldsChildren,
   spaceBlockRuns,
   splitSpaceTextBlock,
 } from "./index.ts";
@@ -224,6 +228,45 @@ describe("shared Spaces editing", () => {
       { type: "block_mention", version: 1, target: { ...key, blockId: "copy-1" } },
       { type: "block_mention", version: 1, target: { ...key, pageId: "other-page", blockId: "a" } },
     ]);
+  });
+
+  it("copies a tabs subtree with fresh ids and remapped parents", () => {
+    const tabs = { ...paragraph(""), id: "t", type: "tabs", content: {} };
+    const pane = { ...tabs, id: "p", parentId: "t", type: "tab_pane", content: { title: "One" } };
+    const child = { ...paragraph("body"), id: "c", parentId: "p" };
+    let id = 0;
+    const copied = copySpaceBlocks(
+      [tabs, pane, child].map((b) => b as SpaceBlock),
+      key,
+      () => SpaceBlockId.make(`copy-${++id}`),
+    );
+    expect(copied.map((block) => [block.id, block.parentId, block.type])).toEqual([
+      ["copy-1", null, "tabs"],
+      ["copy-2", "copy-1", "tab_pane"],
+      ["copy-3", "copy-2", "paragraph"],
+    ]);
+    expect(copied[1]!.content).toEqual({ title: "One" });
+  });
+
+  it("copies a synced copy as is, holds children in originals only and refuses to duplicate an original", () => {
+    const original: SpaceBlock = {
+      ...paragraph(""),
+      id: SpaceBlockId.make("o"),
+      type: "synced_block",
+      content: {},
+    };
+    const copy: SpaceBlock = {
+      ...paragraph(""),
+      id: SpaceBlockId.make("r"),
+      type: "synced_ref",
+      content: { sourceBlockId: "o" },
+    };
+    expect([original, copy].map(canEditSpaceBlock)).toEqual([true, true]);
+    expect(isSpaceSyncedBlock(original) && isSpaceSyncedRef(copy)).toBe(true);
+    expect([original, copy].map(spaceBlockHoldsChildren)).toEqual([true, false]);
+    const [copied] = copySpaceBlocks([copy], key, () => SpaceBlockId.make("fresh"));
+    expect(copied).toMatchObject({ id: "fresh", content: { sourceBlockId: "o" } });
+    expect(() => copySpaceBlocks([original], key, () => SpaceBlockId.make("fresh"))).toThrow();
   });
 
   it.each([

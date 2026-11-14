@@ -354,9 +354,14 @@ describe("Spaces completed context records", () => {
     }));
     const snapshot = { ...spacePage.snapshot, includeChildPages: true, sources };
     expect(Option.isSome(decodeRecord({ ...spacePage, snapshot }))).toBe(true);
+    // Synced copies add their original's page as a source without including child pages.
+    expect(
+      Option.isSome(
+        decodeRecord({ ...spacePage, snapshot: { ...snapshot, includeChildPages: false } }),
+      ),
+    ).toBe(true);
     for (const invalid of [
       { ...snapshot, sources: [...sources, { ...sources[0], pageId: "page-9" }] },
-      { ...snapshot, includeChildPages: false },
       { ...snapshot, sources: [sources[0], sources[0]] },
       { ...snapshot, sources: [{ ...sources[0], environmentId: "another-env" }] },
       { ...snapshot, sources: [{ ...sources[0], pageId: "stale-hint" }] },

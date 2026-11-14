@@ -69,11 +69,17 @@ export function isSpaceToggleCollapsed(state: EditorState, id: string) {
 }
 
 // Collapse state is per viewer and lives only in the editor view, never in the document.
+// The set is also kept in the plugin instance so a recreated editor state keeps toggles closed.
 export function spaceToggleCollapsePlugin() {
+  let remembered: ReadonlySet<string> = new Set();
+  const remember = (value: CollapseState) => {
+    remembered = value.collapsed;
+    return value;
+  };
   return new Plugin<CollapseState>({
     key,
     state: {
-      init: (_, state) => build(state.doc, new Set()),
+      init: (_, state) => remember(build(state.doc, remembered)),
       apply(tr, value) {
         const toggled = tr.getMeta(key) as string | undefined;
         if (toggled === undefined && !tr.docChanged) return value;
@@ -87,7 +93,7 @@ export function spaceToggleCollapsePlugin() {
         if (toggled !== undefined) {
           if (!collapsed.delete(toggled)) collapsed.add(toggled);
         }
-        return build(tr.doc, collapsed);
+        return remember(build(tr.doc, collapsed));
       },
     },
     props: {

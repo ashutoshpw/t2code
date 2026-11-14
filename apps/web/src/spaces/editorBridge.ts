@@ -15,6 +15,7 @@ import {
   type SpaceImageInsertion,
 } from "@t2code/client-runtime/spaces";
 import { SpaceEditorAdapter } from "./adapter";
+import type { SpaceEditorOptions } from "./adapterModel";
 import {
   canEditSpaceEditorBlock,
   sameSpaceValue,
@@ -81,6 +82,7 @@ export class SpaceEditorBridge {
     controller: SpaceDocumentController,
     allocateId: () => SpaceBlockId,
     private readonly notify: (description: string) => void = () => {},
+    adapterOptions: Pick<SpaceEditorOptions, "rootBlockId"> = {},
   ) {
     this.controller = controller;
     this.#acknowledged = controller.session.getSnapshot().acknowledgedGeneration;
@@ -99,6 +101,7 @@ export class SpaceEditorBridge {
       canUndo: () =>
         this.canStructure() &&
         this.#acknowledged === this.controller.session.getSnapshot().acknowledgedGeneration,
+      ...adapterOptions,
     });
   }
   setWritable(writable: boolean, mediaWritable = writable) {

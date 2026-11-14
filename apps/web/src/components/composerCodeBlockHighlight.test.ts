@@ -8,7 +8,11 @@ import { ComposerCodeBlockExtension } from "~/composer-rich-text-doc";
 import type { DiffThemeName } from "~/lib/diffRendering";
 import { getSyntaxHighlighterPromise } from "~/lib/syntaxHighlighting";
 
-import { composerCodeBlockHighlight, tokenizeBlock } from "./composerCodeBlockHighlight";
+import {
+  codeBlockHighlight,
+  composerCodeBlockHighlight,
+  tokenizeBlock,
+} from "./composerCodeBlockHighlight";
 
 vi.mock("~/lib/syntaxHighlighting", () => ({ getSyntaxHighlighterPromise: vi.fn() }));
 
@@ -45,24 +49,37 @@ describe("highlighting edited fences", () => {
     vi.unstubAllGlobals();
   });
 
-  async function mountFence(text: string, resolveTheme = () => THEME) {
+  async function mountFence(text: string, resolveTheme = () => THEME, nested = false) {
     vi.useFakeTimers();
     const highlighter = fakeHighlighter((content) =>
       content.startsWith("x") ? "#ff0000" : undefined,
     );
     const tokenize = vi.spyOn(highlighter, "codeToTokens");
     vi.mocked(getSyntaxHighlighterPromise).mockResolvedValue(highlighter);
+    const fence = {
+      type: "codeBlock",
+      attrs: { language: "ts" },
+      content: [{ type: "text", text }],
+    };
     const editor = new Editor({
       extensions: [
         StarterKit.configure({ codeBlock: false, trailingNode: false }),
         ComposerCodeBlockExtension,
-        composerCodeBlockHighlight({ resolveTheme }),
+        nested
+          ? codeBlockHighlight({
+              name: "nestedCodeHighlight",
+              isCode: (node) => node.type.name === "codeBlock",
+              language: () => "from-getter",
+              nested: true,
+              resolveTheme,
+            })
+          : composerCodeBlockHighlight({ resolveTheme }),
       ],
       content: {
         type: "doc",
-        content: [
-          { type: "codeBlock", attrs: { language: "ts" }, content: [{ type: "text", text }] },
-        ],
+        content: nested
+          ? [{ type: "bulletList", content: [{ type: "listItem", content: [fence] }] }]
+          : [fence],
       },
     });
     vi.stubGlobal("document", { documentElement: {} });
@@ -74,7 +91,9 @@ describe("highlighting edited fences", () => {
       },
     );
     const plugin = editor.extensionManager.plugins.find((candidate) =>
-      (candidate as unknown as { key: string }).key.startsWith("composerCodeBlockHighlight"),
+      (candidate as unknown as { key: string }).key.startsWith(
+        nested ? "nestedCodeHighlight" : "composerCodeBlockHighlight",
+      ),
     ) as Plugin<DecorationSet>;
     // A headless editor holds no plugins in its state, so give this one its own.
     let state = EditorState.create({ doc: editor.state.doc, plugins: [plugin] });
@@ -107,6 +126,9 @@ describe("highlighting edited fences", () => {
         view.dispatch(change(state.tr));
         await vi.advanceTimersByTimeAsync(0);
       },
+      recreateState: () => {
+        state = EditorState.create({ doc: state.doc, plugins: [...state.plugins] });
+      },
       colored: () =>
         plugin
           .getState(state)!
@@ -133,5 +155,21 @@ describe("highlighting edited fences", () => {
       [3_010, 6_010],
     ]);
     expect(fence.colored()).toEqual(["x".repeat(3_000), "x".repeat(3_000)]);
+  });
+
+  it("keeps colors when the editor state is recreated from the same doc", async () => {
+    const fence = await mountFence("x".repeat(3));
+    expect(fence.colored()).toEqual(["xxx"]);
+
+    fence.recreateState();
+
+    expect(fence.colored()).toEqual(["xxx"]);
+  });
+
+  it("highlights a code node nested in a list item, reading its language through the getter", async () => {
+    const fence = await mountFence("x".repeat(3), () => THEME, true);
+
+    expect(vi.mocked(getSyntaxHighlighterPromise)).toHaveBeenLastCalledWith("from-getter");
+    expect(fence.colored()).toEqual(["xxx"]);
   });
 });
