@@ -161,9 +161,14 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
         }),
       ).toBe(`sudo env "PATH=$PATH" t3 browser setup --base-dir '/srv/t3 home'`);
       expect(
-        yield* rootCommand({ node: "/opt/t3/t3", entry: "/opt/t3/t3", executable: true, args }),
-      ).toBe("sudo /opt/t3/t3 browser setup --base-dir '/srv/t3 home'");
-    }),
+        yield* rootCommand({
+          node: "/opt/t2code/t2code",
+          entry: "/opt/t2code/t2code",
+          executable: true,
+          args,
+        }),
+      ).toBe("sudo /opt/t2code/t2code browser setup --base-dir '/srv/t2 home'");
+    }).pipe(Effect.scoped),
   );
 
   it.effect("names this install's launcher when t3 is not on PATH", () =>
@@ -177,7 +182,7 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
       const desktop = {
         node: "/tmp/.mount_T3abc/t3code",
         entry: "/tmp/.mount_T3abc/resources/app.asar/apps/server/dist/bin.mjs",
-        env: { T3CODE_CLI_PATH: shim },
+        env: { T2CODE_CLI_PATH: shim },
       };
 
       expect(yield* rootCommand(desktop)).toBe(`sudo '${shim}' browser setup`);
@@ -229,12 +234,12 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
           entry: "/home/theo/.t3/runtime/versions/1.0.0/t3",
           executable: true,
           path: path.join(prefix, "bin"),
-          env: { T3CODE_NPM_LAUNCHER_PATH: npmLauncher },
+          env: { T2CODE_NPM_LAUNCHER_PATH: npmLauncher },
         }),
       ).toBe('sudo env "PATH=$PATH" t3 browser setup');
 
       expect(
-        yield* rootCommand({ ...desktop, env: { T3CODE_CLI_PATH: path.join(home, "gone") } }),
+        yield* rootCommand({ ...desktop, env: { T2CODE_CLI_PATH: path.join(home, "gone") } }),
       ).toBe('sudo env "PATH=$PATH" t3 browser setup');
     }),
   );
@@ -249,8 +254,11 @@ it.layer(NodeServices.layer)("host CLI commands", (it) => {
       const shim = path.join(home, "t3.cmd");
       yield* fs.writeFileString(shim, "@echo off\r\n");
       const hostCommand = (platform: NodeJS.Platform, env: Record<string, string>) =>
-        resolveHostCliCommand("doctor", ["--base-dir", "C:\\Users\\Jane Doe\\.t3"]).pipe(
-          Effect.provideService(HostProcess.ExecutablePath, "C:\\Program Files\\T3 Code\\t3.exe"),
+        resolveHostCliCommand("doctor", ["--base-dir", "C:\\Users\\Jane Doe\\.t2"]).pipe(
+          Effect.provideService(
+            HostProcess.ExecutablePath,
+            "C:\\Program Files\\T2 Code\\t2code.exe",
+          ),
           Effect.provideService(HostProcess.Arguments, [
             "C:\\Program Files\\T3 Code\\t3.exe",
             "C:\\Program Files\\T3 Code\\resources\\app.asar\\apps\\server\\dist\\bin.mjs",
@@ -259,9 +267,12 @@ it.layer(NodeServices.layer)("host CLI commands", (it) => {
           Effect.provideService(HostProcess.Platform, platform),
           Effect.provideService(HostProcess.Environment, { PATH: "", ...env }),
         );
-      expect((yield* hostCommand("win32", { T3CODE_CLI_PATH: shim })).command).toBe(
-        `& "${shim}" doctor "--base-dir" "C:\\Users\\Jane Doe\\.t3"`,
+      // The desktop shim is called through `&`, and each argument is quoted
+      // the PowerShell way: no POSIX single quotes anywhere.
+      expect((yield* hostCommand("win32", { T2CODE_CLI_PATH: shim })).command).toBe(
+        `& "${shim}" doctor "--base-dir" "C:\\Users\\Jane Doe\\.t2"`,
       );
+      // Without a launcher, plain `t2code` with PowerShell-quoted arguments.
       expect((yield* hostCommand("win32", {})).command).toBe(
         't3 doctor "--base-dir" "C:\\Users\\Jane Doe\\.t3"',
       );
@@ -274,7 +285,7 @@ it.layer(NodeServices.layer)("host CLI commands", (it) => {
           Effect.provideService(HostProcess.IsExecutable, false),
         )).command,
       ).toBe('t3 doctor "--base-dir" "C:\\T3\\\u201C\u201CArchive\u201D\u201D"');
-      expect((yield* hostCommand("linux", { T3CODE_CLI_PATH: shim })).command).toMatch(
+      expect((yield* hostCommand("linux", { T2CODE_CLI_PATH: shim })).command).toMatch(
         / doctor --base-dir 'C:\\Users\\Jane Doe\\\.t3'$/,
       );
     }),
@@ -287,7 +298,7 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const root = yield* fs.makeTempDirectoryScoped();
-      const executable = path.join(root, ".t3/runtime/versions/1.0.0/t3");
+      const executable = path.join(root, ".t2/runtime/versions/1.0.0/t2");
       yield* fs.makeDirectory(path.dirname(executable), { recursive: true });
       yield* fs.writeFileString(executable, "");
       for (const [relative, kind] of [
@@ -310,7 +321,7 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
           Effect.provideService(HostProcess.IsExecutable, launchedBy),
           Effect.provideService(
             HostProcess.Environment,
-            launchedBy ? { T3CODE_NPM_LAUNCHER_PATH: entry } : {},
+            launchedBy ? { T2CODE_NPM_LAUNCHER_PATH: entry } : {},
           ),
         );
         expect(installation).toEqual({ kind });
@@ -355,29 +366,31 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
       const path = yield* Path.Path;
       const root = yield* fs.makeTempDirectoryScoped();
       const prefix = path.join(root, "bunx-tools");
-      const packageRoot = path.join(prefix, "lib/node_modules/t3");
-      const launcher = path.join(packageRoot, "bin/t3.mjs");
-      const executable = path.join(root, ".t3/runtime/versions/1.0.0/t3");
+      const packageRoot = path.join(prefix, "lib/node_modules/@t2code/cli");
+      const launcher = path.join(packageRoot, "bin/t2code.mjs");
+      const executable = path.join(root, ".t2/runtime/versions/1.0.0/t2");
       yield* fs.makeDirectory(path.dirname(launcher), { recursive: true });
       yield* fs.makeDirectory(path.dirname(executable), { recursive: true });
       yield* fs.makeDirectory(path.join(prefix, "bin"));
       yield* fs.writeFileString(launcher, "");
       yield* fs.writeFileString(executable, "");
-      yield* fs.symlink(launcher, path.join(prefix, "bin/t3"));
+      yield* fs.symlink(launcher, path.join(prefix, "bin/t2code"));
       const resolve = resolveServerInstallation.pipe(
         Effect.provideService(HostProcess.ExecutablePath, executable),
         Effect.provideService(HostProcess.Arguments, [executable, executable]),
         Effect.provideService(HostProcess.IsExecutable, true),
         Effect.provideService(HostProcess.Platform, "linux"),
-        Effect.provideService(HostProcess.Environment, { T3CODE_NPM_LAUNCHER_PATH: launcher }),
+        Effect.provideService(HostProcess.Environment, { T2CODE_NPM_LAUNCHER_PATH: launcher }),
       );
+      // A launcher for another version is some other `@t2code/cli` the server spawned
+      // (the variable is inherited), not the install this executable runs from.
       for (const [version, expected] of [
         ["0.0.1", null],
         [packageJson.version, { kind: "npm-global", prefix }],
       ] as const) {
         yield* fs.writeFileString(
           path.join(packageRoot, "package.json"),
-          `{"name":"t3","version":"${version}","bin":{"t3":"./bin/t3.mjs"}}`,
+          `{"name":"@t2code/cli","version":"${version}","bin":{"t2code":"./bin/t2code.mjs"}}`,
         );
         expect(yield* resolve).toEqual(expected);
       }
@@ -389,20 +402,20 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const root = yield* fs.realPath(yield* fs.makeTempDirectoryScoped());
-      // The install script's launcher names ~/.t3, which here links to a home elsewhere.
-      const executable = path.join(root, "data/t3/runtime/versions/1.0.0/t3");
-      const launcher = path.join(root, "bin/t3");
-      const copy = path.join(root, "bin/t3-copy");
+      // The install script's launcher names ~/.t2, which here links to a home elsewhere.
+      const executable = path.join(root, "data/t2/runtime/versions/1.0.0/t2");
+      const launcher = path.join(root, "bin/t2");
+      const copy = path.join(root, "bin/t2-copy");
       yield* fs.makeDirectory(path.dirname(executable), { recursive: true });
       yield* fs.makeDirectory(path.dirname(launcher), { recursive: true });
       yield* fs.writeFileString(executable, "", { mode: 0o755 });
       yield* fs.writeFileString(copy, "", { mode: 0o755 });
-      yield* fs.symlink(path.join(root, "data/t3"), path.join(root, ".t3"));
-      yield* fs.symlink(path.join(root, ".t3/runtime/versions/1.0.0/t3"), launcher);
-      // Earlier PATH entries hold a directory and a non-executable file named t3.
-      yield* fs.makeDirectory(path.join(root, "shadow-dir/t3"), { recursive: true });
+      yield* fs.symlink(path.join(root, "data/t2"), path.join(root, ".t2"));
+      yield* fs.symlink(path.join(root, ".t2/runtime/versions/1.0.0/t2"), launcher);
+      // Earlier PATH entries hold a directory and a non-executable file named t2.
+      yield* fs.makeDirectory(path.join(root, "shadow-dir/t2"), { recursive: true });
       yield* fs.makeDirectory(path.join(root, "shadow-file"));
-      yield* fs.writeFileString(path.join(root, "shadow-file/t3"), "");
+      yield* fs.writeFileString(path.join(root, "shadow-file/t2"), "");
       const resolve = (invokedAs: string, PATH = "shadow-dir:shadow-file:bin") =>
         resolveServerInstallation.pipe(
           Effect.provideService(HostProcess.ExecutablePath, executable),
@@ -413,10 +426,10 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
           Effect.provideService(HostProcess.HomeDirectory, root),
           Effect.provideService(HostProcess.Platform, "linux"),
         );
-      const baseDir = path.join(root, ".t3");
+      const baseDir = path.join(root, ".t2");
 
-      expect(yield* resolve("t3")).toEqual({ kind: "t3-launcher", launcher, baseDir });
-      expect(yield* resolve(launcher)).toEqual({ kind: "t3-launcher", launcher, baseDir });
+      expect(yield* resolve("t2")).toEqual({ kind: "t2-launcher", launcher, baseDir });
+      expect(yield* resolve(launcher)).toEqual({ kind: "t2-launcher", launcher, baseDir });
       expect(yield* resolve(executable)).toBeNull();
       expect(yield* resolve(copy)).toBeNull();
 
@@ -424,11 +437,11 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
       yield* fs.remove(launcher);
       yield* fs.writeFileString(
         launcher,
-        posixLauncherScript(path.join(root, ".t3/runtime/versions/1.0.0/t3")),
+        posixLauncherScript(path.join(root, ".t2/runtime/versions/1.0.0/t2")),
         { mode: 0o755 },
       );
       expect(yield* resolve(executable, path.join(root, "bin"))).toEqual({
-        kind: "t3-launcher",
+        kind: "t2-launcher",
         launcher,
         baseDir,
       });
@@ -441,9 +454,9 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
       const path = yield* Path.Path;
       const root = yield* fs.makeTempDirectoryScoped();
       for (const relative of [
-        "project/node_modules/t3/dist/bin.mjs",
+        "project/node_modules/@t2code/cli/dist/bin.mjs",
         "project/apps/server/dist/bin.mjs",
-        ".t3/runtime/0.0.45/t3",
+        ".t2/runtime/0.0.45/t2",
         "missing/dist/bin.mjs",
       ]) {
         const entry = path.join(root, relative);

@@ -31,7 +31,12 @@ import {
   REUSABLE_DEV_SESSION_PREFIX,
   resolveReusableDevAuth,
 } from "./ReusableDevAuth.ts";
-import { base64UrlDecodeUtf8, base64UrlEncode, resolveSessionCookieName } from "./utils.ts";
+import {
+  base64UrlDecodeUtf8,
+  base64UrlEncode,
+  resolveLegacySessionCookieName,
+  resolveSessionCookieName,
+} from "./utils.ts";
 
 export interface IssuedSession {
   readonly sessionId: AuthSessionId;
@@ -380,6 +385,7 @@ export class SessionStore extends Context.Service<
   SessionStore,
   {
     readonly cookieName: string;
+    readonly legacyCookieName: string | undefined;
     readonly issue: (input?: {
       readonly ttl?: Duration.Duration;
       readonly subject?: string;
@@ -526,6 +532,7 @@ const make = Effect.gen(function* () {
     development: serverConfig.devUrl !== undefined,
   } as const;
   const cookieName = resolveSessionCookieName(cookieInput);
+  const legacyCookieName = resolveLegacySessionCookieName(cookieInput);
   const devAuth = resolveReusableDevAuth(serverConfig);
   if (devAuth) {
     yield* authSessions
@@ -1135,6 +1142,7 @@ const make = Effect.gen(function* () {
 
   return SessionStore.of({
     cookieName,
+    legacyCookieName,
     issue,
     verify,
     issueWebSocketToken,

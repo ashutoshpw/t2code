@@ -203,7 +203,7 @@ describe("DesktopEarlyElectronStartup", () => {
 
 describe("Linux device scale persistence failures", () => {
   const input = {
-    env: { T3CODE_HOME: "/isolated" },
+    env: { T2CODE_HOME: "/isolated" },
     homeDirectory: "/home/user",
     joinPath: NodePath.posix.join,
   };
