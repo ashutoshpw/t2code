@@ -201,6 +201,8 @@ overrides:
   "@types/ws@^8": "catalog:"
   "undici@^8": "catalog:"
   "ws@^8": "catalog:"
+  # @cloudflare/unenv-preset peers on one exact unenv rc; a fresh resolve takes a newer one.
+  unenv: 2.0.0-rc.24
   vite: "catalog:"
   vite-plus: "catalog:"
   yaml: "catalog:"
