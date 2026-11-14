@@ -7,7 +7,12 @@ import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import { parse as parseYamlDocument } from "yaml";
 
-/** Match Python os.path.expanduser: USERPROFILE, then HOMEDRIVE+HOMEPATH on Windows; HOME elsewhere. */
+/**
+ * The home directory the agent expands `~` against, matching Python's
+ * `os.path.expanduser` in the launch environment T2 hands the process:
+ * `USERPROFILE`, then `HOMEDRIVE` + `HOMEPATH`, on Windows and `HOME`
+ * elsewhere.
+ */
 export function resolveAntigravityUserHome(
   platform: NodeJS.Platform,
   environment: NodeJS.ProcessEnv,
@@ -23,7 +28,12 @@ export function resolveAntigravityUserHome(
   return environment.HOME || home;
 }
 
-/** Link private GEMINI_HOME skills to ~/.gemini; ~/.agents/skills is ignored because .agents/skills is project-only. */
+/**
+ * The agent resolves both under `GEMINI_HOME`, which T2 points at a private
+ * profile, so the profile links these back to the user's `~/.gemini`.
+ * `~/.agents/skills` is not read: the agent only treats `.agents/skills` as a
+ * project directory.
+ */
 export function antigravityUserSkillDirectories(
   path: Path.Path,
   geminiHome: string,
