@@ -139,7 +139,7 @@ it.effect.each(["snapshot", "mutation"] as const)(
   (slowRequest) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-live-project-cli-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-live-project-cli-" });
       const baseDir = NodePath.join(root, "state");
       const workspaceRoot = NodePath.join(root, "workspace");
       yield* fs.makeDirectory(workspaceRoot);
@@ -147,7 +147,7 @@ it.effect.each(["snapshot", "mutation"] as const)(
         path: NodePath.join(baseDir, "userdata", "server-runtime.json"),
         state: yield* makePersistedServerRuntimeState({
           config: { host: "127.0.0.1", devUrl: undefined },
-          port: 3_773,
+          port: 3_772,
         }),
       });
       const now = "2026-01-01T00:00:00.000Z";
@@ -203,7 +203,7 @@ it.effect("does not send a token to whatever took over a dead server's port", ()
     yield* fs.makeDirectory(workspaceRoot);
     const state = yield* makePersistedServerRuntimeState({
       config: { host: "127.0.0.1", devUrl: undefined },
-      port: 3_773,
+      port: 3_772,
     });
     yield* persistServerRuntimeState({
       path: NodePath.join(baseDir, "userdata", "server-runtime.json"),
