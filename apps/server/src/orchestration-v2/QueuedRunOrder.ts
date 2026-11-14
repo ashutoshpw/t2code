@@ -1,4 +1,4 @@
-import type { OrchestrationV2Run, OrchestrationV2ThreadProjection } from "@t3tools/contracts";
+import type { OrchestrationV2Run, OrchestrationV2ThreadProjection } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 
 export function isAutomaticCompletionRun(

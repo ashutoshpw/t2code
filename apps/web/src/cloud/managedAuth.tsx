@@ -3,12 +3,12 @@ import {
   createCloudAccountService,
   ManagedRelay,
   setManagedRelaySession,
-} from "@t3tools/client-runtime/relay";
+} from "@t2code/client-runtime/relay";
 import {
   reportAtomCommandResult,
   runAtomCommand,
   settleAsyncResult,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import * as Effect from "effect/Effect";
 import { useEffect, type ReactNode } from "react";
 

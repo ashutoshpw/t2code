@@ -12,7 +12,7 @@ import type {
   CommandId,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Clock from "effect/Clock";
 import * as Deferred from "effect/Deferred";
 import * as Duration from "effect/Duration";
@@ -26,7 +26,7 @@ import { TestClock } from "effect/testing";
 
 import * as Orchestrator from "../Orchestrator.ts";
 import type { RecordedCommandOutput } from "./CommandOutputRecorder.ts";
-import type { ProviderReplayGate } from "@t3tools/provider-testing/replayGate";
+import type { ProviderReplayGate } from "@t2code/provider-testing/replayGate";
 
 export type OrchestratorV2ScenarioStep =
   | {

@@ -1,11 +1,11 @@
-import { ClientCapabilities, PlatformConnectionSource } from "@t3tools/client-runtime/platform";
+import { ClientCapabilities, PlatformConnectionSource } from "@t2code/client-runtime/platform";
 import {
   ConnectionBlockedError,
   ConnectionTransientError,
   Connectivity,
   Wakeups,
-} from "@t3tools/client-runtime/connection";
-import { managedRelayAccountChanges, managedRelaySessionAtom } from "@t3tools/client-runtime/relay";
+} from "@t2code/client-runtime/connection";
+import { managedRelayAccountChanges, managedRelaySessionAtom } from "@t2code/client-runtime/relay";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";

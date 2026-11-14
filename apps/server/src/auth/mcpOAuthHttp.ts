@@ -6,7 +6,7 @@ import {
   AuthMcpRegistrationError,
   EnvironmentHttpApi,
   mcpClientScopes,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";

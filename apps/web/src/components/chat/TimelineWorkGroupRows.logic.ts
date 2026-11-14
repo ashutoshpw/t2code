@@ -1,6 +1,6 @@
-import { toServerClock } from "@t3tools/client-runtime/clock";
-import type { EnvironmentId } from "@t3tools/contracts";
-import { formatDuration } from "@t3tools/shared/orchestrationTiming";
+import { toServerClock } from "@t2code/client-runtime/clock";
+import type { EnvironmentId } from "@t2code/contracts";
+import { formatDuration } from "@t2code/shared/orchestrationTiming";
 
 export function formatWorkingTimerNow(startIso: string, environmentId: EnvironmentId): string {
   const startedAtMs = Date.parse(startIso);

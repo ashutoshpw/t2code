@@ -1,10 +1,10 @@
-import { resolvePullRequestAuthorFilter, SourceControlProviderKind } from "@t3tools/contracts";
+import { resolvePullRequestAuthorFilter, SourceControlProviderKind } from "@t2code/contracts";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Semaphore from "effect/Semaphore";
-import { rollupCheckStatuses } from "@t3tools/source-control-core/server/pullRequestChecks";
-import type { PullRequestCapabilities, PullRequestViewerPermissions } from "@t3tools/contracts";
+import { rollupCheckStatuses } from "@t2code/source-control-core/server/pullRequestChecks";
+import type { PullRequestCapabilities, PullRequestViewerPermissions } from "@t2code/contracts";
 
 import * as AzureDevOpsPullRequestCli from "./AzureDevOpsPullRequestCli.ts";
 import {
@@ -28,7 +28,7 @@ import {
   type ProviderChangeRequestSummary,
   type ProviderDiffSlice,
   type PullRequestProviderApi,
-} from "@t3tools/source-control-core/server/PullRequestProvider";
+} from "@t2code/source-control-core/server/PullRequestProvider";
 import type {
   AzureDevOpsChangeEntry,
   AzureDevOpsItemContent,

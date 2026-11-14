@@ -5,7 +5,7 @@ notices:
 
 - On web and desktop, open **Settings → About**, find **Open source licenses** under **Legal**,
   and select **View licenses**.
-- On mobile, open **Settings → About T3 Code → Open source licenses**.
+- On mobile, open **Settings → About T2 Code → Open source licenses**.
 
 The page lists the version when available, license identifier, and the parts of T2 Code that include
 or use the item. This also covers optional device tools that T2 Code installs on demand instead of

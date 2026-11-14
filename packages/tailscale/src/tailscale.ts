@@ -1,7 +1,7 @@
-import { ExecutionEnvironmentDescriptor } from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as NetService from "@t3tools/shared/Net";
-import { isLocalLoopbackHost, normalizeHostname } from "@t3tools/shared/hostClassification";
+import { ExecutionEnvironmentDescriptor } from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import * as NetService from "@t2code/shared/Net";
+import { isLocalLoopbackHost, normalizeHostname } from "@t2code/shared/hostClassification";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";

@@ -32,7 +32,7 @@ export class OpenCode2Server extends Context.Service<
     /** Drops a configured server's verified connection, so the next use reads its version again. */
     readonly forget: Effect.Effect<void>;
   }
->()("@t3tools/provider-opencode/server/v2/OpenCode2Server") {}
+>()("@t2code/provider-opencode/server/v2/OpenCode2Server") {}
 
 /**
  * OpenCode 2 always requires one and prints a generated one to stdout

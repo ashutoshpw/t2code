@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { EnvironmentId, ThreadId, type TerminalSummary } from "@t3tools/contracts";
-import { selectRunningSubprocessTerminalIds } from "@t3tools/client-runtime/state/terminal";
+import { EnvironmentId, ThreadId, type TerminalSummary } from "@t2code/contracts";
+import { selectRunningSubprocessTerminalIds } from "@t2code/client-runtime/state/terminal";
 import * as Cause from "effect/Cause";
 import * as Option from "effect/Option";
 import { AsyncResult, AtomRegistry } from "effect/reactivity";
@@ -151,7 +151,7 @@ describe("attachedTerminalSessionAtom", () => {
       terminalId: "terminal-1",
       cwd: "/repo",
       worktreePath: null,
-      env: { T3CODE_PROJECT_ROOT: "/repo" },
+      env: { T2CODE_PROJECT_ROOT: "/repo" },
     };
     const atom = attachedTerminalSessionAtom(environmentA, input);
     expect(attachedTerminalSessionAtom(environmentA, { ...input })).toBe(atom);

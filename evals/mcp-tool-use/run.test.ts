@@ -12,8 +12,8 @@ import {
   EnvironmentId,
   PreviewAutomationUnavailableError,
   ThreadId,
-} from "@t3tools/contracts";
-import { projectComposerContextForProvider } from "@t3tools/shared/composerContextReferences";
+} from "@t2code/contracts";
+import { projectComposerContextForProvider } from "@t2code/shared/composerContextReferences";
 
 import {
   answerToolCall,

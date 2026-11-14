@@ -4,7 +4,7 @@ import {
   EnvironmentId,
   MessageId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { serializeAssistantCitation } from "./assistantCitations.ts";

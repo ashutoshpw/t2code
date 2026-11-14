@@ -2,11 +2,11 @@ import {
   isCompactionCommandMessage,
   type ThreadGuestMessage,
   type ThreadGuestShare,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { ThreadFeedEntry } from "../../lib/threadActivity";
 import { scopedThreadKey } from "../../lib/scopedEntities";
-import { threadHasCaughtUpTo } from "@t3tools/client-runtime/state/threads";
-import { resolveUserMessageGrouping } from "@t3tools/client-runtime/user-message";
+import { threadHasCaughtUpTo } from "@t2code/client-runtime/state/threads";
+import { resolveUserMessageGrouping } from "@t2code/client-runtime/user-message";
 import type {
   AcknowledgedThreadMessage,
   QueuedThreadMessage,

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   generateSpreadPinOrderKeys,
   pinOrderKeyBetween,
-} from "@t3tools/client-runtime/state/thread-sort";
-import type { EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/thread-sort";
+import type { EnvironmentId } from "@t2code/contracts";
 
 import {
   computeThreadMoveAvailability,

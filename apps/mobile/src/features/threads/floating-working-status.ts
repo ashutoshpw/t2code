@@ -1,5 +1,5 @@
-import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentConnectionPhase } from "@t2code/client-runtime/connection";
+import type { EnvironmentId } from "@t2code/contracts";
 
 export interface FloatingStatusAction {
   readonly label: string;

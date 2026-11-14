@@ -9,10 +9,10 @@ import type {
   OrchestrationV2RunAttempt,
   OrchestrationV2Subagent,
   OrchestrationV2TurnItem,
-} from "@t3tools/contracts";
-import { subagentHoldsCompletion } from "@t3tools/provider-core/server/subagentProjection";
-import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
-import { latestRootProviderFailure, runRanAfter } from "@t3tools/shared/orchestrationV2ThreadError";
+} from "@t2code/contracts";
+import { subagentHoldsCompletion } from "@t2code/provider-core/server/subagentProjection";
+import { backgroundWorkHoldsCompletion } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
+import { latestRootProviderFailure, runRanAfter } from "@t2code/shared/orchestrationV2ThreadError";
 
 type Work = OrchestrationV2RestartCancelledBackgroundWork;
 type Attempt = Pick<OrchestrationV2RunAttempt, "id" | "runId">;

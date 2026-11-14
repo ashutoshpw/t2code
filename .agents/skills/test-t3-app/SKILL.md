@@ -1,11 +1,11 @@
 ---
 name: test-t3-app
-description: Test T3 Code's web and desktop UI through its built-in Browser panel against isolated development state. Use for browser verification, browser pairing recovery, and test fixtures. Use test-t3-mobile for native mobile verification.
+description: Test T2 Code's web and desktop UI through its built-in Browser panel against isolated development state. Use for browser verification, browser pairing recovery, and test fixtures. Use test-t3-mobile for native mobile verification.
 ---
 
 # Test T3 web and desktop
 
-Use T3's built-in Browser panel for verification. Follow the recovery steps
+Use T2's built-in Browser panel for verification. Follow the recovery steps
 below before declaring it unavailable. Do not install or switch to another
 automation system. For native mobile testing, use
 [test-t2-mobile](../test-t2-mobile/SKILL.md).
@@ -43,7 +43,7 @@ Stop verification and explain the blocker only if the tools are absent or
 `preview_open` reports unavailable or fails.
 
 Navigate to the complete startup pairing URL once with
-`preview_navigate`, then use `preview_snapshot` and T3's interaction tools.
+`preview_navigate`, then use `preview_snapshot` and T2's interaction tools.
 If the token was consumed or expired, run `node apps/server/src/bin.ts pair`
 for a fresh one. Keep using the same tab.
 

@@ -4,14 +4,14 @@ import type {
   VcsRef,
   ProjectId,
   WorktreeSubmodules,
-} from "@t3tools/contracts";
-import type { ThreadStructureRuntime } from "@t3tools/client-runtime/state/shell";
+} from "@t2code/contracts";
+import type { ThreadStructureRuntime } from "@t2code/client-runtime/state/shell";
 import * as Schema from "effect/Schema";
-import { sanitizeNewRefName } from "@t3tools/shared/git";
-import { workspaceRelativeFilePath } from "@t3tools/shared/path";
-import { toSortableTimestamp } from "@t3tools/client-runtime/state/thread-sort";
+import { sanitizeNewRefName } from "@t2code/shared/git";
+import { workspaceRelativeFilePath } from "@t2code/shared/path";
+import { toSortableTimestamp } from "@t2code/client-runtime/state/thread-sort";
 import { deriveCanInterruptRunningThread } from "../session-logic";
-export { deriveLocalBranchNameFromRemoteRef, sanitizeNewRefName } from "@t3tools/shared/git";
+export { deriveLocalBranchNameFromRemoteRef, sanitizeNewRefName } from "@t2code/shared/git";
 
 export interface EnvironmentOption {
   environmentId: EnvironmentId;

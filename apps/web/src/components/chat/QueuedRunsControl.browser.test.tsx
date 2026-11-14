@@ -1,11 +1,11 @@
 import { RegistryContext } from "@effect/atom-react";
-import type { EnvironmentThreadState } from "@t3tools/client-runtime/state/threads";
-import { EnvironmentId, MessageId, ThreadId } from "@t3tools/contracts";
-import { serializeAssistantCitation } from "@t3tools/shared/assistantCitations";
+import type { EnvironmentThreadState } from "@t2code/client-runtime/state/threads";
+import { EnvironmentId, MessageId, ThreadId } from "@t2code/contracts";
+import { serializeAssistantCitation } from "@t2code/shared/assistantCitations";
 import {
   formatComposerContextReference,
   toComposerContextId,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 import * as DateTime from "effect/DateTime";
 import * as Option from "effect/Option";
 import { AsyncResult, type Atom, AtomRegistry } from "effect/reactivity";
@@ -18,7 +18,7 @@ const state = vi.hoisted(() => ({
   workflow: null as unknown,
 }));
 
-vi.mock(import("@t3tools/client-runtime/state/thread-workflows"), async (importOriginal) => ({
+vi.mock(import("@t2code/client-runtime/state/thread-workflows"), async (importOriginal) => ({
   ...(await importOriginal()),
   deriveThreadQueueWorkflowState: (() => state.workflow) as never,
 }));
@@ -48,7 +48,7 @@ vi.mock(import("../../state/query"), async (importOriginal) => ({
 // The thread detail atoms are real, fed by one state atom the test writes.
 vi.mock(import("../../state/threads"), async (importOriginal) => {
   const { createEnvironmentThreadDetailAtoms, EMPTY_ENVIRONMENT_THREAD_STATE } =
-    await import("@t3tools/client-runtime/state/threads");
+    await import("@t2code/client-runtime/state/threads");
   const { AsyncResult, Atom } = await import("effect/reactivity");
   const Option = await import("effect/Option");
   const { makeThreadProjectionFixture } = await import("../../test-fixtures");
@@ -76,7 +76,7 @@ vi.mock(import("../../assets/assetUrls"), async (importOriginal) => ({
 }));
 
 import "~/index.css";
-import { EMPTY_ENVIRONMENT_THREAD_STATE } from "@t3tools/client-runtime/state/threads";
+import { EMPTY_ENVIRONMENT_THREAD_STATE } from "@t2code/client-runtime/state/threads";
 
 import { act, render as renderUi } from "../../../test/render";
 import { makeStreamingTimelineFixture, makeThreadProjectionFixture } from "../../test-fixtures";

@@ -9,9 +9,9 @@ import {
   ProjectId,
   ProviderInstanceId,
   ThreadId,
-} from "@t3tools/contracts";
-import { formatHostForUrl, isWildcardHost } from "@t3tools/shared/hostClassification";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+} from "@t2code/contracts";
+import { formatHostForUrl, isWildcardHost } from "@t2code/shared/hostClassification";
+import { resolveProjectSettings } from "@t2code/shared/projectSettings";
 import * as Cause from "effect/Cause";
 import * as Console from "effect/Console";
 import * as Context from "effect/Context";

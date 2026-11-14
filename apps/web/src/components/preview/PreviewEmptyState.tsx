@@ -1,5 +1,5 @@
-import type { EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
-import { parseUrl } from "@t3tools/shared/url";
+import type { EnvironmentId, ScopedThreadRef } from "@t2code/contracts";
+import { parseUrl } from "@t2code/shared/url";
 import { Globe, History, RadioTower } from "lucide-react";
 
 import type { BrowserHistoryEntry } from "~/browserHistoryStore";

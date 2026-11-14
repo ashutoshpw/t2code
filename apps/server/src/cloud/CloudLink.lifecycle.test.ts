@@ -25,7 +25,7 @@ import {
   type AuthEnvironmentScope,
   EnvironmentAuthenticatedPrincipal,
   EnvironmentId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as EnvironmentKeys from "./environmentKeys.ts";
 import * as EnvironmentAuth from "../auth/EnvironmentAuth.ts";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
@@ -44,7 +44,7 @@ import * as CliTokenManager from "./CliTokenManager.ts";
 import {
   RelayEnvironmentLinkProofPayload,
   RelayManagedEndpointRecoveryRegistrationRequest,
-} from "@t3tools/contracts/relay";
+} from "@t2code/contracts/relay";
 import {
   CLOUD_ENDPOINT_CONFIRMED_ORIGIN,
   CLOUD_ENDPOINT_RUNTIME_CONFIG,

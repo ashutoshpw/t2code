@@ -3,7 +3,7 @@ import type {
   ContextMenuItem,
   ContextMenuSource,
   LocalApi,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { isWebUrl } from "./browser/webUrl";
 import { requestConfirmDialog } from "./confirmDialog";

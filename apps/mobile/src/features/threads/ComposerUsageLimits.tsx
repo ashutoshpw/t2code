@@ -1,5 +1,5 @@
-import { providerClients } from "@t3tools/client-runtime/provider-clients";
-import type { EnvironmentId, UsageLimitsReport } from "@t3tools/contracts";
+import { providerClients } from "@t2code/client-runtime/provider-clients";
+import type { EnvironmentId, UsageLimitsReport } from "@t2code/contracts";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { SymbolView } from "../../components/ui/AppSymbol";

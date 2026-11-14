@@ -17,7 +17,7 @@ import {
   type TerminalMetadataStreamEvent,
   type TerminalSummary,
   WS_METHODS,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as DateTime from "effect/DateTime";

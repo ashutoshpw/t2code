@@ -4,7 +4,7 @@ import {
   type LimitAccount,
   type LimitPoolWindow,
   type LimitPresentations,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 
 import type { WidgetTheme } from "./widgetTheme";
 

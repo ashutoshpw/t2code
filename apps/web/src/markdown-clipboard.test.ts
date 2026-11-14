@@ -5,12 +5,12 @@ import {
   serializeRenderedMarkdownFragment,
   serializeTableElementToMarkdown,
 } from "./markdown-clipboard";
-import { EnvironmentId, MessageId, ThreadId } from "@t3tools/contracts";
+import { EnvironmentId, MessageId, ThreadId } from "@t2code/contracts";
 import {
   collectAssistantCitations,
   serializeAssistantCitation,
-} from "@t3tools/shared/assistantCitations";
-import { markdownMathRanges, parseMarkdownWithMath } from "@t3tools/shared/markdownMath";
+} from "@t2code/shared/assistantCitations";
+import { markdownMathRanges, parseMarkdownWithMath } from "@t2code/shared/markdownMath";
 
 import { unified } from "unified";
 import remarkParse from "remark-parse";

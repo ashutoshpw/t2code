@@ -11,7 +11,7 @@ import {
   shouldRecommendDatabaseCompaction,
   type UsageSummary,
   WS_METHODS,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Duration from "effect/Duration";
 import * as Equal from "effect/Equal";

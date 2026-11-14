@@ -8,7 +8,7 @@ import {
   type TailscaleCommandError,
   type TailscaleServeHttpsDisabledError,
   type TailscaleStderrDiagnostic,
-} from "@t3tools/tailscale";
+} from "@t2code/tailscale";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import type { ChildProcessSpawner } from "effect/process";

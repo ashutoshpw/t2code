@@ -1,4 +1,4 @@
-import { parseNewThreadLink } from "@t3tools/shared/promptLinks";
+import { parseNewThreadLink } from "@t2code/shared/promptLinks";
 import { describe, expect, it } from "vite-plus/test";
 
 import {

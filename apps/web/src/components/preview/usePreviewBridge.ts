@@ -4,7 +4,7 @@ import type {
   PreviewSessionSnapshot,
   ScopedThreadRef,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useEffect, useEffectEvent, useRef } from "react";
 
 import { recordFaviconForThread } from "~/browserFaviconStore";

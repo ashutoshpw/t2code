@@ -4,8 +4,8 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   type ProviderInstallState,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as Deferred from "effect/Deferred";
 import * as SubscriptionRef from "effect/SubscriptionRef";
@@ -17,8 +17,8 @@ import * as Stream from "effect/Stream";
 import * as ServerSettings from "../serverSettings.ts";
 import * as CodexInstallation from "./CodexInstallation.ts";
 import * as AntigravityInstallation from "./AntigravityInstallation.ts";
-import { ProviderDriverError } from "@t3tools/provider-core/server/errors";
-import type { ProviderInstance } from "@t3tools/provider-core/server/driver";
+import { ProviderDriverError } from "@t2code/provider-core/server/errors";
+import type { ProviderInstance } from "@t2code/provider-core/server/driver";
 import * as ProviderInstallation from "./providerInstallation.ts";
 import * as ProviderInstanceRegistry from "./ProviderInstanceRegistry.ts";
 import * as ProviderRegistry from "./ProviderRegistry.ts";
