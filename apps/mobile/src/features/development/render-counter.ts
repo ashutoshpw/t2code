@@ -136,7 +136,8 @@ const sorted = (map: Map<string, number>) =>
 install(state);
 
 Object.assign(globalThis, {
-  __t3RenderCounterOpen(url: string) {
+  /** Routes an app link in-process, so drivers need no simctl or adb access. */
+  __t2RenderCounterOpen(url: string) {
     const { Linking } = require("react-native") as typeof import("react-native");
     void Linking.openURL(url);
     return true;

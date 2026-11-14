@@ -1,5 +1,5 @@
-import { EnvironmentId, ThreadId, type ResolvedKeybindingsConfig } from "@t3tools/contracts";
-import { compileResolvedKeybindingsConfig, isMacPlatform } from "@t3tools/shared/keybindings";
+import { EnvironmentId, ThreadId, type ResolvedKeybindingsConfig } from "@t2code/contracts";
+import { compileResolvedKeybindingsConfig, isMacPlatform } from "@t2code/shared/keybindings";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 

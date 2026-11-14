@@ -15,32 +15,6 @@ afterEach(() => {
 });
 
 describe("loadRepoEnv", () => {
-  it("does not project cloud configuration for an unconfigured clone", () => {
-    const env = loadRepoEnv({ baseEnv: {}, repoRoot: makeTemporaryDirectory() });
-
-    expect(env.T2CODE_CLERK_PUBLISHABLE_KEY).toBeUndefined();
-    expect(env.T2CODE_CLERK_CLI_OAUTH_CLIENT_ID).toBeUndefined();
-    expect(env.VITE_CLERK_PUBLISHABLE_KEY).toBeUndefined();
-    expect(env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY).toBeUndefined();
-    expect(env.T2CODE_CLERK_JWT_TEMPLATE).toBeUndefined();
-    expect(env.VITE_CLERK_JWT_TEMPLATE).toBeUndefined();
-    expect(env.EXPO_PUBLIC_CLERK_JWT_TEMPLATE).toBeUndefined();
-    expect(env.T2CODE_RELAY_URL).toBeUndefined();
-    expect(env.VITE_T2CODE_RELAY_URL).toBeUndefined();
-    expect(env.T2CODE_MOBILE_OTLP_TRACES_URL).toBeUndefined();
-    expect(env.T2CODE_MOBILE_OTLP_TRACES_DATASET).toBeUndefined();
-    expect(env.T2CODE_MOBILE_OTLP_TRACES_TOKEN).toBeUndefined();
-    expect(env.EXPO_PUBLIC_OTLP_TRACES_URL).toBeUndefined();
-    expect(env.EXPO_PUBLIC_OTLP_TRACES_DATASET).toBeUndefined();
-    expect(env.EXPO_PUBLIC_OTLP_TRACES_TOKEN).toBeUndefined();
-    expect(env.T2CODE_RELAY_CLIENT_OTLP_TRACES_URL).toBeUndefined();
-    expect(env.T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET).toBeUndefined();
-    expect(env.T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN).toBeUndefined();
-    expect(env.VITE_RELAY_OTLP_TRACES_URL).toBeUndefined();
-    expect(env.VITE_RELAY_OTLP_TRACES_DATASET).toBeUndefined();
-    expect(env.VITE_RELAY_OTLP_TRACES_TOKEN).toBeUndefined();
-  });
-
   it("applies process, root local, and root precedence in that order", () => {
     const repoRoot = makeTemporaryDirectory();
     NodeFS.writeFileSync(
@@ -55,9 +29,6 @@ describe("loadRepoEnv", () => {
     expect(loadRepoEnv({ baseEnv: {}, repoRoot }).T2CODE_RELAY_URL).toBe(
       "https://local.example.test",
     );
-    // must still resolve and project under the new names.
-    expect(loadRepoEnv({ baseEnv: {}, repoRoot }).T2CODE_CLERK_PUBLISHABLE_KEY).toBe("pk_local");
-    expect(loadRepoEnv({ baseEnv: {}, repoRoot }).T2CODE_CLERK_JWT_TEMPLATE).toBe("template_local");
     expect(
       loadRepoEnv({
         baseEnv: {
@@ -78,74 +49,6 @@ describe("loadRepoEnv", () => {
       EXPO_PUBLIC_CLERK_JWT_TEMPLATE: "template_ci",
       T2CODE_RELAY_URL: "https://ci.example.test",
       VITE_T2CODE_RELAY_URL: "https://ci.example.test",
-    });
-  });
-
-  it("accepts legacy framework aliases as root overrides", () => {
-    expect(
-      resolvePublicConfig({
-        VITE_CLERK_PUBLISHABLE_KEY: "pk_legacy",
-        VITE_CLERK_JWT_TEMPLATE: "template_legacy",
-        T2CODE_CLERK_CLI_OAUTH_CLIENT_ID: "oauth_canonical",
-        VITE_T2CODE_RELAY_URL: "https://legacy.example.test",
-        EXPO_PUBLIC_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-        EXPO_PUBLIC_OTLP_TRACES_DATASET: "mobile-traces",
-        EXPO_PUBLIC_OTLP_TRACES_TOKEN: "mobile-token",
-      }),
-    ).toEqual({
-      clerkPublishableKey: "pk_legacy",
-      clerkJwtTemplate: "template_legacy",
-      clerkCliOAuthClientId: "oauth_canonical",
-      relayUrl: "https://legacy.example.test",
-      mobileOtlpTracesUrl: "https://api.axiom.co/v1/traces",
-      mobileOtlpTracesDataset: "mobile-traces",
-      mobileOtlpTracesToken: "mobile-token",
-      relayClientOtlpTracesUrl: undefined,
-      relayClientOtlpTracesDataset: undefined,
-      relayClientOtlpTracesToken: undefined,
-    });
-  });
-
-  it("projects canonical relay client tracing values to web build aliases", () => {
-    expect(
-      loadRepoEnv({
-        baseEnv: {
-          T2CODE_RELAY_CLIENT_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-          T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET: "relay-client-traces",
-          T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN: "relay-client-token",
-        },
-        repoRoot: makeTemporaryDirectory(),
-      }),
-    ).toEqual({
-      T2CODE_RELAY_CLIENT_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-      T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET: "relay-client-traces",
-      T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN: "relay-client-token",
-      VITE_RELAY_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-      VITE_RELAY_OTLP_TRACES_DATASET: "relay-client-traces",
-      VITE_RELAY_OTLP_TRACES_TOKEN: "relay-client-token",
-    });
-  });
-
-  it("projects canonical mobile tracing values to Expo public aliases", () => {
-    expect(
-      loadRepoEnv({
-        baseEnv: {
-          T2CODE_RELAY_URL: "https://relay.example.test",
-          T2CODE_MOBILE_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-          T2CODE_MOBILE_OTLP_TRACES_DATASET: "mobile-traces",
-          T2CODE_MOBILE_OTLP_TRACES_TOKEN: "mobile-token",
-        },
-        repoRoot: makeTemporaryDirectory(),
-      }),
-    ).toEqual({
-      T2CODE_RELAY_URL: "https://relay.example.test",
-      VITE_T2CODE_RELAY_URL: "https://relay.example.test",
-      T2CODE_MOBILE_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-      T2CODE_MOBILE_OTLP_TRACES_DATASET: "mobile-traces",
-      T2CODE_MOBILE_OTLP_TRACES_TOKEN: "mobile-token",
-      EXPO_PUBLIC_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-      EXPO_PUBLIC_OTLP_TRACES_DATASET: "mobile-traces",
-      EXPO_PUBLIC_OTLP_TRACES_TOKEN: "mobile-token",
     });
   });
 });

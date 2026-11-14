@@ -87,7 +87,7 @@ is installed. On the nightly train, run your installed `t2` (for example
 
 There is no `t2` executable for Intel Macs (the desktop app is available). To
 run a server there, build it from source with `vp`, which provides the Node version it needs
-([Install vp](../operations/development.md#first-checkout)):
+([Install vp](https://github.com/ashutoshpw/t2code#install-vp)):
 
 ```bash
 git clone https://github.com/ashutoshpw/t2code
@@ -205,7 +205,7 @@ computer.
 | Cursor      | Install [Cursor CLI](https://cursor.com/cli), then run `agent login`.                                                                                     |
 | Grok Build  | Install [Grok Build CLI](https://x.ai/cli), then run `grok login`.                                                                                        |
 | Kiro        | Install [Kiro CLI](https://kiro.dev/docs/cli/), then run `kiro-cli login`.                                                                                |
-| fx          | Install [fx](https://fx.sh), then run `fx login codex`, `fx login grok`, or `fx login`.      |
+| fx          | Install [fx](https://fx.sh), then run `fx login codex`, `fx login grok`, or `fx login`.                                                                   |
 | OpenCode    | Install [OpenCode](https://opencode.ai), then run `opencode auth login`.                                                                                  |
 | Antigravity | Install and sign in with Google from T2 Code's provider settings.                                                                                         |
 | Pi          | Install [Pi](./providers-pi.md#set-up-pi) with Node.js 22.19 or newer, then run `pi` and `/login`.                                                        |

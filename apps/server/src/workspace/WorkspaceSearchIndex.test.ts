@@ -8,8 +8,8 @@ import {
 } from "@ff-labs/fff-node";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { afterEach, expect, it } from "@effect/vitest";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { PROJECT_FAVICON_EXTENSIONS, isProjectFaviconPath } from "@t3tools/shared/projectFavicon";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { PROJECT_FAVICON_EXTENSIONS, isProjectFaviconPath } from "@t2code/shared/projectFavicon";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -56,7 +56,7 @@ it.live("image searches match the image subset of a file search without fetching
       }
     });
 
-    const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-image-search-" });
+    const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-image-search-" });
     yield* vcsProcess.run({ operation: "test.gitInit", command: "git", args: ["init"], cwd });
     yield* fileSystem.writeFileString(path.join(cwd, ".git/info/exclude"), "hidden/\n");
     yield* writeFiles(cwd, [
@@ -117,7 +117,7 @@ it.live("image searches match the image subset of a file search without fetching
 
     // Past 15,000 matches fff drops its filename fallback, which the image glob would otherwise
     // reorder: "x/logo/logo.png" must keep its place relative to "a/xxlogo.png".
-    const largeCwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-image-rank-" });
+    const largeCwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-image-rank-" });
     yield* writeFiles(largeCwd, [
       ...Array.from({ length: 14_998 }, (_, index) => `b/logo-${index}.png`),
       "x/logo/source.ts",
@@ -140,7 +140,7 @@ it.effect("fetches past a first page of Git-ignored results", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-search-ignored-" });
+      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t2-search-ignored-" });
       const vcsProcess = yield* VcsProcess.VcsProcess;
       yield* vcsProcess.run({ operation: "test.gitInit", command: "git", args: ["init"], cwd });
       yield* fs.writeFileString(path.join(cwd, ".git", "info", "exclude"), "hidden/\n");
@@ -370,8 +370,8 @@ it.effect("reads symlinks again after the watcher reports a change", () =>
       if ((yield* HostProcess.Platform) === "win32") return;
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-symlink-watch-" });
-      const outside = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-outside-" });
+      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-symlink-watch-" });
+      const outside = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-outside-" });
       yield* fileSystem.writeFileString(path.join(cwd, "a.ts"), "");
       yield* fileSystem.symlink("a.ts", path.join(cwd, "old-link.ts"));
       const { directorySearch, notifyWatchers } = fakeSymlinkFinder([]);
@@ -411,7 +411,7 @@ it.effect("answers from the last symlink scan while a slow rescan runs", () =>
       if ((yield* HostProcess.Platform) === "win32") return;
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-symlink-stale-" });
+      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-symlink-stale-" });
       yield* fileSystem.writeFileString(path.join(cwd, "a.ts"), "");
       yield* fileSystem.symlink("a.ts", path.join(cwd, "old-link.ts"));
       const { notifyWatchers } = fakeSymlinkFinder([]);
@@ -449,7 +449,7 @@ it.effect("keeps symlinks once the watcher subscribes after starting late", () =
       if ((yield* HostProcess.Platform) === "win32") return;
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-symlink-watch-" });
+      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-symlink-watch-" });
       yield* fileSystem.writeFileString(path.join(cwd, "a.ts"), "");
       yield* fileSystem.symlink("a.ts", path.join(cwd, "link.ts"));
       const { directorySearch } = fakeSymlinkFinder([], { watchFailures: 2 });
@@ -477,8 +477,8 @@ it.effect(
         if ((yield* HostProcess.Platform) === "win32") return;
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-symlink-dupe-" });
-        const outside = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-outside-" });
+        const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-symlink-dupe-" });
+        const outside = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-outside-" });
         yield* fileSystem.makeDirectory(path.join(cwd, "src"));
         yield* fileSystem.symlink("src", path.join(cwd, "src-link"));
         // A link the scan rejects stays out even when the watcher indexed it.
@@ -519,7 +519,7 @@ it.effect("finds symlinks in folders past the first page of the index", () =>
       if ((yield* HostProcess.Platform) === "win32") return;
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-symlink-pages-" });
+      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-symlink-pages-" });
       yield* fileSystem.makeDirectory(path.join(cwd, "late"));
       yield* fileSystem.writeFileString(path.join(cwd, "late/a.ts"), "");
       yield* fileSystem.symlink("a.ts", path.join(cwd, "late/link.ts"));
@@ -546,7 +546,7 @@ it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const home = yield* fs.realPath(
-          yield* fs.makeTempDirectoryScoped({ prefix: "t3-search-home-" }),
+          yield* fs.makeTempDirectoryScoped({ prefix: "t2-search-home-" }),
         );
         yield* fs.makeDirectory(path.join(home, "OneDrive", "Remix"), { recursive: true });
         yield* fs.writeFileString(path.join(home, "OneDrive", "Remix", "part.stl"), "solid part\n");

@@ -116,7 +116,7 @@ describe("RemoteOpenTargets", () => {
         sshd: { ipv4: false, ipv6: false },
         tailscale: TAILSCALE_UP,
         hostname: "bb-1",
-        username: "t3-user",
+        username: "t2-user",
       });
       expect(targets).toEqual([]);
     }),
@@ -128,10 +128,10 @@ describe("RemoteOpenTargets", () => {
         sshd: { ipv4: false, ipv6: false },
         tailscale: TAILSCALE_SSH,
         hostname: "bb-1",
-        username: "t3-user",
+        username: "t2-user",
       });
       expect(targets).toEqual([
-        { kind: "tailscale", host: "bb-1.tail1234.ts.net", username: "t3-user" },
+        { kind: "tailscale", host: "bb-1.tail1234.ts.net", username: "t2-user" },
       ]);
     }),
   );
@@ -194,9 +194,9 @@ describe("RemoteOpenTargets", () => {
         sshd: { ipv4: false, ipv6: true },
         tailscale: TAILSCALE_DOWN,
         hostname: "bb-1",
-        username: "t3-user",
+        username: "t2-user",
       });
-      expect(targets).toEqual([{ kind: "mdns", host: "bb-1.local", username: "t3-user" }]);
+      expect(targets).toEqual([{ kind: "mdns", host: "bb-1.local", username: "t2-user" }]);
     }),
   );
 });

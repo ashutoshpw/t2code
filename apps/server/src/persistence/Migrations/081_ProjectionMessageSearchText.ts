@@ -24,7 +24,7 @@ export default Effect.gen(function* () {
       SELECT message_id, json_extract(payload_json, '$.text') AS text
       FROM orchestration_v2_projection_messages
       WHERE message_id > ${afterMessageId}
-        AND payload_json LIKE '%t3-citation://%'
+        AND payload_json LIKE '%t2-citation://%'
         AND json_type(payload_json, '$.text') = 'text'
       ORDER BY message_id
       LIMIT ${pageSize}

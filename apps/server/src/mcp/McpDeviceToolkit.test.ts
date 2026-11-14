@@ -135,7 +135,7 @@ const layerDeviceServiceMock = Layer.mock(DeviceService.DeviceService)({
   screenshot: () => Effect.succeed({ device, png }),
   close: () => Effect.void,
   testHost: () => Effect.die("not used"),
-  // As for an Expo device, agent-device knows the device by a different id than T3.
+  // As for an Expo device, agent-device knows the device by a different id than T2.
   agentTarget: () =>
     Effect.succeed({
       agentDeviceId: "SIM-UDID",
@@ -190,7 +190,7 @@ it.effect("registers the device tools and returns the screenshot as image conten
       expect(openedContent.quickStart).toContain(
         `${openedContent.agentDevice.command} snapshot -i`,
       );
-      // The launcher selects the device by agent-device's id for it, not T3's.
+      // The launcher selects the device by agent-device's id for it, not T2's.
       expect(openedContent.agentDevice.command).toBe(
         "/state/device/targets/thread-device/--platform_ios_--udid_SIM-UDID_--config_/host.json_--session_thread-device/agent-device",
       );
@@ -329,7 +329,7 @@ it.effect("device_open reports a failed host's setup error instead of no devices
         Layer.provide(layerFailed),
         Layer.provide(layerProjectsMock),
         Layer.provide(
-          ServerConfig.layerTest(process.cwd(), { prefix: "t3-mcp-device-toolkit-test-" }),
+          ServerConfig.layerTest(process.cwd(), { prefix: "t2-mcp-device-toolkit-test-" }),
         ),
         Layer.provide(NodeServices.layer),
       ),
@@ -469,7 +469,7 @@ describe("device targeting across hosts", () => {
           Layer.provide(layerDevices),
           Layer.provide(layerProjectsMock),
           Layer.provide(
-            ServerConfig.layerTest(process.cwd(), { prefix: "t3-mcp-device-toolkit-test-" }),
+            ServerConfig.layerTest(process.cwd(), { prefix: "t2-mcp-device-toolkit-test-" }),
           ),
           Layer.provide(NodeServices.layer),
         ),

@@ -189,7 +189,7 @@ const fakeExpo = (
                           node: {
                             id: "someone-else",
                             status: "IN_PROGRESS",
-                            name: "T3 Code · Expo Simulators · 000000",
+                            name: "T2 Code · Expo Simulators · 000000",
                           },
                         },
                         ...(options.active ?? []).map((node) => ({ node })),
@@ -255,13 +255,13 @@ const makeSecretResolver = (values: Record<string, string> = {}) =>
 const layerWith = (secrets: Layer.Layer<SecretResolver.SecretResolver>) =>
   Layer.mergeAll(
     ProcessRunner.layer,
-    ServerConfig.layerTest(process.cwd(), { prefix: "t3-eas-host-" }),
+    ServerConfig.layerTest(process.cwd(), { prefix: "t2-eas-host-" }),
     secrets,
   ).pipe(Layer.provideMerge(NodeServices.layer));
 
 const layer = Layer.mergeAll(
   ProcessRunner.layer,
-  ServerConfig.layerTest(process.cwd(), { prefix: "t3-eas-host-" }),
+  ServerConfig.layerTest(process.cwd(), { prefix: "t2-eas-host-" }),
   makeSecretResolver(),
 ).pipe(Layer.provideMerge(NodeServices.layer));
 
@@ -653,7 +653,7 @@ describe("Expo Simulators host", () => {
   it.effect("reports iOS unavailable on a server with no Expo credential", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-expo-home-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-expo-home-" });
       const host = yield* makeHost(
         fakeExpo(),
         config({ accessToken: "" }),

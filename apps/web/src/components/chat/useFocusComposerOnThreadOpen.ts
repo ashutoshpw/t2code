@@ -11,7 +11,7 @@ export function useFocusComposerOnThreadOpen(
   terminalOpen: boolean,
   focusComposer: () => void,
 ) {
-  // oxlint-disable-next-line t2code/react-effect-budget -- restores DOM focus on thread entry and after the drawer opens or closes
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- schedules a frame to focus the composer DOM element when a thread opens with the terminal closed
   useEffect(() => {
     if (!threadRef || !enabled || !root) return;
     let frame: number | undefined;
