@@ -7,7 +7,7 @@ index 0f90eedca20655ccd30b8f28e433b2094341fbdf..c2ef86927d6e3ab0e8584330fa0ac3fd
      /** Matched file items */
      items: FileItem[];
 -    /** Corresponding scores for each item */
-+    /** Corresponding scores for each item. Empty when the page has more than 200 items (patched in T3 Code to skip per-item score FFI calls). */
++    /** Corresponding scores for each item. Empty when the page has more than 200 items (patched in T2 Code to skip per-item score FFI calls). */
      scores: Score[];
      /** Total number of files that matched */
      totalMatched: number;
@@ -16,7 +16,7 @@ index 0f90eedca20655ccd30b8f28e433b2094341fbdf..c2ef86927d6e3ab0e8584330fa0ac3fd
      /** Matched directory items */
      items: DirItem[];
 -    /** Corresponding scores for each item */
-+    /** Corresponding scores for each item. Empty when the page has more than 200 items (patched in T3 Code to skip per-item score FFI calls). */
++    /** Corresponding scores for each item. Empty when the page has more than 200 items (patched in T2 Code to skip per-item score FFI calls). */
      scores: Score[];
      /** Total number of directories that matched */
      totalMatched: number;
@@ -25,7 +25,7 @@ index 0f90eedca20655ccd30b8f28e433b2094341fbdf..c2ef86927d6e3ab0e8584330fa0ac3fd
      /** Matched items (files and directories interleaved by score) */
      items: MixedItem[];
 -    /** Corresponding scores for each item */
-+    /** Corresponding scores for each item. Empty when the page has more than 200 items (patched in T3 Code to skip per-item score FFI calls). */
++    /** Corresponding scores for each item. Empty when the page has more than 200 items (patched in T2 Code to skip per-item score FFI calls). */
      scores: Score[];
      /** Total number of items (files + dirs) that matched */
      totalMatched: number;
