@@ -19,8 +19,11 @@ import { WS_METHODS } from "./rpc.ts";
 export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.providerAuthRemoveMethod]: AuthProvidersManageScope,
   [WS_METHODS.spacesSearch]: AuthOrchestrationReadScope,
+  [WS_METHODS.spacesAssetsUploadGet]: AuthOrchestrationReadScope,
+  [WS_METHODS.spacesAssetsGet]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesAssetsUploadCreate]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesAssetsUploadFinalize]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesReferencesResolve]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesCreate]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesRename]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesSetDefault]: AuthOrchestrationOperateScope,

@@ -308,6 +308,13 @@ export const layerBrowserApiCors = Layer.unwrap(
         : {}),
       allowedMethods: browserApiCorsAllowedMethods,
       allowedHeaders: browserApiCorsAllowedHeaders,
+      exposedHeaders: [
+        "accept-ranges",
+        "content-range",
+        "content-length",
+        "content-encoding",
+        "etag",
+      ],
       maxAge: 600,
     });
   }),

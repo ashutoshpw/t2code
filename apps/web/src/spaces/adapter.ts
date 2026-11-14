@@ -1,24 +1,36 @@
 import { Extension, type Extensions } from "@tiptap/core";
-import { closeHistory, history, redo, undo } from "@tiptap/pm/history";
+import { closeHistory, history, isHistoryTransaction, redo, undo } from "@tiptap/pm/history";
 import { Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import {
   Plugin,
   PluginKey,
+  TextSelection,
+  NodeSelection,
   type EditorState,
   type Command,
   type Transaction,
 } from "@tiptap/pm/state";
-import { canSplit } from "@tiptap/pm/transform";
+import { canSplit, AddMarkStep, RemoveMarkStep } from "@tiptap/pm/transform";
+import { toggleMark } from "@tiptap/pm/commands";
 import { Schema } from "effect";
 import {
   copySpaceBlocks,
+  mediaAssetId,
   isKnownSpaceBlock,
   isSpaceListItem,
+  isSafeSpaceLink,
   joinSpaceTextBlocks,
   splitSpaceTextBlock,
   type SpaceMutation,
 } from "@t2code/client-runtime/spaces";
-import { SpaceBlock, type SpaceBlockId, type SpacePageTarget } from "@t2code/contracts/spaces";
+import {
+  SpaceBlock,
+  SpaceKnownMark,
+  type SpaceAssetId,
+  type SpaceBlockId,
+  type SpacePageTarget,
+  type SpaceRichText,
+} from "@t2code/contracts/spaces";
 
 import {
   canEditSpaceEditorBlock,
@@ -26,6 +38,9 @@ import {
   spaceBlockNode,
   spaceDocumentBlocks,
   spaceWindowDocument,
+  spaceEditorRuns,
+  spaceMentionSpans,
+  spaceMentionRangeSafe,
   type SpaceEditorWindow,
 } from "./document";
 import { richBlockTypes, spaceSchemaExtensions } from "./schema";
@@ -43,19 +58,30 @@ export interface SpaceEditorOptions {
     readonly before: string | null;
     readonly after: string | null;
   }) => string;
+  readonly canEdit?: () => boolean;
+  readonly canChangeStructure?: () => boolean;
+  readonly canUndo?: () => boolean;
+  readonly canEditMedia?: () => boolean;
 }
 export interface SpaceEditorBatch {
   readonly baseRevision: number;
   readonly memberIds: readonly SpaceBlockId[];
   readonly mutations: readonly SpaceMutation[];
 }
+interface MediaChange {
+  readonly before: SpaceBlock | null;
+  readonly after: SpaceBlock | null;
+}
 interface Operation {
+  readonly media?: MediaChange;
+  readonly history?: boolean;
   readonly merged?: { readonly from: SpaceBlockId; readonly into: SpaceBlockId };
 }
 interface AdapterState {
   readonly batch: SpaceEditorBatch;
   readonly joins: readonly NonNullable<Operation["merged"]>[];
 }
+const decodeMentionMark = Schema.decodeOption(SpaceKnownMark, { onExcessProperty: "error" });
 const localHistoryDepth = 100;
 const clipboardType = "application/x-t2-spaces-blocks+json";
 const decodeClipboard = Schema.decodeUnknownSync(
@@ -82,12 +108,34 @@ function entries(doc: ProseMirrorNode) {
   return result;
 }
 
+function mediaIdentity(block: SpaceBlock | null) {
+  return block && isKnownSpaceBlock(block)
+    ? { ...block, content: { ...block.content, caption: [] } }
+    : block;
+}
+
+function captionBoundary(doc: ProseMirrorNode, position: number) {
+  const point = doc.resolve(position);
+  if (point.parent.type.name !== "spaceMedia") return true;
+  const text = point.parent.textContent,
+    offset = point.parentOffset;
+  return !(
+    offset > 0 &&
+    offset < text.length &&
+    /[\uD800-\uDBFF]/.test(text[offset - 1]!) &&
+    /[\uDC00-\uDFFF]/.test(text[offset]!)
+  );
+}
+
 export class SpaceEditorAdapter {
   readonly #options: SpaceEditorOptions;
   readonly #key = new PluginKey<AdapterState>("spaces-window");
   readonly #operation = new PluginKey<Operation>("spaces-operation");
-  readonly #members: ReadonlySet<SpaceBlockId>;
-  readonly #complete: ReadonlySet<SpaceBlockId | null>;
+  #members: ReadonlySet<SpaceBlockId>;
+  #committed: ReadonlySet<SpaceBlockId>;
+  #complete: ReadonlySet<SpaceBlockId | null>;
+  #window: SpaceEditorWindow;
+  #mediaHistory: readonly MediaChange[] = [];
   readonly document: ProseMirrorNode;
 
   constructor(options: SpaceEditorOptions) {
@@ -101,7 +149,11 @@ export class SpaceEditorAdapter {
         throw new Error("Editor limits must be positive integers");
     }
     this.#options = options;
+    this.#window = options.window;
     this.#members = new Set(options.window.blocks.map((block) => block.id));
+    this.#committed = new Set(
+      options.window.committedIds ?? options.window.blocks.map((block) => block.id),
+    );
     this.#complete = new Set(options.window.completeParents);
     this.document = spaceWindowDocument(options.window, options.maxBlocks, options.maxDepth);
     this.#validate(this.document);
@@ -111,7 +163,7 @@ export class SpaceEditorAdapter {
     doc.check();
     const blocks = spaceDocumentBlocks(doc);
     spaceWindowDocument(
-      { ...this.#options.window, blocks },
+      { ...this.#window, blocks },
       this.#options.maxBlocks,
       this.#options.maxDepth,
     );
@@ -146,7 +198,7 @@ export class SpaceEditorAdapter {
         });
     }
     return {
-      baseRevision: this.#options.window.revision,
+      baseRevision: this.#window.revision,
       memberIds: [...this.#members],
       mutations,
     };
@@ -156,11 +208,19 @@ export class SpaceEditorAdapter {
     return new Plugin<AdapterState>({
       key: this.#key,
       state: {
-        init: () => ({ batch: this.#batch(this.document, this.document), joins: [] }),
+        init: (_config, state) => ({ batch: this.#batch(state.doc, state.doc), joins: [] }),
         apply: (tr, value) => {
           if (!tr.docChanged) return value;
           const operation = tr.getMeta(this.#operation) as Operation | undefined;
           const merged = operation?.merged;
+          if (operation?.media)
+            this.#mediaHistory = [
+              ...this.#mediaHistory,
+              {
+                before: mediaIdentity(operation.media.before),
+                after: mediaIdentity(operation.media.after),
+              },
+            ].slice(-localHistoryDepth * 2);
           return {
             batch: this.#batch(tr.before, tr.doc, operation),
             // History replays steps without join metadata; retain bounded targets for redo.
@@ -174,8 +234,28 @@ export class SpaceEditorAdapter {
       },
       filterTransaction: (tr) => {
         if (!tr.docChanged) return true;
+        if (this.#options.canEdit?.() === false) return false;
         try {
           const operation = tr.getMeta(this.#operation) as Operation | undefined;
+          const localHistory = operation?.history === true && isHistoryTransaction(tr);
+          for (const [i, step] of tr.steps.entries()) {
+            const doc = tr.docs[i]!;
+            let safe = true;
+            step.getMap().forEach((from, to) => {
+              if (
+                !captionBoundary(doc, from) ||
+                !captionBoundary(doc, to) ||
+                (!localHistory && !spaceMentionRangeSafe(doc, from, to))
+              )
+                safe = false;
+            });
+            if (step instanceof AddMarkStep || step instanceof RemoveMarkStep)
+              safe &&=
+                captionBoundary(doc, step.from) &&
+                captionBoundary(doc, step.to) &&
+                (localHistory || spaceMentionRangeSafe(doc, step.from, step.to));
+            if (!safe) return false;
+          }
           const batch = this.#batch(tr.before, tr.doc, operation);
           const before = entries(tr.before);
           const after = entries(tr.doc);
@@ -208,11 +288,29 @@ export class SpaceEditorAdapter {
             )
               return false;
           }
-          for (const entry of before.filter((item) => item.node.type.name === "spaceAtom")) {
+          const oldBlocks = new Map(spaceDocumentBlocks(tr.before).map((b) => [b.id, b]));
+          const newBlocks = new Map(spaceDocumentBlocks(tr.doc).map((b) => [b.id, b]));
+          for (const id of new Set([...oldBlocks.keys(), ...newBlocks.keys()])) {
+            const old = oldBlocks.get(id) ?? null,
+              next = newBlocks.get(id) ?? null;
+            if ((old && mediaAssetId(old)) || (next && mediaAssetId(next))) {
+              if (
+                !sameSpaceValue(old, next) &&
+                ((old && before.find((e) => e.block.id === id)?.node.type.name === "spaceAtom") ||
+                  !this.#mediaAllowed(old, next, operation))
+              )
+                return false;
+            }
+          }
+          for (const entry of before.filter(
+            (item) => item.node.type.name === "spaceAtom" && !mediaAssetId(item.block),
+          )) {
             const next = after.find((item) => item.block.id === entry.block.id);
+            if (!next && entry.block.type === "divider" && canEditSpaceEditorBlock(entry.block))
+              continue;
             if (
               !next &&
-              !this.#members.has(entry.block.id) &&
+              !this.#committed.has(entry.block.id) &&
               isKnownSpaceBlock(entry.block) &&
               entry.block.type !== "child_page"
             )
@@ -319,11 +417,16 @@ export class SpaceEditorAdapter {
   }
 
   extensions(): Extensions {
+    const thisAdapter = this;
     const plugins = this.plugins();
     const split = this.split();
     const join = this.joinBackward();
     const undo = this.undoLocal();
     const redo = this.redoLocal();
+    const bold = this.mark("bold"),
+      italic = this.mark("italic"),
+      strike = this.mark("strike"),
+      code = this.mark("code");
     return [
       ...spaceSchemaExtensions,
       Extension.create({
@@ -332,14 +435,50 @@ export class SpaceEditorAdapter {
         addKeyboardShortcuts() {
           const run = (command: Command) => command(this.editor.state, this.editor.view.dispatch);
           return {
-            Enter: () => run(split),
-            Backspace: () =>
-              this.editor.state.selection.empty &&
-              this.editor.state.selection.$from.parentOffset === 0
-                ? run(join)
-                : false,
-            "Mod-z": () => run(undo),
-            "Mod-Shift-z": () => run(redo),
+            Enter: () => {
+              if (this.editor.state.selection.$from.parent.type.name === "code")
+                this.editor.view.dispatch(this.editor.state.tr.insertText("\n"));
+              else run(split);
+              return true;
+            },
+            ArrowLeft: () => run(thisAdapter.mentionBoundary(-1)),
+            ArrowRight: () => run(thisAdapter.mentionBoundary(1)),
+            Delete: () => run(thisAdapter.mentionBoundary(1, true)),
+            Backspace: () => {
+              if (run(thisAdapter.mentionBoundary(-1, true))) return true;
+              if (
+                this.editor.state.selection.empty &&
+                this.editor.state.selection.$from.parentOffset === 0
+              ) {
+                run(join);
+                return true;
+              }
+              return false;
+            },
+            "Mod-b": () => {
+              run(bold);
+              return true;
+            },
+            "Mod-i": () => {
+              run(italic);
+              return true;
+            },
+            "Mod-Shift-x": () => {
+              run(strike);
+              return true;
+            },
+            "Mod-`": () => {
+              run(code);
+              return true;
+            },
+            "Mod-z": () => {
+              run(undo);
+              return true;
+            },
+            "Mod-Shift-z": () => {
+              run(redo);
+              return true;
+            },
           };
         },
       }),
@@ -350,7 +489,540 @@ export class SpaceEditorAdapter {
     return this.#key.getState(state)!.batch;
   }
 
+  replaceWindow(window: SpaceEditorWindow) {
+    if (window.revision !== this.#window.revision) this.clearMediaHistory();
+    this.#window = window;
+    this.#members = new Set(window.blocks.map((block) => block.id));
+    this.#committed = new Set(window.committedIds ?? window.blocks.map((block) => block.id));
+    this.#complete = new Set(window.completeParents);
+  }
+
+  changes(before: ProseMirrorNode, transactions: readonly Transaction[]): readonly SpaceMutation[] {
+    const last = transactions.at(-1);
+    if (!last || before.eq(last.doc)) return [];
+    const joins = new Map<SpaceBlockId, SpaceBlockId>();
+    for (const transaction of transactions) {
+      const operation = transaction.getMeta(this.#operation) as Operation | undefined;
+      if (operation?.merged) joins.set(operation.merged.from, operation.merged.into);
+    }
+    return this.#batch(before, last.doc).mutations.map((mutation) => {
+      const into = mutation.kind === "delete" ? joins.get(mutation.blockId) : undefined;
+      return mutation.kind === "delete" && into ? { ...mutation, mergedInto: into } : mutation;
+    });
+  }
+
+  planImage(
+    state: EditorState,
+    assetId: SpaceAssetId,
+    kind: "image" | "pdf" | "video" = "image",
+  ): SpaceBlock {
+    if (
+      this.#options.canChangeStructure?.() === false ||
+      !this.#isComplete(null, state.doc) ||
+      entries(state.doc).length >= this.#options.maxBlocks
+    )
+      throw new Error("Image insertion requires a current complete root window with capacity");
+    const previous = spaceDocumentBlocks(state.doc).findLast((block) => block.parentId === null);
+    return {
+      id: this.#options.allocateId(),
+      parentId: null,
+      order: this.#rank(null, previous, undefined),
+      type: kind,
+      version: 1,
+      content: { assetId },
+    };
+  }
+  insertImage(block: SpaceBlock): Command {
+    return (state, dispatch) => {
+      if (
+        this.#options.canChangeStructure?.() === false ||
+        !isKnownSpaceBlock(block) ||
+        !["image", "pdf", "video"].includes(block.type) ||
+        block.parentId !== null ||
+        !this.#isComplete(null, state.doc) ||
+        entries(state.doc).length >= this.#options.maxBlocks ||
+        entries(state.doc).some((e) => e.block.id === block.id)
+      )
+        return false;
+      const previous = spaceDocumentBlocks(state.doc).findLast((b) => b.parentId === null);
+      try {
+        if (block.order !== this.#rank(null, previous, undefined)) return false;
+      } catch {
+        return false;
+      }
+      if (!dispatch) return this.#options.canEdit?.() !== false;
+      const at = state.doc.content.size;
+      const tr = closeHistory(state.tr).insert(at, spaceBlockNode(block, [], false, state.schema));
+      tr.setSelection(NodeSelection.create(tr.doc, at));
+      return this.#dispatch(tr, dispatch, { media: { before: null, after: block } });
+    };
+  }
+
+  append(type: "paragraph" | "code" | "divider" = "paragraph"): Command {
+    return (state, dispatch) => {
+      if (
+        this.#options.canChangeStructure?.() === false ||
+        entries(state.doc).length >= this.#options.maxBlocks ||
+        !this.#isComplete(null, state.doc)
+      )
+        return false;
+      const previous = spaceDocumentBlocks(state.doc).findLast((block) => block.parentId === null);
+      let order: string;
+      try {
+        order = this.#rank(null, previous, undefined);
+      } catch {
+        return false;
+      }
+      if (!dispatch) return true;
+      const block: SpaceBlock = {
+        id: this.#options.allocateId(),
+        parentId: null,
+        order,
+        type,
+        version: 1,
+        content:
+          type === "paragraph" ? { runs: [] } : type === "code" ? { text: "", language: "" } : {},
+      };
+      const at = state.doc.content.size;
+      const tr = state.tr.insert(at, spaceBlockNode(block, [], false, state.schema));
+      tr.setSelection(
+        type === "divider"
+          ? NodeSelection.create(tr.doc, at)
+          : TextSelection.create(tr.doc, at + 1),
+      );
+      return this.#dispatch(tr, dispatch);
+    };
+  }
+
+  mark(type: "bold" | "italic" | "strike" | "code"): Command {
+    return (state, dispatch) =>
+      this.#options.canEdit?.() !== false &&
+      captionBoundary(state.doc, state.selection.from) &&
+      captionBoundary(state.doc, state.selection.to) &&
+      this.#mediaSelectionAllowed(state) &&
+      spaceMentionRangeSafe(state.doc, state.selection.from, state.selection.to) &&
+      toggleMark(state.schema.marks[`space_${type}`]!, { value: { type, version: 1 } })(
+        state,
+        dispatch,
+      );
+  }
+
+  #mediaSelectionAllowed(state: EditorState) {
+    let allowed = true;
+    state.doc.nodesBetween(state.selection.from, state.selection.to, (node) => {
+      if (node.type.name === "spaceMedia" && this.#options.canEditMedia?.() !== true)
+        allowed = false;
+    });
+    return allowed;
+  }
+  mentionRange(state: EditorState) {
+    const entry = this.#selectedEntry(state),
+      selection = state.selection;
+    if (
+      !entry ||
+      !(selection instanceof TextSelection) ||
+      !spaceEditorRuns(entry.block) ||
+      !selection.$from.sameParent(selection.$to) ||
+      !spaceMentionRangeSafe(state.doc, selection.from, selection.to)
+    )
+      return null;
+    const text = selection.$from.parent.textContent;
+    for (const offset of [selection.$from.parentOffset, selection.$to.parentOffset])
+      if (
+        offset > 0 &&
+        offset < text.length &&
+        /[\uD800-\uDBFF]/.test(text[offset - 1]!) &&
+        /[\uDC00-\uDFFF]/.test(text[offset]!)
+      )
+        return null;
+    return { blockId: entry.block.id, from: selection.from, to: selection.to };
+  }
+  insertMention(mark: import("./mentions").SpaceMentionMark, label: string): Command {
+    return (state, dispatch) => {
+      const range = this.mentionRange(state);
+      const decoded = decodeMentionMark(mark);
+      if (
+        !range ||
+        decoded._tag !== "Some" ||
+        !["page_mention", "block_mention"].includes(mark.type) ||
+        mark.target.environmentId !== this.target.environmentId ||
+        !label ||
+        label.length > 512 ||
+        new TextEncoder().encode(label).byteLength > 2048
+      )
+        return false;
+      const marks = (state.storedMarks ?? state.selection.$from.marks()).filter(
+        (m) => !["space_page_mention", "space_block_mention"].includes(m.type.name),
+      );
+      const node = state.schema.text(label, [
+        ...marks,
+        state.schema.marks[`space_${mark.type}`]!.create({ value: mark }),
+      ]);
+      const tr = closeHistory(state.tr).replaceWith(range.from, range.to, node);
+      tr.setSelection(TextSelection.create(tr.doc, range.from + label.length));
+      return this.#dispatch(tr, dispatch);
+    };
+  }
+  mentionBoundary(direction: -1 | 1, remove = false): Command {
+    return (state, dispatch) => {
+      if (!state.selection.empty) return false;
+      const at = state.selection.from;
+      const span = spaceMentionSpans(state.doc).find((s) =>
+        direction < 0 ? s.from < at && at <= s.to : s.from <= at && at < s.to,
+      );
+      if (!span || (remove && this.#options.canEdit?.() === false)) return false;
+      if (!dispatch) return true;
+      if (remove)
+        return this.#dispatch(closeHistory(state.tr).delete(span.from, span.to), dispatch);
+      dispatch(
+        state.tr
+          .setSelection(TextSelection.create(state.doc, direction < 0 ? span.from : span.to))
+          .setMeta("addToHistory", false),
+      );
+      return true;
+    };
+  }
+  #selectedEntry(state: EditorState) {
+    if (this.#options.canEdit?.() === false) return null;
+    let id: SpaceBlockId | undefined;
+    if (state.selection instanceof NodeSelection) id = state.selection.node.attrs.block?.id;
+    else {
+      if (!state.selection.$from.sameParent(state.selection.$to)) return null;
+      for (let depth = state.selection.$from.depth; depth > 0; depth--) {
+        id = state.selection.$from.node(depth).attrs.block?.id;
+        if (id) break;
+      }
+    }
+    const entry = entries(state.doc).find((item) => item.block.id === id);
+    const block = spaceDocumentBlocks(state.doc).find((item) => item.id === id);
+    return entry &&
+      block &&
+      entry.node.type.name !== "spaceAtom" &&
+      (!mediaAssetId(block) || this.#options.canEditMedia?.() === true) &&
+      canEditSpaceEditorBlock(block)
+      ? { ...entry, block }
+      : null;
+  }
+  #attribute(
+    type: "heading" | "callout" | "code",
+    key: "level" | "icon" | "language",
+    value: string | number,
+  ): Command {
+    return (state, dispatch) => {
+      const entry = this.#selectedEntry(state);
+      if (
+        !entry ||
+        !isKnownSpaceBlock(entry.block) ||
+        entry.block.type !== type ||
+        Reflect.get(entry.block.content, key) === value
+      )
+        return false;
+      return this.#dispatch(
+        state.tr.setNodeMarkup(entry.pos, undefined, {
+          block: { ...entry.block, content: { ...entry.block.content, [key]: value } },
+        }),
+        dispatch,
+      );
+    };
+  }
+  setHeadingLevel(level: 1 | 2 | 3): Command {
+    return (state, dispatch) =>
+      [1, 2, 3].includes(level) && this.#attribute("heading", "level", level)(state, dispatch);
+  }
+  setCalloutIcon(icon: string): Command {
+    return this.#attribute("callout", "icon", icon);
+  }
+  setCodeLanguage(language: string): Command {
+    return this.#attribute("code", "language", language);
+  }
+
+  linkSelection(state: EditorState) {
+    const entry = this.#selectedEntry(state),
+      selection = state.selection;
+    if (
+      !entry ||
+      !(selection instanceof TextSelection) ||
+      !isKnownSpaceBlock(entry.block) ||
+      spaceEditorRuns(entry.block) === null
+    )
+      return null;
+    const runs = spaceEditorRuns(entry.block)!;
+    let offset = 0;
+    const segments = runs.flatMap((run) => {
+      const from = offset;
+      offset += run.text.length;
+      return run.text
+        ? [
+            {
+              from,
+              to: offset,
+              href: run.marks.find((mark) => mark.type === "link")?.href as string | undefined,
+            },
+          ]
+        : [];
+    });
+    let from = selection.$from.parentOffset,
+      to = selection.$to.parentOffset;
+    const text = runs.map((run) => run.text).join("");
+    const splitsPair = (n: number) =>
+      n > 0 &&
+      n < text.length &&
+      /[\uD800-\uDBFF]/.test(text[n - 1]!) &&
+      /[\uDC00-\uDFFF]/.test(text[n]!);
+    if ([from, to].some(splitsPair)) return null;
+    if (selection.empty) {
+      const index = segments.findIndex((segment) => segment.from <= from && from < segment.to);
+      const at = index < 0 && from === text.length ? segments.length - 1 : index;
+      const selected = segments[at];
+      if (!selected?.href) return null;
+      let left = at,
+        right = at;
+      while (left > 0 && segments[left - 1]!.href === selected.href) left--;
+      while (right + 1 < segments.length && segments[right + 1]!.href === selected.href) right++;
+      from = segments[left]!.from;
+      to = segments[right]!.to;
+    }
+    if ([from, to].some(splitsPair)) return null;
+    const selected = segments.filter((segment) => segment.from < to && segment.to > from);
+    const href = selected[0]?.href;
+    const start = selection.$from.start();
+    if (!spaceMentionRangeSafe(state.doc, start + from, start + to)) return null;
+    return {
+      from: start + from,
+      to: start + to,
+      href: href && selected.every((segment) => segment.href === href) ? href : null,
+      hasLink: selected.some((segment) => !!segment.href),
+    };
+  }
+  setLink(href: string): Command {
+    return (state, dispatch) => isSafeSpaceLink(href) && this.#link(href)(state, dispatch);
+  }
+  removeLink(): Command {
+    return this.#link(null);
+  }
+  #link(href: string | null): Command {
+    return (state, dispatch) => {
+      const range = this.linkSelection(state),
+        entry = this.#selectedEntry(state);
+      if (
+        !range ||
+        !entry ||
+        !isKnownSpaceBlock(entry.block) ||
+        spaceEditorRuns(entry.block) === null ||
+        (!href && !range.hasLink) ||
+        (href !== null && range.href === href)
+      )
+        return false;
+      const start = state.selection.$from.start(),
+        from = range.from - start,
+        to = range.to - start;
+      let offset = 0;
+      const runs: SpaceRichText = spaceEditorRuns(entry.block)!.flatMap((run) => {
+        const a = Math.max(0, from - offset),
+          b = Math.min(run.text.length, to - offset);
+        offset += run.text.length;
+        if (a >= b) return [run];
+        const marks = run.marks.flatMap((mark) =>
+          mark.type === "link" ? (href ? [{ ...mark, href }] : []) : [mark],
+        );
+        if (href && !run.marks.some((mark) => mark.type === "link"))
+          marks.push({ type: "link", version: 1, href });
+        return [
+          ...(a > 0 ? [{ ...run, text: run.text.slice(0, a) }] : []),
+          { ...run, text: run.text.slice(a, b), marks },
+          ...(b < run.text.length ? [{ ...run, text: run.text.slice(b) }] : []),
+        ];
+      });
+      const tr = state.tr.removeMark(range.from, range.to, state.schema.marks.space_link!);
+      if (href)
+        tr.addMark(
+          range.from,
+          range.to,
+          state.schema.marks.space_link!.create({ value: { type: "link", version: 1, href } }),
+        );
+      tr.setNodeMarkup(entry.pos, undefined, {
+        block: {
+          ...entry.block,
+          content: {
+            ...entry.block.content,
+            [mediaAssetId(entry.block) ? "caption" : "runs"]: runs,
+          },
+        },
+      });
+      return this.#dispatch(tr, dispatch);
+    };
+  }
+
+  toggleTodo(id: SpaceBlockId): Command {
+    return (state, dispatch) => {
+      const entry = entries(state.doc).find((item) => item.block.id === id);
+      const block = spaceDocumentBlocks(state.doc).find((item) => item.id === id);
+      if (
+        !entry ||
+        entry.node.type.name === "spaceAtom" ||
+        !block ||
+        !isKnownSpaceBlock(block) ||
+        block.type !== "todo_item"
+      )
+        return false;
+      return this.#dispatch(
+        state.tr.setNodeMarkup(entry.pos, undefined, {
+          block: { ...block, content: { ...block.content, checked: !block.content.checked } },
+        }),
+        dispatch,
+      );
+    };
+  }
+
+  #mediaAllowed(before: SpaceBlock | null, after: SpaceBlock | null, operation?: Operation) {
+    const supported = (b: SpaceBlock | null) =>
+      !b || (!!mediaAssetId(b) && canEditSpaceEditorBlock(b));
+    if (!supported(before) || !supported(after)) return false;
+    if (after) {
+      const text = spaceEditorRuns(after)!
+        .map((run) => run.text)
+        .join("");
+      for (let i = 0; i < text.length; i++) {
+        const code = text.charCodeAt(i);
+        if (code >= 0xd800 && code <= 0xdbff) {
+          const next = text.charCodeAt(++i);
+          if (!(next >= 0xdc00 && next <= 0xdfff)) return false;
+        } else if (code >= 0xdc00 && code <= 0xdfff) return false;
+      }
+    }
+    if (before && !after && !this.#committed.has(before.id)) return true;
+    if (this.#options.canEditMedia?.() !== true && !(operation?.media?.before === null))
+      return false;
+    if (before && after && sameSpaceValue(mediaIdentity(before), mediaIdentity(after))) return true;
+    const matches = (change: MediaChange) =>
+      sameSpaceValue(change.before, before) && sameSpaceValue(change.after, after);
+    const historyMatches = (change: MediaChange) =>
+      sameSpaceValue(mediaIdentity(change.before), mediaIdentity(before)) &&
+      sameSpaceValue(mediaIdentity(change.after), mediaIdentity(after));
+    return (
+      (!!operation?.media && matches(operation.media)) ||
+      (!!operation?.history &&
+        this.#mediaHistory.some(
+          (change) =>
+            historyMatches(change) ||
+            historyMatches({ before: change.after, after: change.before }),
+        ))
+    );
+  }
+  clearMediaHistory() {
+    this.#mediaHistory = [];
+  }
+  mediaTarget(state: EditorState, id: SpaceBlockId) {
+    const entry = entries(state.doc).find((e) => e.block.id === id);
+    const block = spaceDocumentBlocks(state.doc).find((b) => b.id === id);
+    return entry?.node.type.name === "spaceMedia" &&
+      block &&
+      mediaAssetId(block) &&
+      canEditSpaceEditorBlock(block)
+      ? block
+      : null;
+  }
+  replaceMedia(before: SpaceBlock, after: SpaceBlock): Command {
+    return (state, dispatch) => {
+      const entry = entries(state.doc).find((e) => e.block.id === before.id);
+      const actual = this.mediaTarget(state, before.id);
+      if (
+        this.#options.canChangeStructure?.() === false ||
+        this.#options.canEditMedia?.() !== true ||
+        !entry ||
+        !sameSpaceValue(actual, before) ||
+        !mediaAssetId(before) ||
+        !mediaAssetId(after) ||
+        !canEditSpaceEditorBlock(before) ||
+        !canEditSpaceEditorBlock(after) ||
+        !isKnownSpaceBlock(before) ||
+        !isKnownSpaceBlock(after) ||
+        !sameSpaceValue(
+          {
+            ...before,
+            type: after.type,
+            content: {
+              ...before.content,
+              assetId: "assetId" in after.content ? after.content.assetId : null,
+            },
+          },
+          after,
+        )
+      )
+        return false;
+      return this.#dispatch(
+        closeHistory(state.tr).replaceWith(
+          entry.pos,
+          entry.pos + entry.node.nodeSize,
+          spaceBlockNode(after, [], false, state.schema),
+        ),
+        dispatch,
+        { media: { before, after } },
+      );
+    };
+  }
+  removeMedia(id: SpaceBlockId): Command {
+    return (state, dispatch) => {
+      const entry = entries(state.doc).find((e) => e.block.id === id);
+      const all = spaceDocumentBlocks(state.doc),
+        before = this.mediaTarget(state, id);
+      if (
+        !entry ||
+        !before ||
+        !mediaAssetId(before) ||
+        !canEditSpaceEditorBlock(before) ||
+        this.#options.canEditMedia?.() !== true ||
+        this.#options.canChangeStructure?.() === false ||
+        !this.#complete.has(null) ||
+        all.some((b) => b.parentId === id)
+      )
+        return false;
+      return this.#dispatch(
+        closeHistory(state.tr).delete(entry.pos, entry.pos + entry.node.nodeSize),
+        dispatch,
+        { media: { before, after: null } },
+      );
+    };
+  }
+
+  remove(id: SpaceBlockId): Command {
+    return (state, dispatch) => {
+      if (this.#options.canChangeStructure?.() === false) return false;
+      const entry = entries(state.doc).find((item) => item.block.id === id);
+      if (
+        !entry ||
+        (mediaAssetId(entry.block) !== null && this.#committed.has(id)) ||
+        (entry.node.type.name === "spaceAtom" &&
+          entry.block.type !== "divider" &&
+          !(
+            ["image", "pdf", "video"].includes(entry.block.type) &&
+            isKnownSpaceBlock(entry.block) &&
+            !this.#committed.has(id)
+          )) ||
+        !this.#isComplete(entry.block.parentId, state.doc) ||
+        !this.#subtreeComplete(entry.node, state.doc)
+      )
+        return false;
+      const subtree = entries(state.schema.nodes.doc!.create(null, [entry.node]));
+      if (
+        subtree.some(
+          (item) =>
+            !canEditSpaceEditorBlock(item.block) ||
+            (["child_page", "image", "pdf", "video"].includes(item.block.type) &&
+              !(
+                ["image", "pdf", "video"].includes(item.block.type) &&
+                !this.#committed.has(item.block.id)
+              )),
+        )
+      )
+        return false;
+      if (!dispatch) return this.#options.canEdit?.() !== false;
+      return this.#dispatch(state.tr.delete(entry.pos, entry.pos + entry.node.nodeSize), dispatch);
+    };
+  }
+
   #dispatch(tr: Transaction, dispatch?: (tr: Transaction) => void, operation: Operation = {}) {
+    if (this.#options.canEdit?.() === false) return false;
     tr.setMeta(this.#operation, operation);
     try {
       this.#validate(tr.doc);
@@ -365,7 +1037,7 @@ export class SpaceEditorAdapter {
   #isComplete(parent: SpaceBlockId | null, doc: ProseMirrorNode) {
     if (this.#complete.has(parent)) return true;
     if (parent === null || !entries(doc).some((entry) => entry.block.id === parent)) return false;
-    const original = this.#options.window.blocks.find((block) => block.id === parent);
+    const original = this.#window.blocks.find((block) => block.id === parent);
     return !original || !isSpaceListItem(original);
   }
   #subtreeComplete(node: ProseMirrorNode, doc: ProseMirrorNode): boolean {
@@ -390,6 +1062,8 @@ export class SpaceEditorAdapter {
 
   split(): Command {
     return (state, dispatch) => {
+      if (this.#options.canChangeStructure?.() === false) return false;
+      if (!spaceMentionRangeSafe(state.doc, state.selection.from, state.selection.to)) return false;
       const { $from, $to, empty } = state.selection;
       if (!empty || !$from.sameParent($to)) return false;
       const depth = $from.parent.type.name === "spaceBody" ? $from.depth - 1 : $from.depth;
@@ -401,6 +1075,7 @@ export class SpaceEditorAdapter {
       );
       if (
         !block ||
+        blocks.length >= this.#options.maxBlocks ||
         !richBlockTypes.includes(node.type.name as (typeof richBlockTypes)[number]) ||
         !this.#isComplete(block.parentId, state.doc) ||
         !this.#subtreeComplete(node, state.doc)
@@ -409,10 +1084,15 @@ export class SpaceEditorAdapter {
       const pos = $from.before(depth);
       const siblings = blocks.filter((item) => item.parentId === block.parentId);
       const sibling = siblings[siblings.findIndex((item) => item.id === block.id) + 1];
-      const next = {
-        id: this.#options.allocateId(),
-        order: this.#rank(block.parentId, block, sibling),
-      };
+      const id = dispatch ? this.#options.allocateId() : null;
+      let order: string;
+      try {
+        order = this.#rank(block.parentId, block, sibling);
+      } catch {
+        return false;
+      }
+      if (!dispatch) return true;
+      const next = { id: id!, order };
       if (entries(state.doc).some((entry) => entry.block.id === next.id)) return false;
       const [first, second] = splitSpaceTextBlock(block, $from.parentOffset, next);
       const splitDepth = $from.parent.type.name === "spaceBody" ? 2 : 1;
@@ -427,6 +1107,8 @@ export class SpaceEditorAdapter {
 
   joinBackward(): Command {
     return (state, dispatch) => {
+      if (this.#options.canChangeStructure?.() === false) return false;
+      if (!spaceMentionRangeSafe(state.doc, state.selection.from, state.selection.to)) return false;
       const { $from, empty } = state.selection;
       if (!empty || $from.parentOffset !== 0 || !$from.parent.attrs.block) return false;
       const secondNode = $from.parent;
@@ -473,6 +1155,7 @@ export class SpaceEditorAdapter {
       | "todo_item",
   ): Command {
     return (state, dispatch) => {
+      if (this.#options.canChangeStructure?.() === false) return false;
       const entry = entries(state.doc).find((item) => item.block.id === id);
       const block = spaceDocumentBlocks(state.doc).find((item) => item.id === id);
       const targetIsList = ["bulleted_item", "numbered_item", "todo_item"].includes(type);
@@ -488,6 +1171,18 @@ export class SpaceEditorAdapter {
           (entry.node.childCount > 1 || !this.#isComplete(id, state.doc)))
       )
         return false;
+      const knownKeys = new Set([
+        "runs",
+        ...(block.type === "heading"
+          ? ["level"]
+          : block.type === "todo_item"
+            ? ["checked"]
+            : block.type === "callout"
+              ? ["icon"]
+              : []),
+      ]);
+      if (Object.keys(block.content).some((key) => !knownKeys.has(key))) return false;
+      if (!dispatch) return this.#options.canEdit?.() !== false;
       const content = {
         runs: block.content.runs,
         ...(type === "heading"
@@ -527,6 +1222,7 @@ export class SpaceEditorAdapter {
       if (
         !entry ||
         !canEditSpaceEditorBlock(entry.block) ||
+        mediaAssetId(entry.block) !== null ||
         (entry.node.type.name === "spaceAtom" &&
           (isSpaceListItem(entry.block) ||
             spaceBlockNode(entry.block).type.name !== "spaceAtom")) ||
@@ -598,6 +1294,7 @@ export class SpaceEditorAdapter {
   pasteBlocks(blocks: readonly SpaceBlock[], source: SpacePageTarget): Command {
     return (state, dispatch) => {
       if (
+        this.#options.canChangeStructure?.() === false ||
         source.environmentId !== this.#options.target.environmentId ||
         source.pageId !== this.#options.target.pageId ||
         !blocks.length ||
@@ -614,7 +1311,13 @@ export class SpaceEditorAdapter {
           )
         )
           return false;
-        if (blocks.some((block) => !canEditSpaceEditorBlock(block))) return false;
+        if (
+          blocks.some(
+            (block) =>
+              !canEditSpaceEditorBlock(block) || ["image", "pdf", "video"].includes(block.type),
+          )
+        )
+          return false;
         const copied = copySpaceBlocks(blocks, source, this.#options.allocateId);
         if (copied.some((block) => entries(state.doc).some((entry) => entry.block.id === block.id)))
           return false;
@@ -626,7 +1329,7 @@ export class SpaceEditorAdapter {
           return next;
         });
         const doc = spaceWindowDocument(
-          { revision: this.#options.window.revision, blocks: ranked, completeParents: [] },
+          { revision: this.#window.revision, blocks: ranked, completeParents: [] },
           this.#options.maxBlocks,
           this.#options.maxDepth,
           state.schema,
@@ -643,17 +1346,19 @@ export class SpaceEditorAdapter {
 
   undoLocal(): Command {
     return (state, dispatch) =>
+      this.#options.canUndo?.() !== false &&
       undo(
         state,
         dispatch
           ? (tr) => {
-              this.#dispatch(tr, dispatch);
+              this.#dispatch(tr, dispatch, { history: true });
             }
           : undefined,
       );
   }
   redoLocal(): Command {
     return (state, dispatch) =>
+      this.#options.canUndo?.() !== false &&
       redo(
         state,
         dispatch
@@ -666,7 +1371,7 @@ export class SpaceEditorAdapter {
                   (join) =>
                     previousIds.has(join.from) && !nextIds.has(join.from) && nextIds.has(join.into),
                 );
-              this.#dispatch(tr, dispatch, merged ? { merged } : {});
+              this.#dispatch(tr, dispatch, { ...(merged ? { merged } : {}), history: true });
             }
           : undefined,
       );

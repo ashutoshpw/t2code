@@ -1,0 +1,60 @@
+[data-space-editor] .tiptap {
+  counter-reset: spaces-numbered;
+}
+[data-space-editor] [data-space-block] {
+  position: relative;
+  margin-block: 0.4rem;
+}
+[data-space-editor] [data-space-list-content] {
+  margin-inline-start: 1.5rem;
+  counter-reset: spaces-numbered;
+}
+[data-space-editor] [data-space-type="numbered_item"] {
+  counter-increment: spaces-numbered;
+}
+[data-space-editor] [data-space-type="bulleted_item"]::before {
+  content: "•";
+  position: absolute;
+}
+[data-space-editor] [data-space-type="numbered_item"]::before {
+  content: counter(spaces-numbered) ".";
+  position: absolute;
+}
+[data-space-editor] [data-space-type="todo_item"]::before {
+  content: "☐";
+  position: absolute;
+}
+[data-space-editor] [data-space-checked="true"]::before {
+  content: "☑";
+}
+[data-space-editor] h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+[data-space-editor] h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+[data-space-editor] h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+[data-space-editor] blockquote {
+  border-inline-start: 2px solid currentColor;
+  padding-inline-start: 0.75rem;
+}
+[data-space-editor] [data-space-type="callout"] {
+  padding-inline-start: 1.5rem;
+}
+[data-space-editor] [data-space-type="callout"]::before {
+  content: attr(data-space-icon);
+  position: absolute;
+  inset-inline-start: 0;
+}
+[data-space-editor] pre {
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+}
+[data-space-editor] [contenteditable="false"] {
+  color: var(--muted-foreground);
+}
