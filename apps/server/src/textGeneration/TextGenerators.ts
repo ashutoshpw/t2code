@@ -39,7 +39,7 @@ export class TextGenerators extends Context.Service<
       input: ListTextGeneratorModelsInput,
     ) => Effect.Effect<ListTextGeneratorModelsResult, TextGeneratorError>;
   }
->()("t3/textGeneration/TextGenerators") {}
+>()("@t2code/cli/textGeneration/TextGenerators") {}
 
 interface CachedModels {
   readonly config: TextGeneratorConfig;
