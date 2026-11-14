@@ -1,3 +1,5 @@
+import { prepareMobileComposerContext } from "./spaces";
+import type { ComposerContextDraft } from "@t2code/contracts";
 import { appAtomRegistry } from "./atom-registry";
 import { createThreadOutboxManager } from "./thread-outbox-manager";
 import type { QueuedThreadMessage } from "./thread-outbox-model";
@@ -16,8 +18,19 @@ export async function flushThreadOutbox(): Promise<void> {
   await flushThreadOutboxWrites();
 }
 
-export function enqueueThreadOutboxMessage(message: QueuedThreadMessage): Promise<void> {
-  return threadOutboxManager.enqueue(message);
+export async function enqueueThreadOutboxMessage(
+  message: QueuedThreadMessage,
+  preparation?: {
+    contextDraft?: ComposerContextDraft | undefined;
+    isCurrentDraft?: (() => boolean) | undefined;
+  },
+): Promise<void> {
+  const context = await prepareMobileComposerContext({ ...message, ...preparation });
+  await threadOutboxManager.enqueue(
+    context === message.context
+      ? message
+      : { ...message, ...(context ? { context } : { context: undefined }) },
+  );
 }
 
 export function confirmThreadOutboxMessageQueued(message: QueuedThreadMessage): Promise<boolean> {

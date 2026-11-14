@@ -409,7 +409,7 @@ function OnboardingTunnelLimitAlert({
     <TunnelLimitAlert
       upgrade={upgrade}
       onLinkT3Chat={onOpenAccountPage ? () => onOpenAccountPage("t3-chat") : null}
-      onManageTunnels={onOpenAccountPage ? () => onOpenAccountPage("t3-connect") : null}
+      onManageTunnels={onOpenAccountPage ? () => onOpenAccountPage("t2-connect") : null}
     />
   );
 }

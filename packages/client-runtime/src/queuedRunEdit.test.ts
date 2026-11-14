@@ -291,3 +291,38 @@ describe("makeQueuedRunsAtom", () => {
     expect(exits).toEqual(["env:thread"]);
   });
 });
+
+it("retains a departed edit through failed recovery and releases only its current recovery claim", () => {
+  const { registry, runs, store } = setup();
+  let exits = 0;
+  store.begin(
+    "env:thread",
+    { runId: RUN, text: "owned" },
+    {
+      runs,
+      retainOnExit: true,
+      onRunLeftQueue: () => {
+        exits++;
+      },
+    },
+  );
+  registry.set(runs, []);
+  expect(store.get("env:thread")?.text).toBe("owned");
+  expect(registry.get(store.exitedAtom)).toEqual({ "env:thread": true });
+  expect(store.startSave("env:thread")).toBeNull();
+  const first = store.startRecovery("env:thread")!;
+  expect(store.startRecovery("env:thread")).toBeNull();
+  expect(first.finish(false)).toBe(true);
+  expect(store.get("env:thread")?.text).toBe("owned");
+  registry.set(runs, []);
+  expect(exits).toBe(1);
+  const stale = store.startRecovery("env:thread")!;
+  store.update("env:thread", (edit) => ({ ...edit, text: "newer" }));
+  expect(stale.finish(true)).toBe(false);
+  expect(store.get("env:thread")?.text).toBe("newer");
+  const current = store.startRecovery("env:thread")!;
+  expect(current.isCurrent()).toBe(true);
+  expect(current.finish(true)).toBe(true);
+  expect(store.get("env:thread")).toBeNull();
+  expect(registry.get(store.exitedAtom)).toEqual({});
+});

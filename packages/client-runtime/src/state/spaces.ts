@@ -300,6 +300,10 @@ export function createSpacesEnvironmentAtoms<R, E>(
       label: "environment-data:spaces:apply",
       tag: WS_METHODS.spacesBlocksApply,
     }),
+    capture: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.captureContextSnapshot",
+      tag: WS_METHODS.spacesContextCapture,
+    }),
     // Each caller owns this query; sharing its SWR cache could authorize an obsolete location.
     location: (target: {
       environmentId: EnvironmentId;

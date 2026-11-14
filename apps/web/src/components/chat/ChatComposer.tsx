@@ -1,4 +1,7 @@
 import { VoiceInputSetup } from "./VoiceInputSetup";
+import { ComposerSpaceContextOptions } from "./ComposerSpaceContextOptions";
+import { ComposerContextId } from "@t2code/contracts";
+import type { ComposerContextDraft } from "@t2code/contracts";
 import { useComposerTypingGuard } from "./useComposerTypingGuard";
 import { insertAttachmentReferencesForDraft } from "./composerAttachmentReferences";
 import { DESKTOP_PASTE_AS_TEXT_EVENT } from "../../lib/desktopPasteAsText";
@@ -212,6 +215,7 @@ import {
 } from "./ComposerAttachmentStrip";
 import { CollapsedComposerStopAction, ComposerPrimaryActions } from "./ComposerPrimaryActions";
 import { ComposerFooterPrimaryActions } from "./ComposerFooterControls";
+import { ComposerPrimaryActions } from "./ComposerPrimaryActions";
 import { ComposerPendingUserInputPanel } from "./ComposerPendingUserInputPanel";
 import { resolveComposerMenuActiveItemId } from "./composerMenuHighlight";
 import { buildPullRequestReferenceContext } from "../pullRequest/pullRequestDetail.logic";
@@ -334,6 +338,7 @@ export interface ChatComposerHandle {
     reviewComments: ReviewCommentContext[];
     threadContexts: ThreadContextRecord[];
     environmentContexts: EnvironmentContextRecord[];
+    contextDraft?: ComposerContextDraft | undefined;
     selectedPromptEffort: string | null;
     selectedModelSelection: ModelSelection;
     multipleModelSelections: ReadonlyArray<ModelSelection> | null;
@@ -751,6 +756,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     },
   };
   const composerContextRecords = composerContextRecordsFromDraft({
+    contextDraft: attachmentDraft.contextDraft,
     terminalContexts: composerTerminalContexts,
     reviewComments: composerReviewComments,
     previewAnnotations: composerPreviewAnnotations,
@@ -1114,7 +1120,9 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         composerTerminalContexts.length +
         composerPreviewAnnotations.length +
         composerReviewComments.length +
-        composerThreadContexts.length >
+        composerThreadContexts.length +
+        (attachmentDraft.contextDraft?.selectors.length ?? 0) +
+        (attachmentDraft.contextDraft?.records.length ?? 0) >
       0,
     isEditingQueuedMessage,
     environmentAvailable:
@@ -1141,13 +1149,18 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     composerDraft.persistedAttachments.length === 0 &&
     composerTerminalContexts.length === 0 &&
     composerPreviewAnnotations.length === 0 &&
-    composerReviewComments.length === 0;
+    composerReviewComments.length === 0 &&
+    composerThreadContexts.length === 0 &&
+    !(
+      attachmentDraft.contextDraft?.selectors.length || attachmentDraft.contextDraft?.records.length
+    );
   const linkedEnvironments = useLinkedEnvironments(environmentId);
   const {
     items: composerMenuItems,
     isLoading: isComposerMenuLoading,
     emptyState: composerMenuEmptyState,
   } = useComposerMenuItems({
+    spacesContextEnabled: !isLiteralPendingAnswer,
     composerTrigger,
     environmentId,
     linkedEnvironments,
@@ -1330,7 +1343,13 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         wanted.add(toKindScopedComposerContextId("image", annotation.id));
       }
     }
+    const selectors = (attachmentDraft.contextDraft?.selectors ?? []).filter((record) =>
+      wanted.has(record.contextId),
+    );
     const records: ComposerContextRecord[] = [
+      ...(attachmentDraft.contextDraft?.records ?? []).filter((record) =>
+        wanted.has(record.contextId),
+      ),
       ...composerTerminalContexts
         .filter((c) => wanted.has(terminalContextReference(c).contextId))
         .map(terminalContextRecord),
@@ -1363,11 +1382,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
           return [record];
         }),
     ];
-    if (records.length === 0) return null;
+    if (records.length === 0 && selectors.length === 0) return null;
     const fragment = encodeComposerContextFragment({
       version: 1,
       source: { environmentId, ...(activeThread ? { threadId: activeThread.id } : {}) },
       records,
+      selectors,
     });
     if (fragment) rememberCopiedComposerAttachments(environmentId, copiedFiles);
     return fragment;
@@ -1920,6 +1940,40 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     });
     const { snapshot, trigger } = resolveActiveComposerTrigger();
     if (!trigger) return;
+    if (item.type === "space-notice") return;
+    if (item.type === "space-action") {
+      if (trigger.kind === "path" && trigger.query === item.query) item.perform();
+      return;
+    }
+    if (item.type === "space-context") {
+      if (isLiteralPendingAnswer || trigger.kind !== "path" || trigger.query !== item.query) return;
+      const selector = item.select(ComposerContextId.make(randomUUID()));
+      if (!selector || selector.environmentId !== environmentId) return;
+      const currentDraft = useComposerDraftStore
+        .getState()
+        .getComposerDraft(attachmentDraftTarget)?.contextDraft;
+      if ((currentDraft?.selectors.length ?? 0) >= 200) return;
+      const replacement = `${formatInlineContextReference({ kind: selector.kind, contextId: selector.contextId, label: selector.label })} `;
+      const end = extendReplacementRangeForTrailingSpace(
+        snapshot.value,
+        trigger.rangeEnd,
+        replacement,
+      );
+      const applied = applyPromptReplacement(trigger.rangeStart, end, replacement, {
+        expectedText: snapshot.value.slice(trigger.rangeStart, end),
+      });
+      if (applied) {
+        const latest = useComposerDraftStore
+          .getState()
+          .getComposerDraft(attachmentDraftTarget)?.contextDraft;
+        useComposerDraftStore.getState().setContextDraft(attachmentDraftTarget, {
+          selectors: [...(latest?.selectors ?? []), selector],
+          records: latest?.records ?? [],
+        });
+        setComposerHighlightedItemId(null);
+      }
+      return;
+    }
     if (item.type === "path") {
       if (!isPathSuggestionCurrent(item.searchTarget, trigger, environmentId, gitCwd)) return;
       const replacement = `${serializeComposerFileLink(item.path)} `;
@@ -3212,6 +3266,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         reviewComments: composerReviewComments,
         threadContexts: composerThreadContexts,
         environmentContexts: composerEnvironmentContexts,
+        contextDraft: attachmentDraft.contextDraft,
         selectedPromptEffort,
         selectedModelSelection,
         multipleModelSelections:
@@ -3600,6 +3655,15 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
               {composerAttachmentMediaRow}
 
               {composerAttachmentFileList}
+
+              {!isComposerCollapsedMobile && !isLiteralPendingAnswer && (
+                <ComposerSpaceContextOptions
+                  target={attachmentDraftTarget}
+                  context={attachmentDraft.contextDraft}
+                  prompt={prompt}
+                  disabled={!canOperateThread || isConnecting}
+                />
+              )}
 
               <div className="relative">
                 {previewFile ? (
