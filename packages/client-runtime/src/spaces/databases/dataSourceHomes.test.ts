@@ -80,4 +80,33 @@ describe("findDataSourceHomes", () => {
     expect(found.missing).toEqual([]);
     expect(source.calls).toEqual([]);
   });
+
+  it("keeps the homes found before a failed read and reports the walk as incomplete", async () => {
+    const found = await findDataSourceHomes({
+      ids: ["ds-a", "ds-z"],
+      first: page(["a"], "1"),
+      listPage: async () => {
+        throw new Error("offline");
+      },
+    });
+    expect(found.homes.get("ds-a")?.databaseId).toBe("db-a");
+    expect(found.missing).toEqual(["ds-z"]);
+    expect(found.incomplete).toBe(true);
+  });
+
+  it("calls a walk that hit the page cap unknown, and a finished one complete", async () => {
+    const endless = await findDataSourceHomes({
+      ids: ["ds-z"],
+      first: page(["a"], "1"),
+      listPage: async (cursor) => page(["a"], String(Number(cursor ?? 0) + 1)),
+    });
+    expect(endless.incomplete).toBe(true);
+    const source = pager({ space: [], any: [page(["x"], null)] });
+    const done = await findDataSourceHomes({
+      ids: ["ds-gone"],
+      first: page(["a"], null),
+      listPage: source.listPage,
+    });
+    expect(done.incomplete).toBe(false);
+  });
 });

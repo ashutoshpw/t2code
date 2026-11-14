@@ -111,7 +111,7 @@ export function ShowMore({
       </Button>
       {problem ? (
         <span role="alert" className="text-muted-foreground text-xs">
-          Couldn't load more rows.
+          {problem === "ended" ? PROBLEM_TEXT.ended : "Couldn't load more rows."}
         </span>
       ) : null}
     </div>

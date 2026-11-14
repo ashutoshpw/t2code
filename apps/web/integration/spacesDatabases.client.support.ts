@@ -27,6 +27,7 @@ import {
 import { databasePorts } from "../src/spaces/databases/data/ports.ts";
 import { databaseStores } from "../src/spaces/databases/data/stores.ts";
 import type { DatabaseModel } from "../src/spaces/databases/data/useDatabaseModel.ts";
+import { connectViewSession } from "../src/spaces/databases/data/viewSession.ts";
 import { viewInputOf, type ViewQueryOptions } from "../src/spaces/databases/data/useViewQuery.ts";
 import { placeDatabaseBlock } from "./spacesDatabases.support.ts";
 import {
@@ -92,11 +93,6 @@ function manualClock() {
   };
 }
 
-const intersects = (dependencies: ReadonlySet<string>, ids: ReadonlySet<string>) => {
-  for (const id of ids) if (dependencies.has(id)) return true;
-  return false;
-};
-
 /**
  * One view as a client holds it: the real session and writer wired as `useViewQuery` wires them,
  * with rows derived the same way (loaded windows, placed rows, pending and acked edits).
@@ -129,20 +125,14 @@ function openViewQuery(
         .map((column) => column.property.id),
     );
   let dependencies = dependenciesOf(view);
-  const stops = [
-    registry.subscribe(databasePorts.changed.dataSource(environmentId, dataSource.id), () =>
-      session.invalidate(),
-    ),
-    writer.onAck((ack) => {
-      if (ack.dataSourceId !== dataSource.id) return;
-      session.noteAck({
-        dataRevision: ack.dataRevision,
-        affects: intersects(dependencies, ack.propertyIds),
-        structural: ack.structural,
-        edits: ack.edits,
-      });
-    }),
-  ];
+  const disconnect = connectViewSession({
+    session,
+    registry,
+    environmentId,
+    dataSourceId: dataSource.id,
+    writer,
+    watched: () => dependencies,
+  });
   session.setInput(input, { fillRows: options.fillRows ?? 0 });
 
   const pending = (): PendingCellEdits => {
@@ -217,7 +207,7 @@ function openViewQuery(
         throw error instanceof Error ? error : new Error(JSON.stringify(error));
     },
     dispose: () => {
-      for (const stop of stops) stop();
+      disconnect();
       session.dispose();
     },
   };

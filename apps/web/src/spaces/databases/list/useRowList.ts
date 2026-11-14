@@ -105,7 +105,10 @@ export function useRowList(
   useLayoutEffect(() => {
     latest.set({
       open: (pageId, mode) => actions.openRow(pageId, mode),
-      trash: (pageId) => void actions.trashRow(pageId),
+      trash: (pageId) =>
+        void actions.trashRow(pageId).then((trashed) => {
+          if (trashed) query.forgetRow(pageId);
+        }),
       move: (pageId, direction) => {
         const target = moveTarget(items, pageId, direction);
         if (target !== null)

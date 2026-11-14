@@ -5,6 +5,7 @@ import type {
   SpaceDatabaseQueryInput,
   SpaceDatabaseView,
   SpaceFilter,
+  SpaceGroup,
   SpacePageId,
   SpacePropertyId,
 } from "@t2code/contracts/spaces";
@@ -30,6 +31,13 @@ export interface ViewQueryOptions {
   readonly cover?: boolean;
 }
 
+/** Presentation fields never reach the query, so toggling one is not a new query. */
+function queryGroup(group: SpaceGroup | undefined): SpaceGroup | null {
+  if (group === undefined) return null;
+  const { hideEmpty: _h, order: _o, hidden: _hidden, collapsed: _c, ...rest } = group;
+  return rest;
+}
+
 /**
  * The explicit query of a view. No `viewId` is sent, so an unsaved view edit changes the key and
  * restarts the query. `include` is left to the session, which asks for totals on the first window.
@@ -50,8 +58,8 @@ export function viewQueryInput(
     dataSourceId: view.dataSourceId,
     filter: view.filter ?? null,
     sorts: view.sorts,
-    group: options.mode === "rows" ? null : (view.group ?? null),
-    subGroup: options.mode === "rows" ? null : (view.subGroup ?? null),
+    group: options.mode === "rows" ? null : queryGroup(view.group),
+    subGroup: options.mode === "rows" ? null : queryGroup(view.subGroup),
     ...(options.search === undefined || options.search === "" ? {} : { search: options.search }),
     mode: options.mode,
     ...(options.extraFilter === undefined ? {} : { extraFilter: options.extraFilter }),

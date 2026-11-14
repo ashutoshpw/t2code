@@ -355,7 +355,12 @@ it.layer(NodeServices.layer)("Spaces database query paging", (it) => {
           ),
           plans.join("\n"),
         );
+        // The filters start from the value indexes; pages are then fetched by key, not walked.
         assert.isTrue(
+          plans.some((detail) => detail.includes("spaces_db_cells_num")),
+          plans.join("\n"),
+        );
+        assert.isFalse(
           plans.some((detail) => detail.includes("spaces_pages_rows")),
           plans.join("\n"),
         );

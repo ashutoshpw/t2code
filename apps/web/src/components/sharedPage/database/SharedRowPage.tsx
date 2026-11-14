@@ -94,7 +94,8 @@ export function SharedRowPage({
       if (!abort.signal.aborted) setLoaded({ key, result });
     });
     return () => abort.abort();
-  }, [key, target, zone]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `key` is every field of `target` the load reads; the object itself is new on each render.
+  }, [key, zone]);
 
   const current = loaded?.key === key ? loaded.result : null;
   return (

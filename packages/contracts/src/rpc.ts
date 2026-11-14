@@ -468,6 +468,7 @@ export const WS_METHODS = {
   spacesDatabasesList: "spaces.databases.list",
   spacesDatabasesGet: "spaces.databases.get",
   spacesDatabasesQuery: "spaces.databases.query",
+  spacesDatabasesSubscribeChanges: "spaces.databases.subscribeChanges",
   spacesDatabasesRowsGet: "spaces.databases.rows.get",
   spacesDatabasesCreate: "spaces.databases.create",
   spacesDatabasesUpdate: "spaces.databases.update",
@@ -891,6 +892,16 @@ export const WsSpacesDatabasesQueryRpc = Rpc.make(WS_METHODS.spacesDatabasesQuer
   success: Spaces.SpaceDatabaseQueryResult,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
+
+export const WsSpacesDatabasesSubscribeChangesRpc = Rpc.make(
+  WS_METHODS.spacesDatabasesSubscribeChanges,
+  {
+    payload: Spaces.SpaceDatabaseChangesSubscribeInput,
+    success: Spaces.SpaceDatabaseChangeEvent,
+    error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+    stream: true,
+  },
+);
 
 export const WsSpacesDatabasesRowsGetRpc = Rpc.make(WS_METHODS.spacesDatabasesRowsGet, {
   payload: Spaces.SpaceDatabaseRowGetInput,
@@ -2526,6 +2537,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesDatabasesListRpc,
   WsSpacesDatabasesGetRpc,
   WsSpacesDatabasesQueryRpc,
+  WsSpacesDatabasesSubscribeChangesRpc,
   WsSpacesDatabasesRowsGetRpc,
   WsSpacesDatabasesCreateRpc,
   WsSpacesDatabasesUpdateRpc,

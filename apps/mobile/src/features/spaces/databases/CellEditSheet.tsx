@@ -36,8 +36,11 @@ export const ADD_OPTIONS_FOOTER = "Add options on desktop.";
 export function CellEditSheet(props: {
   readonly title: string;
   readonly editor: SheetEditor;
-  /** Called with the value to send once the draft is valid; the sheet closes after it. */
-  readonly onCommit: (value: Extract<CommitResult, { ok: true }>["value"]) => void;
+  /**
+   * Called with the value to send once the draft is valid; the sheet closes after it. A returned
+   * message keeps the sheet open, with the typed value, and shows it.
+   */
+  readonly onCommit: (value: Extract<CommitResult, { ok: true }>["value"]) => string | null;
   readonly onClose: () => void;
 }) {
   const { editor } = props;
@@ -49,7 +52,11 @@ export function CellEditSheet(props: {
       setError(result.message);
       return;
     }
-    props.onCommit(result.value);
+    const refused = props.onCommit(result.value);
+    if (refused !== null) {
+      setError(refused);
+      return;
+    }
     props.onClose();
   };
   return (
@@ -64,7 +71,7 @@ export function CellEditSheet(props: {
         {editor.kind === "text" ? (
           <TextBody editor={editor} error={error} onSubmit={submit} onEdit={() => setError(null)} />
         ) : editor.kind === "choice" ? (
-          <ChoiceBody editor={editor} onSubmit={submit} />
+          <ChoiceBody editor={editor} error={error} onSubmit={submit} />
         ) : (
           <DateBody editor={editor} error={error} onSubmit={submit} onEdit={() => setError(null)} />
         )}
@@ -110,6 +117,7 @@ function TextBody(props: {
 
 function ChoiceBody(props: {
   readonly editor: Extract<SheetEditor, { kind: "choice" }>;
+  readonly error: string | null;
   readonly onSubmit: (draft: CellDraft) => void;
 }) {
   const { editor } = props;
@@ -143,6 +151,7 @@ function ChoiceBody(props: {
           />
         ))}
       </ListSection>
+      <ErrorLine message={props.error} />
       {editor.multiple ? (
         <SaveButton label="Done" onPress={() => props.onSubmit({ kind: "choice", selected })} />
       ) : (

@@ -5,6 +5,7 @@ import { View } from "react-native";
 import { ControlPill } from "../../../components/ui/ControlPill";
 import { Notice } from "../../../components/ui/Notice";
 import { databaseWriter, writeFailures } from "../../../state/spacesDatabases";
+import { failuresOf } from "../../../state/spacesDatabaseWriter";
 
 export const UNSAVED_WARNING = "Changes that are not saved are lost if you close the app.";
 
@@ -15,7 +16,10 @@ export const unsavedMessage = (count: number): string =>
 export function WriteNotices(props: { readonly environmentId: EnvironmentId }) {
   const writer = databaseWriter(props.environmentId);
   const { failed } = useSyncExternalStore(writer.subscribe, writer.getSnapshot);
-  const refused = useSyncExternalStore(writeFailures.subscribe, writeFailures.getSnapshot);
+  const refused = failuresOf(
+    useSyncExternalStore(writeFailures.subscribe, writeFailures.getSnapshot),
+    props.environmentId,
+  );
   if (failed === 0 && refused.length === 0) return null;
   return (
     <View className="gap-2 pb-2">

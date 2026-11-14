@@ -37,10 +37,19 @@ export function deriveViewRows(input: {
   const pending = Object.keys(snapshot.acked).length > 0 ? { ...snapshot.acked, ...own } : own;
   const windows = snapshot.windows;
   const placed = snapshot.placed;
-  const loaded = windows?.rows ?? EMPTY_ROWS;
+  // Ungrouping keeps the old answer until the flat one arrives: show its rows, not a skeleton.
+  const loaded =
+    mode === "rows" && windows?.groups !== undefined
+      ? windows.groups.flatMap((bucket) =>
+          bucket.subGroups === undefined
+            ? bucket.rows
+            : bucket.subGroups.flatMap((sub) => sub.rows),
+        )
+      : (windows?.rows ?? EMPTY_ROWS);
+  const heldIds = new Set(loaded.map((row) => row.page.id));
   const rows = applyCellPatches(
     mode === "rows" && placed.length > 0
-      ? [...loaded, ...placed.map((entry) => entry.row)]
+      ? [...loaded, ...placed.map((entry) => entry.row).filter((row) => !heldIds.has(row.page.id))]
       : loaded,
     pending,
   );
@@ -48,14 +57,17 @@ export function deriveViewRows(input: {
     mode === "groups" && windows?.groups
       ? windows.groups.map((bucket) => {
           const id = canonicalJson(bucket.key);
-          const extra = placed.filter((entry) => entry.group === id).map((entry) => entry.row);
+          const held = new Set(bucket.rows.map((row) => row.page.id));
+          const mine = placed.filter((entry) => entry.group === id && !held.has(entry.row.page.id));
+          const extra = mine.map((entry) => entry.row);
+          const uncounted = mine.filter((entry) => entry.counted !== true).length;
           const patched = applyCellPatches(
             extra.length > 0 ? [...bucket.rows, ...extra] : bucket.rows,
             pending,
           );
           return patched === bucket.rows && extra.length === 0
             ? bucket
-            : { ...bucket, rows: patched, count: bucket.count + extra.length };
+            : { ...bucket, rows: patched, count: bucket.count + uncounted };
         })
       : null;
   return { rows, groups, pending };

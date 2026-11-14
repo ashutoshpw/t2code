@@ -73,6 +73,15 @@ export const databaseLimits: SpaceDatabaseLimits = Object.freeze({
 export const computedDrainRows = 200;
 export const computedDrainSteps = 40_000;
 
+/** What one database's views may add up to, so reading them all in `getDatabase` always fits. */
+export const maxDatabaseViewBytes = 262_144;
+/** Dead databases and orphan views are kept this long before the sweep removes them for good. */
+export const deadDatabaseRetentionMs = 2_592_000_000;
+export const orphanViewRetentionMs = 2_592_000_000;
+export const databaseSweepIntervalMs = 3_600_000;
+export const deadDatabasePurgeRows = 20;
+export const orphanViewPurgeRows = 100;
+
 export function ensureDatabaseLimit(limit: keyof SpaceDatabaseLimits, actual: number) {
   const maximum = databaseLimits[limit];
   return actual > maximum

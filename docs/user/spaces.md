@@ -50,7 +50,9 @@ Properties are text, number, select, multi-select, status, date, checkbox, URL, 
 
 ### Linked views, sub-items and templates
 
-Choose **Linked view of database** from the **/** menu to show an existing database, with its own views, somewhere else. It shows the same rows. While the original database is in the trash, the linked view stops working and shows a message until you restore it.
+Choose **Linked view of database** from the **/** menu to show an existing database somewhere else. It shows the same rows, and each linked view keeps its own filters, sorts and layout.
+
+While the original database is in the trash, a linked view shows a message instead of rows until you restore it. A database whose block was removed keeps its rows for 30 days and comes back if you undo the removal (editor undo or **Undo saved change**) in that time. Emptying its page from the trash cannot be undone. After 30 days its rows are removed permanently. A database whose page is in the trash is kept until the trash is emptied.
 
 Sub-items let rows have child rows of the same database. Turn them on in a table or list view's layout settings, then show them in a hierarchy or as plain rows.
 
@@ -61,10 +63,11 @@ Templates pre-fill new rows. Use **New template** in the new-row menu, edit it l
 - Formulas that use `now()` or `today()` are for display. They cannot be filtered, sorted, grouped or used in a rollup, and they do not appear on shared links.
 - Empty values stay empty through arithmetic.
 - Dates without a time zone, and `formatDate`, use the time zone of the machine running T2 Code.
+- Numbers you type on the web follow your browser's regional format, so `1,5` is one and a half where commas mark decimals.
 - Nested sub-items hide children that do not match the filter, and are off while grouping or searching.
 - After a large change, calculated values fill in over a few seconds.
 
-Agents can read and edit databases through the same Spaces access as pages. Refer to properties by their names when you ask.
+Agents can read and edit databases through the same Spaces access as pages. Refer to properties by their names when you ask. An open database shows edits made by other people, other devices and agents as they happen, without a refresh.
 
 ## Pages: move, trash and restore
 
@@ -88,7 +91,7 @@ Share a page and its sub-pages with someone who has no T2 Code account. Page lin
 
 Anyone with the link can read the page and all its sub-pages, read-only, without signing in. Nothing above or beside the page is reachable. Viewers see the page as it was when they opened it and reload to see changes. A **Shared** button on the page shows the link again. Use **Create new link** to replace it, or **Stop sharing** to end it.
 
-Databases on a shared page appear read-only. Viewers can switch between the views saved on the page and open a row to read it, but they cannot search, filter or edit. Each view shows 50 rows at a time and only the properties it displays, up to 500 rows per view, or 200 per board column, so a board can show more than 500. Board columns show 10 rows at a time, and calendars and timelines show as a month list. Sub-pages and databases inside an opened row are not shown. To keep rows off a link, filter them out in every view on the page; hiding a board column is not enough. A relation column shows the titles of related rows even when the view's filter excludes them, so hide the column to keep those titles off the link. Rollup and formula columns show their result as calculated from all related rows, including ones the filter excludes, and a formula can use properties the view hides, so hide those columns too when the values are private. Formulas that use `now()` or `today()` do not appear. A linked view appears only when its original database is also inside the shared page.
+Databases on a shared page appear read-only. Viewers can switch between the views saved on the page and open a row to read it, but they cannot search, filter or edit. Each view shows 50 rows at a time and only the properties it displays, up to 500 rows per view. Board columns show 10 rows at a time and stop at 200 rows each, so a board can show more than 500 in total. Calendars and timelines show as a month list. Sub-pages and databases inside an opened row are not shown. To keep rows off a link, filter them out in every view on the page; hiding a board column is not enough. A relation column shows the titles of related rows even when the view's filter excludes them, so hide the column to keep those titles off the link. Rollup and formula columns show their result as calculated from all related rows, including ones the filter excludes, and a formula can use properties the view hides, so hide those columns too when the values are private. Formulas that use `now()` or `today()` do not appear. A linked view appears only when its original database is also inside the shared page.
 
 A link stops working when:
 

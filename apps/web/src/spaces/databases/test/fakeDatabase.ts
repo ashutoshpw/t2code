@@ -710,6 +710,7 @@ export class FakeDatabase {
         dataSource: (_environmentId: string, dataSourceId: string) =>
           this.counter(`dataSource:${dataSourceId}`),
       },
+      live: () => false,
       rowPageChanged: (registry: AnyRegistry, _environmentId: string, pageId: string) => {
         this.#bump(registry, `row:${pageId}`);
         this.#bump(registry, `dataSource:${FIXTURE_IDS.dataSource}`);

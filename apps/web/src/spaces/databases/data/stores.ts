@@ -1,10 +1,11 @@
 import type { EnvironmentId } from "@t2code/contracts";
 import { DatabaseWriter, type PendingCellEdit } from "@t2code/client-runtime/spaces";
-import type { SpaceViewId } from "@t2code/contracts/spaces";
+import { SPACE_TITLE_PROPERTY_ID, type SpaceViewId } from "@t2code/contracts/spaces";
 import type { AtomRegistry } from "effect/reactivity";
 
 import { toastManager } from "../../../components/ui/toast";
 import { environmentPresentations } from "../../../state/presentation";
+import { spacesEnvironment } from "../../../state/spaces";
 import { databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { databasePorts } from "./ports";
 
@@ -81,6 +82,18 @@ export function databaseStores(registry: AtomRegistry.AtomRegistry): DatabaseSto
             description: databaseErrorMessage(error),
           });
         },
+      });
+      // A title written from the grid is a page title: pins, recents and breadcrumbs follow it
+      // whether or not the row's own properties are on screen.
+      writer.onAck((ack) => {
+        const titled = new Set(
+          ack.edits.flatMap((edit) =>
+            edit.propertyId === SPACE_TITLE_PROPERTY_ID ? [edit.pageId] : [],
+          ),
+        );
+        if (titled.size === 0) return;
+        for (const pageId of titled) databasePorts.rowPageChanged(registry, environmentId, pageId);
+        registry.update(spacesEnvironment.changed(environmentId), (value) => value + 1);
       });
       allWriters.add(writer);
       writers.set(environmentId, writer);

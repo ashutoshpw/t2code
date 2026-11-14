@@ -55,6 +55,7 @@ export const fixture = Effect.fn("SpaceEditorServiceTest.fixture")(function* <A,
     | FileSystem.FileSystem
     | Path.Path
   >,
+  options?: { readonly backgroundDrain?: boolean },
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -63,7 +64,7 @@ export const fixture = Effect.fn("SpaceEditorServiceTest.fixture")(function* <A,
     Effect.flatMap((service) => use(service, path.join(directory, "spaces.sqlite"))),
     Effect.provide(
       Layer.mergeAll(
-        SpacesService.layerFromPath(path.join(directory, "spaces.sqlite")).pipe(
+        SpacesService.layerFromPath(path.join(directory, "spaces.sqlite"), undefined, options).pipe(
           Layer.provide(
             Layer.succeed(ServerEnvironment.ServerEnvironmentIdentity, {
               getEnvironmentId: Effect.succeed(environmentId),

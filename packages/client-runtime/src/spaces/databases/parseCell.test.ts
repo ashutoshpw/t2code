@@ -42,6 +42,22 @@ describe("parseLocalizedNumber", () => {
   });
 });
 
+describe("parseCell numbers by locale", () => {
+  const number = known("number", { format: "number" });
+  it("reads a comma as the decimal mark under a comma-decimal locale", () => {
+    expect(parseCell("1,5", number, { decimal: "," })).toEqual({ ok: true, value: 1.5 });
+    expect(parseCell("1.234,5", number, { decimal: "," })).toEqual({ ok: true, value: 1234.5 });
+  });
+  it("shows a number to edit with the locale's decimal mark", () => {
+    expect(numberToText(1.5, "number", ",")).toBe("1,5");
+    expect(numberToText(1.5, "number")).toBe("1.5");
+  });
+  it("keeps a comma as a grouping mark otherwise", () => {
+    expect(parseCell("1,5", number)).toEqual({ ok: true, value: 15 });
+    expect(parseCell("1,5", number, { decimal: "." })).toEqual({ ok: true, value: 15 });
+  });
+});
+
 describe("parseNumber", () => {
   it("reads signs, decimals, exponents, grouping commas and a leading currency sign", () => {
     expect(parseNumber("1,234.5", "number")).toBe(1234.5);

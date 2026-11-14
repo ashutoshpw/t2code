@@ -12,20 +12,47 @@ import {
 } from "@t2code/contracts/spaces";
 import { WS_METHODS, type EnvironmentId } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
+import * as Stream from "effect/Stream";
 import { Atom, AtomRegistry } from "effect/reactivity";
 
 import type { EnvironmentRegistry } from "../connection/registry.ts";
 import { requestGuarded, type EnvironmentRpcInput } from "../rpc/client.ts";
-import { createEnvironmentQueryAtomFamily, createEnvironmentRpcCommand } from "./runtime.ts";
+import {
+  EMPTY_REMOTE_CHANGES,
+  foldRemote,
+  makeKnownRevisions,
+  markApplied,
+  noteDatabaseRevision,
+  noteDataSourceRevisions,
+  pendingBumps,
+  type KnownRevisions,
+  type RemoteChanges,
+} from "../spaces/databases/remoteChanges.ts";
+import {
+  createEnvironmentQueryAtomFamily,
+  createEnvironmentRpcCommand,
+  createEnvironmentRpcSubscriptionAtomFamily,
+} from "./runtime.ts";
 
 type Registry = AtomRegistry.AtomRegistry;
 
 const keyOf = (environmentId: EnvironmentId, id: string) => JSON.stringify([environmentId, id]);
 
+const pushes = (capability: SpaceCapability | undefined) =>
+  capability?.version === 2 &&
+  capability.features?.databases === true &&
+  capability.features.databaseChanges === true;
+
+/** A burst of remote changes becomes one application of counter bumps. */
+const REMOTE_APPLY_DELAY_MS = 300;
+/** Past this a database's idle subscription is released; leaving a view and coming back keeps it. */
+const CHANGES_IDLE_TTL_MS = 10_000;
+
 /**
  * Database state per environment. Invalidation is per data source and per database: a cell write
  * refreshes the queries of its data source and nothing else (not page lists, not the library).
- * There is no push channel, so another client's edits arrive when a view refetches.
+ * Another client's edits arrive through the server's change stream, which carries ids and
+ * revisions only; the counters below are bumped when it announces a revision this client lacks.
  */
 export function createSpacesDatabaseAtoms<R, E>(
   runtime: Atom.AtomRuntime<EnvironmentRegistry | R, E>,
@@ -33,6 +60,8 @@ export function createSpacesDatabaseAtoms<R, E>(
     readonly capabilityAtom: (
       environmentId: EnvironmentId,
     ) => Atom.Atom<SpaceCapability | undefined>;
+    /** One-shot timer; tests inject their own. */
+    readonly schedule?: (run: () => void, delayMs: number) => () => void;
   },
 ) {
   const counter = () => Atom.family((_key: string) => Atom.make(0));
@@ -110,6 +139,128 @@ export function createSpacesDatabaseAtoms<R, E>(
     dataSourceId: SpaceDataSourceId,
   ) => registry.set(dataSourceOfRow(keyOf(environmentId, pageId)), dataSourceId);
 
+  // Per registry: two clients of one atom set must not share what each has seen.
+  const knownByRegistry = new WeakMap<Registry, Map<EnvironmentId, KnownRevisions>>();
+  const knownOf = (registry: Registry, environmentId: EnvironmentId) => {
+    let byEnvironment = knownByRegistry.get(registry);
+    if (byEnvironment === undefined) {
+      byEnvironment = new Map();
+      knownByRegistry.set(registry, byEnvironment);
+    }
+    let known = byEnvironment.get(environmentId);
+    if (known === undefined) {
+      known = makeKnownRevisions();
+      byEnvironment.set(environmentId, known);
+    }
+    return known;
+  };
+  const learnDataSource = (
+    registry: Registry,
+    environmentId: EnvironmentId,
+    id: SpaceDataSourceId,
+    revisions: { readonly schemaRevision?: number; readonly dataRevision?: number },
+  ) => noteDataSourceRevisions(knownOf(registry, environmentId), id, revisions);
+  const learnDatabase = (
+    registry: Registry,
+    environmentId: EnvironmentId,
+    id: SpaceDatabaseId,
+    revision: number,
+  ) => noteDatabaseRevision(knownOf(registry, environmentId), id, revision);
+
+  const learnOwner = (
+    registry: Registry,
+    environmentId: EnvironmentId,
+    dataSourceId: SpaceDataSourceId,
+    revision: number,
+  ) => {
+    const owner = registry.get(databaseOfDataSource(keyOf(environmentId, dataSourceId)));
+    if (owner !== undefined) learnDatabase(registry, environmentId, owner, revision);
+  };
+
+  const remoteChanges = createEnvironmentRpcSubscriptionAtomFamily(runtime, {
+    label: "environment-data:spaces:databases:changes",
+    tag: WS_METHODS.spacesDatabasesSubscribeChanges,
+    idleTtlMs: CHANGES_IDLE_TTL_MS,
+    transform: (stream) => stream.pipe(Stream.scan(() => EMPTY_REMOTE_CHANGES, foldRemote)),
+  });
+  const resyncCounter = Atom.family((_environmentId: EnvironmentId) => Atom.make(0));
+  const schedule =
+    options?.schedule ??
+    ((run: () => void, delayMs: number) => {
+      // @effect-diagnostics-next-line globalTimers:off -- a one-shot debounce read by atoms, outside an Effect runtime.
+      const timer = setTimeout(run, delayMs);
+      return () => clearTimeout(timer);
+    });
+  // Mounted by whatever reads `liveTrigger`; it depends on the capability only, so a bump never rebuilds it.
+  const changeSubscription = Atom.family((environmentId: EnvironmentId) =>
+    Atom.make((get) => {
+      if (!pushes(options ? get(options.capabilityAtom(environmentId)) : undefined)) return;
+      const registry = get.registry;
+      const known = knownOf(registry, environmentId);
+      let latest: RemoteChanges = EMPTY_REMOTE_CHANGES;
+      let seenResyncs = 0;
+      let resyncWanted = false;
+      let cancel: (() => void) | undefined;
+      const apply = () => {
+        cancel = undefined;
+        const bumps = pendingBumps(latest, known);
+        markApplied(latest, known);
+        for (const source of bumps.dataSources) {
+          bump(registry, dataSourceChanged(environmentId, source.id));
+          if (source.schema) bump(registry, databaseChanged(environmentId, source.databaseId));
+        }
+        for (const id of bumps.databases) bump(registry, databaseChanged(environmentId, id));
+        if (bumps.list) bump(registry, listCounter(environmentId));
+        if (resyncWanted) {
+          resyncWanted = false;
+          bump(registry, resyncCounter(environmentId));
+        }
+      };
+      get.addFinalizer(() => cancel?.());
+      get.subscribe(
+        remoteChanges({ environmentId, input: { environmentId } }),
+        (result) => {
+          if (result._tag !== "Success") return;
+          latest = result.value;
+          if (latest.resyncs !== seenResyncs) {
+            // A fresh stream restarts its count at zero; only a resync event asks for a refresh.
+            seenResyncs = latest.resyncs;
+            resyncWanted = resyncWanted || latest.resyncs > 0;
+          }
+          if (cancel !== undefined) return;
+          const pending = pendingBumps(latest, known);
+          if (resyncWanted || pending.dataSources.length > 0 || pending.databases.length > 0)
+            cancel = schedule(apply, REMOTE_APPLY_DELAY_MS);
+        },
+        { immediate: true },
+      );
+    }),
+  );
+  /** Every query trigger adds this in: it mounts the change stream and moves on a resync. */
+  const liveTrigger = Atom.family((environmentId: EnvironmentId) =>
+    Atom.make((get) => {
+      get(changeSubscription(environmentId));
+      return get(resyncCounter(environmentId));
+    }),
+  );
+  const listTrigger = Atom.family((environmentId: EnvironmentId) =>
+    Atom.make((get) => get(listCounter(environmentId)) + get(liveTrigger(environmentId))),
+  );
+  /** What a view session watches: its data source's counter, moved by remote changes and resyncs too. */
+  const dataSourceLive = Atom.family((key: string) => {
+    const [environmentId, dataSourceId] = JSON.parse(key) as [EnvironmentId, SpaceDataSourceId];
+    return Atom.make(
+      (get) =>
+        get(dataSourceChanged(environmentId, dataSourceId)) + get(liveTrigger(environmentId)),
+    );
+  });
+  const databaseTrigger = Atom.family((key: string) => {
+    const [environmentId, databaseId] = JSON.parse(key) as [EnvironmentId, SpaceDatabaseId];
+    return Atom.make(
+      (get) => get(databaseChanged(environmentId, databaseId)) + get(liveTrigger(environmentId)),
+    );
+  });
+
   const available = (registry: Registry, environmentId: EnvironmentId) => {
     const capability = options ? registry.get(options.capabilityAtom(environmentId)) : undefined;
     return capability?.version === 2 && capability.features?.databases === true;
@@ -135,7 +286,8 @@ export function createSpacesDatabaseAtoms<R, E>(
     return Atom.make(
       (get) =>
         get(dataSourceChanged(environmentId, dataSourceId)) +
-        (viewId === null ? 0 : get(viewCounter(keyOf(environmentId, viewId)))),
+        (viewId === null ? 0 : get(viewCounter(keyOf(environmentId, viewId)))) +
+        get(liveTrigger(environmentId)),
     );
   });
   // A row refreshes with its own writes and, once its answer named the data source, with schema edits.
@@ -145,6 +297,7 @@ export function createSpacesDatabaseAtoms<R, E>(
       const source = get(dataSourceOfRow(key));
       return (
         get(rowCounter(key)) +
+        get(liveTrigger(environmentId)) +
         (source === undefined ? 0 : get(dataSourceChanged(environmentId, source)))
       );
     });
@@ -155,6 +308,13 @@ export function createSpacesDatabaseAtoms<R, E>(
   return {
     databaseChanged,
     dataSourceChanged,
+    /** What the server's change stream announced, folded; the applier reads it, tests observe it. */
+    remoteChanges,
+    /** The server pushes changes, so views do not need to poll for another client's edits. */
+    changesLive: (registry: Registry, environmentId: EnvironmentId) =>
+      pushes(options ? registry.get(options.capabilityAtom(environmentId)) : undefined),
+    dataSourceLive: (environmentId: EnvironmentId, dataSourceId: SpaceDataSourceId) =>
+      dataSourceLive(keyOf(environmentId, dataSourceId)),
     admission,
     rowPageChanged,
     dataSourcesChanged: bumpDataSources,
@@ -164,7 +324,7 @@ export function createSpacesDatabaseAtoms<R, E>(
       ...queryOptions,
       label: "environment-data:spaces:databases:list",
       refreshTrigger: ({ environmentId }: { environmentId: EnvironmentId }) =>
-        listCounter(environmentId),
+        listTrigger(environmentId),
       execute: Effect.fn("SpacesDatabases.list")(function* (
         input: EnvironmentRpcInput<typeof WS_METHODS.spacesDatabasesList>,
       ) {
@@ -173,6 +333,8 @@ export function createSpacesDatabaseAtoms<R, E>(
           requestGuarded(WS_METHODS.spacesDatabasesList, input),
         );
         registry.set(admission(input.environmentId), result.mutationAdmission);
+        for (const item of result.items)
+          learnDatabase(registry, input.environmentId, item.database.id, item.database.revision);
         for (const item of result.items)
           for (const source of item.dataSources)
             registry.set(
@@ -191,7 +353,7 @@ export function createSpacesDatabaseAtoms<R, E>(
       }: {
         environmentId: EnvironmentId;
         input: SpaceDatabaseGetInput;
-      }) => databaseChanged(environmentId, input.databaseId),
+      }) => databaseTrigger(keyOf(environmentId, input.databaseId)),
       execute: Effect.fn("SpacesDatabases.database")(function* (
         input: EnvironmentRpcInput<typeof WS_METHODS.spacesDatabasesGet>,
       ) {
@@ -200,11 +362,14 @@ export function createSpacesDatabaseAtoms<R, E>(
           requestGuarded(WS_METHODS.spacesDatabasesGet, input),
         );
         registry.set(admission(input.environmentId), result.mutationAdmission);
-        for (const source of result.dataSources)
+        learnDatabase(registry, input.environmentId, result.database.id, result.database.revision);
+        for (const source of result.dataSources) {
+          learnDataSource(registry, input.environmentId, source.id, source);
           registry.set(
             databaseOfDataSource(keyOf(input.environmentId, source.id)),
             result.database.id,
           );
+        }
         for (const view of result.views)
           registry.set(databaseOfView(keyOf(input.environmentId, view.id)), result.database.id);
         return result;
@@ -224,9 +389,11 @@ export function createSpacesDatabaseAtoms<R, E>(
         input: EnvironmentRpcInput<typeof WS_METHODS.spacesDatabasesQuery>,
       ) {
         const registry = yield* AtomRegistry.AtomRegistry;
-        return yield* guard(registry, input.environmentId, () =>
+        const result = yield* guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesQuery, input),
         );
+        learnDataSource(registry, input.environmentId, result.dataSourceId, result);
+        return result;
       }),
     }),
     row: createEnvironmentQueryAtomFamily(runtime, {
@@ -247,6 +414,7 @@ export function createSpacesDatabaseAtoms<R, E>(
           requestGuarded(WS_METHODS.spacesDatabasesRowsGet, input),
         );
         registry.set(admission(input.environmentId), result.mutationAdmission);
+        learnDataSource(registry, input.environmentId, result.dataSource.id, result.dataSource);
         registry.set(
           dataSourceOfRow(keyOf(input.environmentId, input.pageId)),
           result.dataSource.id,
@@ -272,8 +440,9 @@ export function createSpacesDatabaseAtoms<R, E>(
         guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesUpdate, input),
         ),
-      onSuccess: (target, registry) =>
+      onSuccess: (target, registry, result) =>
         Effect.sync(() => {
+          learnDatabase(registry, target.environmentId, target.input.databaseId, result.revision);
           bump(registry, databaseChanged(target.environmentId, target.input.databaseId));
           bump(registry, listCounter(target.environmentId));
         }),
@@ -291,6 +460,7 @@ export function createSpacesDatabaseAtoms<R, E>(
             databaseOfDataSource(keyOf(target.environmentId, result.dataSourceId)),
             target.input.databaseId,
           );
+          learnDatabase(registry, target.environmentId, target.input.databaseId, result.revision);
           bump(registry, databaseChanged(target.environmentId, target.input.databaseId));
           bump(registry, listCounter(target.environmentId));
         }),
@@ -302,8 +472,10 @@ export function createSpacesDatabaseAtoms<R, E>(
         guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesDataSourcesUpdate, input),
         ),
-      onSuccess: (target, registry) =>
+      onSuccess: (target, registry, result) =>
         Effect.sync(() => {
+          learnDataSource(registry, target.environmentId, target.input.dataSourceId, result);
+          learnOwner(registry, target.environmentId, target.input.dataSourceId, result.revision);
           bumpDataSources(registry, target.environmentId, [target.input.dataSourceId]);
           bumpDatabaseOf(registry, target.environmentId, target.input.dataSourceId);
           bump(registry, listCounter(target.environmentId));
@@ -316,8 +488,9 @@ export function createSpacesDatabaseAtoms<R, E>(
         guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesDataSourcesDelete, input),
         ),
-      onSuccess: (target, registry) =>
+      onSuccess: (target, registry, result) =>
         Effect.sync(() => {
+          learnOwner(registry, target.environmentId, target.input.dataSourceId, result.revision);
           bumpDataSources(registry, target.environmentId, [target.input.dataSourceId]);
           bumpDatabaseOf(registry, target.environmentId, target.input.dataSourceId);
           bump(registry, listCounter(target.environmentId));
@@ -332,6 +505,7 @@ export function createSpacesDatabaseAtoms<R, E>(
         ),
       onSuccess: (target, registry, result) =>
         Effect.sync(() => {
+          learnDataSource(registry, target.environmentId, target.input.dataSourceId, result);
           bumpDataSources(registry, target.environmentId, [
             target.input.dataSourceId,
             ...result.affectedDataSourceIds,
@@ -353,6 +527,7 @@ export function createSpacesDatabaseAtoms<R, E>(
           );
           if (owner !== undefined) {
             registry.set(databaseOfView(keyOf(target.environmentId, result.viewId)), owner);
+            learnDatabase(registry, target.environmentId, owner, result.revision);
             bump(registry, databaseChanged(target.environmentId, owner));
           }
         }),
@@ -364,8 +539,15 @@ export function createSpacesDatabaseAtoms<R, E>(
         guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesViewsUpdate, input),
         ),
-      onSuccess: (target, registry) =>
-        Effect.sync(() => bumpViewAndDatabase(registry, target.environmentId, target.input.viewId)),
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() => {
+          const owner = registry.get(
+            databaseOfView(keyOf(target.environmentId, target.input.viewId)),
+          );
+          if (owner !== undefined)
+            learnDatabase(registry, target.environmentId, owner, result.revision);
+          bumpViewAndDatabase(registry, target.environmentId, target.input.viewId);
+        }),
     }),
     deleteView: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:databases:deleteView",
@@ -374,8 +556,15 @@ export function createSpacesDatabaseAtoms<R, E>(
         guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesViewsDelete, input),
         ),
-      onSuccess: (target, registry) =>
-        Effect.sync(() => bumpViewAndDatabase(registry, target.environmentId, target.input.viewId)),
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() => {
+          const owner = registry.get(
+            databaseOfView(keyOf(target.environmentId, target.input.viewId)),
+          );
+          if (owner !== undefined)
+            learnDatabase(registry, target.environmentId, owner, result.revision);
+          bumpViewAndDatabase(registry, target.environmentId, target.input.viewId);
+        }),
     }),
     createRows: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:databases:createRows",
@@ -385,12 +574,13 @@ export function createSpacesDatabaseAtoms<R, E>(
           requestGuarded(WS_METHODS.spacesDatabasesRowsCreate, input),
         ),
       onSuccess: (target, registry, result) =>
-        Effect.sync(() =>
+        Effect.sync(() => {
+          learnDataSource(registry, target.environmentId, target.input.dataSourceId, result);
           bumpDataSources(registry, target.environmentId, [
             target.input.dataSourceId,
             ...(result.affectedDataSourceIds ?? []),
-          ]),
-        ),
+          ]);
+        }),
     }),
     updateRows: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:databases:updateRows",
@@ -401,6 +591,7 @@ export function createSpacesDatabaseAtoms<R, E>(
         ),
       onSuccess: (target, registry, result) =>
         Effect.sync(() => {
+          learnDataSource(registry, target.environmentId, target.input.dataSourceId, result);
           bumpDataSources(registry, target.environmentId, [
             target.input.dataSourceId,
             ...result.affectedDataSourceIds,
@@ -416,10 +607,11 @@ export function createSpacesDatabaseAtoms<R, E>(
         guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesRowsMove, input),
         ),
-      onSuccess: (target, registry) =>
-        Effect.sync(() =>
-          bumpDataSources(registry, target.environmentId, [target.input.dataSourceId]),
-        ),
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() => {
+          learnDataSource(registry, target.environmentId, target.input.dataSourceId, result);
+          bumpDataSources(registry, target.environmentId, [target.input.dataSourceId]);
+        }),
     }),
   };
 }

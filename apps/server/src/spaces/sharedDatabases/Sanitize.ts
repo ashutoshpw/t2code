@@ -305,7 +305,7 @@ const sanitizeLayout = (scope: ViewScope, shown: ReadonlySet<string>): JsonObjec
   return out;
 };
 
-export const shownProperties = (scope: ViewScope): ReadonlySet<string> =>
+export const shownProperties = (scope: Pick<ViewScope, "exposed">): ReadonlySet<string> =>
   new Set([...scope.exposed.columns.map((column) => column.propertyId), ...scope.exposed.extras]);
 
 export const sanitizeView = (scope: ViewScope): SpaceSharedDatabaseView => {
@@ -409,7 +409,7 @@ export const optionLedger = (scope: ViewScope): OptionLedger => {
 };
 
 export const sanitizeRow = (
-  scope: ViewScope,
+  scope: Pick<ViewScope, "exposed" | "snapshot">,
   row: C.SpaceDatabaseRow,
   related: ReadonlySet<string>,
   ledger: OptionLedger,

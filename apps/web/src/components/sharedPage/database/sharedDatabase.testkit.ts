@@ -30,7 +30,7 @@ export const view = (
   ...extra,
 });
 
-const SOURCE_PROPERTIES = {
+export const SOURCE_PROPERTIES = {
   title: prop("title", "Name", "title", {}, 0),
   st: prop("st", "Status", "select", { options: [] }, 1),
   n: prop("n", "Score", "number", {}, 2),

@@ -16,6 +16,9 @@ import { databasePorts } from "./ports";
 import { databaseStores } from "./stores";
 import { viewInputOf } from "./useViewQuery";
 
+/** Expanded parents that keep a query session; one more collapses the oldest. */
+const MAX_EXPANDED_PARENTS = 50;
+
 const NO_PAGES: Readonly<Record<string, SpaceRelatedPage>> = {};
 
 const intersects = (dependencies: ReadonlySet<string>, ids: ReadonlySet<string>) => {
@@ -55,14 +58,18 @@ export function useSubItems(
   const [source] = useState(() => new Latest({ dataSourceId, writer }));
   const [tree] = useState(
     () =>
-      new SubItemTree({
-        query: (input) => databasePorts.query(registry, input),
-        schedule: (run, delayMs) => {
-          const timer = setTimeout(run, delayMs);
-          return () => clearTimeout(timer);
+      new SubItemTree(
+        {
+          query: (input) => databasePorts.query(registry, input),
+          schedule: (run, delayMs) => {
+            const timer = setTimeout(run, delayMs);
+            return () => clearTimeout(timer);
+          },
+          busy: () => source.get().writer.busy(source.get().dataSourceId),
+          live: () => databasePorts.live(registry, environmentId),
         },
-        busy: () => source.get().writer.busy(source.get().dataSourceId),
-      }),
+        { maxExpanded: MAX_EXPANDED_PARENTS },
+      ),
   );
   const input = options.enabled
     ? viewInputOf(model, view, columns, {

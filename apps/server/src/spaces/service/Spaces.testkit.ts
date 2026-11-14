@@ -47,7 +47,7 @@ export const fixture = Effect.fn("SpacesServiceTest.fixture")(function* <A, E>(
     SpacesService.SpacesService | Settings.ServerSettingsService | FileSystem.FileSystem
   >,
   enabled = true,
-  options?: { readonly backgroundDrain?: boolean },
+  options?: { readonly backgroundDrain?: boolean; readonly backgroundSweep?: boolean },
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -55,7 +55,7 @@ export const fixture = Effect.fn("SpacesServiceTest.fixture")(function* <A, E>(
   const dbPath = path.join(directory, "spaces.sqlite");
   return yield* use(dbPath).pipe(
     Effect.provide(
-      SpacesService.layerFromPath(dbPath, undefined, options).pipe(
+      SpacesService.layerFromPath(dbPath, undefined, { backgroundSweep: false, ...options }).pipe(
         Layer.provide(identity),
         Layer.provideMerge(Settings.layerTest({ spacesEnabled: enabled })),
       ),

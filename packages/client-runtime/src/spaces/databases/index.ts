@@ -19,6 +19,8 @@ export * from "./format.ts";
 export * from "./groupLabel.ts";
 export * from "./viewRows.ts";
 export * from "./parseCell.ts";
+export * from "./richText.ts";
 export * from "./dateValue.ts";
 export * from "./errors.ts";
 export * from "./rowCells.ts";
+export * from "./remoteChanges.ts";

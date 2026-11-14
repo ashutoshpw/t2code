@@ -28,6 +28,15 @@ export function cellOf(event: { currentTarget: Element; target: EventTarget }) {
   return row === undefined || col === undefined ? null : { pageId: row, propertyId: col };
 }
 
+/** The row menu hangs on the title cell's trigger; a keyboard user reaches it from any cell of the row. */
+function openRowMenu(grid: Element, pageId: string) {
+  grid
+    .querySelector<HTMLElement>(
+      `[data-row="${CSS.escape(pageId)}"][data-col="title"] [aria-label="Row actions"]`,
+    )
+    ?.click();
+}
+
 export function handleGridKeyDown(
   event: KeyboardEvent<HTMLElement>,
   grid: GridHandlers,
@@ -72,6 +81,9 @@ export function handleGridKeyDown(
   } else if (NAVIGATION.has(event.key)) {
     handled();
     grid.navigate(cell, { key: event.key, shift: event.shiftKey, mod });
+  } else if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) {
+    handled();
+    openRowMenu(event.currentTarget, pageId);
   } else if (event.key === "Enter" && mod) {
     handled();
     grid.open(pageId);

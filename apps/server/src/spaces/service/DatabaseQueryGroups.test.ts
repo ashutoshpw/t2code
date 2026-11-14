@@ -277,6 +277,39 @@ it.layer(NodeServices.layer)("Spaces database query groups", (it) => {
     ),
   );
 
+  it.effect("rejects range and date scope keys that are not the engine's own bucket keys", () =>
+    fixture((dbPath) =>
+      Effect.gen(function* () {
+        const { query } = yield* seed(dbPath);
+        const reason = (extra: Partial<C.SpaceDatabaseQueryInput>) =>
+          Effect.map(databaseError(query(extra)), (error) => error.reason);
+        const range = { property: ids.points, by: { range: { start: 0, size: 10 } } } as const;
+        yield* query({
+          group: range,
+          scope: { group: { kind: "number_range", start: 10, end: 20 } },
+        });
+        for (const key of [
+          { kind: "number_range", start: 12, end: 20 },
+          { kind: "number_range", start: 10, end: 19 },
+          { kind: "number_range", start: 10, end: 30 },
+        ] as const)
+          assert.equal(yield* reason({ group: range, scope: { group: key } }), "invalid_scope");
+        const month = { property: ids.due, by: "month" } as const;
+        yield* query({
+          group: month,
+          scope: { group: { kind: "date", start: "2026-11-01", unit: "month" } },
+        });
+        assert.equal(
+          yield* reason({
+            group: month,
+            scope: { group: { kind: "date", start: "2026-11-15", unit: "month" } },
+          }),
+          "invalid_scope",
+        );
+      }),
+    ),
+  );
+
   it.effect("labels text and page buckets and orders pages by title", () =>
     fixture((dbPath) =>
       Effect.gen(function* () {

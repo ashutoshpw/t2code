@@ -50,6 +50,21 @@ describe("viewQueryInput", () => {
       property: "g",
     });
   });
+  it("keeps presentation fields of a group out of the query key", () => {
+    const groups = { ...options, mode: "groups" as const };
+    const base = queryKey(viewQueryInput({ ...view, group: { property: "g" as never } }, groups));
+    const toggled = {
+      ...view,
+      group: {
+        property: "g",
+        hidden: [{ kind: "empty" }],
+        collapsed: [],
+        order: [],
+        hideEmpty: true,
+      },
+    } as unknown as typeof view;
+    expect(queryKey(viewQueryInput(toggled, groups))).toBe(base);
+  });
   it("asks for covers only on request, and that changes the key", () => {
     const plain = viewQueryInput(view, options);
     const covered = viewQueryInput(view, { ...options, cover: true });

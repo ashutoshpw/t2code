@@ -447,4 +447,54 @@ it.layer(NodeServices.layer)("Spaces database views", (it) => {
       }),
     ),
   );
+
+  it.effect(
+    "clears calendar and timeline date references when the property stops being a date",
+    () =>
+      fixture(() =>
+        Effect.gen(function* () {
+          const { service, kit, created, when, create, views } = yield* setup();
+          const calendar = yield* create({
+            name: "Cal",
+            type: "calendar",
+            layout: { datePropertyId: when },
+          });
+          const timeline = yield* create({
+            name: "Line",
+            type: "timeline",
+            layout: { startPropertyId: when, endPropertyId: when },
+          });
+          const layoutOf = (viewId: C.SpaceViewId) =>
+            Effect.map(views, (all) => all.find((view) => view.id === viewId)!.layout);
+          assert.deepEqual(yield* layoutOf(calendar.viewId), { datePropertyId: when });
+          yield* kit.schema(created.dataSourceId, [
+            { op: "changePropertyType", propertyId: when, type: "number" },
+          ]);
+          assert.deepEqual(yield* layoutOf(calendar.viewId), {});
+          assert.deepEqual(yield* layoutOf(timeline.viewId), {});
+          // A query through a view without the reference runs.
+          const answer = yield* service.queryDatabase({
+            ...env,
+            dataSourceId: created.dataSourceId,
+            viewId: calendar.viewId,
+            mode: "rows",
+            timeZone: "UTC",
+            limit: 1,
+          });
+          assert.isDefined(answer.rows);
+          // Removing a date property clears the reference the same way.
+          const second = yield* kit.schema(created.dataSourceId, [
+            { op: "addProperty", property: { name: "Due", type: "date" } },
+          ]);
+          const due = second.created[0]!.propertyId!;
+          const dated = yield* create({
+            name: "Cal 2",
+            type: "calendar",
+            layout: { datePropertyId: due },
+          });
+          yield* kit.schema(created.dataSourceId, [{ op: "removeProperty", propertyId: due }]);
+          assert.deepEqual(yield* layoutOf(dated.viewId), {});
+        }),
+      ),
+  );
 });

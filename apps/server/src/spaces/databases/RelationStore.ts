@@ -261,6 +261,28 @@ export const createTwin = Effect.fn("SpacesDatabases.createTwin")(function* (inp
     WHERE c.data_source_id = ${sourceId} AND c.property_id = ${input.property.id} AND c.ref IS NOT NULL`;
 });
 
+/** Replaces the cells of `property` with the mirror of the live `twin`'s cells. */
+export const mirrorFrom = Effect.fn("SpacesDatabases.mirrorFrom")(function* (input: {
+  readonly property: Property;
+  readonly twin: Property;
+  readonly ownSourceId: string;
+  readonly twinSourceId: string;
+}) {
+  const sql = yield* SpacesSql.SpacesSql;
+  const [widest] = yield* sql<{
+    readonly widest: number | null;
+  }>`SELECT MAX(n) AS widest FROM (SELECT COUNT(*) AS n FROM spaces_db_cells
+    WHERE data_source_id = ${input.twinSourceId} AND property_id = ${input.twin.id} GROUP BY ref)`;
+  yield* ensureDatabaseLimit("maxCellItems", widest?.widest ?? 0);
+  yield* sql`DELETE FROM spaces_db_cells WHERE data_source_id = ${input.ownSourceId} AND property_id = ${input.property.id}`;
+  yield* sql`INSERT INTO spaces_db_cells (page_id, property_id, ord, data_source_id, ref)
+    SELECT c.ref, ${input.property.id},
+      row_number() OVER (PARTITION BY c.ref ORDER BY p.row_position, p.row_seq, p.page_id) - 1,
+      ${input.ownSourceId}, c.page_id
+    FROM spaces_db_cells c JOIN spaces_pages p ON p.page_id = c.page_id
+    WHERE c.data_source_id = ${input.twinSourceId} AND c.property_id = ${input.twin.id} AND c.ref IS NOT NULL`;
+});
+
 /** Soft-deletes a twin in another (or the same) data source, as removeProperty would. */
 export const removeTwin = Effect.fn("SpacesDatabases.removeTwin")(function* (input: {
   readonly snapshot: Snapshot;

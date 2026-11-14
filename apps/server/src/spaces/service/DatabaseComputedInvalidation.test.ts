@@ -316,4 +316,78 @@ it.layer(NodeServices.layer)("Spaces computed invalidation", (it) => {
       }),
     ),
   );
+
+  it.effect("an errored formula stops depending on what it read", () =>
+    fixture(
+      (dbPath) =>
+        Effect.gen(function* () {
+          const { service, kit, tasks, t, addComputed, property } = yield* setupWork();
+          const extra = pid("extra01");
+          yield* kit.schema(tasks, [
+            { op: "addProperty", property: { id: extra, name: "Extra", type: "number" } },
+          ]);
+          yield* addComputed(tasks, "sum0001", "Sum", "formula", {
+            expression: 'prop("Estimate") + prop("Extra")',
+          });
+          yield* service.drainComputed;
+          const depCount = () =>
+            raw(
+              dbPath,
+              Effect.gen(function* () {
+                const sql = yield* SqlClient.SqlClient;
+                const [row] = yield* sql<{
+                  readonly n: number;
+                }>`SELECT COUNT(*) AS n FROM spaces_db_computed_deps WHERE property_id = 'sum0001'`;
+                return row!.n;
+              }),
+            );
+          assert.isAbove(yield* depCount(), 0);
+          yield* kit.schema(tasks, [{ op: "removeProperty", propertyId: ids.est }]);
+          yield* service.drainComputed;
+          assert.isDefined((yield* property(tasks, "sum0001")).computed?.error);
+          assert.equal(yield* depCount(), 0);
+          // Editing a former input queues nothing for the errored formula.
+          yield* kit.setCells(tasks, t[0]!, { [extra]: 5 });
+          assert.deepEqual(yield* queued(dbPath), []);
+          // The input coming back brings the formula back and queues its rows.
+          yield* kit.schema(tasks, [{ op: "restoreProperty", propertyId: ids.est }]);
+          assert.isUndefined((yield* property(tasks, "sum0001")).computed?.error);
+          assert.isAbove(yield* depCount(), 0);
+        }),
+      true,
+      { backgroundDrain: false },
+    ),
+  );
+
+  it.effect("a legacy formula that never compiled recovers when its missing property appears", () =>
+    fixture(
+      (dbPath) =>
+        Effect.gen(function* () {
+          const { service, kit, tasks, t, addComputed, property, cell } = yield* setupWork();
+          yield* addComputed(tasks, "late001", "Late", "formula", { expression: "1" });
+          yield* exec(
+            dbPath,
+            Effect.gen(function* () {
+              const sql = yield* SqlClient.SqlClient;
+              const config = JSON.stringify({ expression: 'prop("Bonus") * 2' });
+              yield* sql`UPDATE spaces_db_properties SET computed = NULL, config = ${config}
+                WHERE property_id = 'late001'`;
+              yield* sql`DELETE FROM spaces_db_computed_deps WHERE property_id = 'late001'`;
+            }),
+          );
+          // The first touch of the source records the compile error.
+          yield* kit.schema(tasks, [{ op: "updateProperty", propertyId: ids.note, name: "Memo" }]);
+          assert.isDefined((yield* property(tasks, "late001")).computed?.error);
+          yield* kit.schema(tasks, [
+            { op: "addProperty", property: { id: pid("bonus01"), name: "Bonus", type: "number" } },
+          ]);
+          assert.isUndefined((yield* property(tasks, "late001")).computed?.error);
+          yield* kit.setCells(tasks, t[0]!, { [pid("bonus01")]: 4 });
+          yield* service.drainComputed;
+          assert.deepEqual(yield* cell(t[0]!, pid("late001")), numberValue(8));
+        }),
+      true,
+      { backgroundDrain: false },
+    ),
+  );
 });

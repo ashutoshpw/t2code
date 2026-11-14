@@ -1,3 +1,4 @@
+import "~/index.css";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { render } from "../../../../test/render";

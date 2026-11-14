@@ -1,5 +1,10 @@
 import type { EnvironmentId } from "@t2code/contracts";
-import type { SpaceDataSource, SpaceDatabaseView } from "@t2code/contracts/spaces";
+import type {
+  SpaceDataSource,
+  SpaceDatabaseView,
+  SpaceGroupKey,
+  SpacePageId,
+} from "@t2code/contracts/spaces";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,7 +22,9 @@ export function NewRowSheet(props: {
   readonly environmentId: EnvironmentId;
   readonly view: SpaceDatabaseView | undefined;
   readonly dataSource: SpaceDataSource;
-  readonly onCreated: () => void;
+  readonly month?: string;
+  readonly groupKey?: SpaceGroupKey;
+  readonly onCreated: (pageId: SpacePageId | undefined) => void;
   readonly onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -39,13 +46,15 @@ export function NewRowSheet(props: {
       title,
       now: Date.now(),
       zone: viewerZone(),
+      ...(props.month === undefined ? {} : { month: props.month }),
+      ...(props.groupKey === undefined ? {} : { groupKey: props.groupKey }),
     });
     setBusy(false);
     if (!result.ok) {
       setError(result.message);
       return;
     }
-    props.onCreated();
+    props.onCreated(result.pageId);
     props.onClose();
   };
   return (
