@@ -43,7 +43,7 @@ export default defineConfig({
       },
       dev: {
         command:
-          "node scripts/build-browser-secret.mjs && node scripts/build-preview-annotation-css.mjs && cross-env T3CODE_DESKTOP_DEV=1 vp pack --watch",
+          "node scripts/build-browser-secret.mjs && node scripts/build-preview-annotation-css.mjs && cross-env T2CODE_DESKTOP_DEV=1 vp pack --watch",
         dependsOn: ["@t2code/cli#build"],
         cache: false,
       },

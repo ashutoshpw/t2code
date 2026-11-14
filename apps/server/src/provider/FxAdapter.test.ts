@@ -43,7 +43,7 @@ async function makeFxMock(
   return writeFakeCli({
     directory: binaryDirectory,
     name: "fx",
-    env: { T3_ACP_REQUEST_LOG_PATH: requestLogPath, ...env },
+    env: { T2_ACP_REQUEST_LOG_PATH: requestLogPath, ...env },
     source: execScriptSource({ scriptPath: mockAgentPath }),
   });
 }
@@ -92,7 +92,7 @@ describe("FxAdapter", () => {
         });
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
-          makeFxMock(directory, requestLogPath, { T3_ACP_EMIT_TOOL_CALLS: "1" }),
+          makeFxMock(directory, requestLogPath, { T2_ACP_EMIT_TOOL_CALLS: "1" }),
         );
         const adapter = yield* makeFxAdapter(
           decodeFxSettings({ enabled: true, binaryPath: fxPath }),
@@ -163,7 +163,7 @@ describe("FxAdapter", () => {
         });
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
-          makeFxMock(directory, requestLogPath, { T3_ACP_EMIT_TOOL_CALLS: "1" }),
+          makeFxMock(directory, requestLogPath, { T2_ACP_EMIT_TOOL_CALLS: "1" }),
         );
         const adapter = yield* makeFxAdapter(
           decodeFxSettings({ enabled: true, binaryPath: fxPath }),
@@ -205,8 +205,8 @@ describe("FxAdapter", () => {
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
           makeFxMock(directory, requestLogPath, {
-            T3_ACP_EMIT_TOOL_CALLS: "1",
-            T3_ACP_EMIT_EDIT_PERMISSION: "1",
+            T2_ACP_EMIT_TOOL_CALLS: "1",
+            T2_ACP_EMIT_EDIT_PERMISSION: "1",
           }),
         );
         const adapter = yield* makeFxAdapter(
@@ -249,7 +249,7 @@ describe("FxAdapter", () => {
         });
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
-          makeFxMock(directory, requestLogPath, { T3_ACP_EMIT_TOOL_CALLS: "1" }),
+          makeFxMock(directory, requestLogPath, { T2_ACP_EMIT_TOOL_CALLS: "1" }),
         );
         const adapter = yield* makeFxAdapter(
           decodeFxSettings({ enabled: true, binaryPath: fxPath }),
@@ -289,8 +289,8 @@ describe("FxAdapter", () => {
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
           makeFxMock(directory, requestLogPath, {
-            T3_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1",
-            T3_ACP_AUTO_FINISH_CANCEL: "1",
+            T2_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1",
+            T2_ACP_AUTO_FINISH_CANCEL: "1",
           }),
         );
         const adapter = yield* makeFxAdapter(
@@ -355,8 +355,8 @@ describe("FxAdapter", () => {
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
           makeFxMock(directory, requestLogPath, {
-            T3_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1",
-            T3_ACP_AUTO_FINISH_CANCEL: "1",
+            T2_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1",
+            T2_ACP_AUTO_FINISH_CANCEL: "1",
           }),
         );
         const adapter = yield* makeFxAdapter(
