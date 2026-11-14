@@ -144,12 +144,12 @@ test("renders baseline, impact, ceiling, and ceiling changes", () => {
     currentRun: {
       sha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       conclusion: "success",
-      url: "https://github.com/pingdotgg/t2code/actions/runs/2",
+      url: "https://github.com/ashutoshpw/t2code/actions/runs/2",
     },
     baselineRun: {
       sha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       matchesBase: true,
-      url: "https://github.com/pingdotgg/t2code/actions/runs/1",
+      url: "https://github.com/ashutoshpw/t2code/actions/runs/1",
     },
   });
 
@@ -218,7 +218,7 @@ test("resolves a fallback PR with a redacted head repo and exact main baseline",
   await resolve({
     github,
     context: {
-      repo: { owner: "pingdotgg", repo: "t2code" },
+      repo: { owner: "ashutoshpw", repo: "t2code" },
       payload: {
         workflow_run: {
           id: 2,
@@ -276,7 +276,7 @@ test("does not guess when a fallback commit belongs to multiple PRs", async () =
       },
     },
     context: {
-      repo: { owner: "pingdotgg", repo: "t2code" },
+      repo: { owner: "ashutoshpw", repo: "t2code" },
       payload: {
         workflow_run: {
           id: 2,
@@ -321,7 +321,7 @@ test("skips a missing PR commit but preserves other lookup failures", async () =
         rest: { repos: { listPullRequestsAssociatedWithCommit: () => {} } },
       },
       context: {
-        repo: { owner: "pingdotgg", repo: "t2code" },
+        repo: { owner: "ashutoshpw", repo: "t2code" },
         payload: {
           workflow_run: { event: "pull_request", head_sha: "old-head", pull_requests: [] },
         },
@@ -362,7 +362,7 @@ test("does not report a passing run that skipped the server tests", async () => 
       },
     },
     context: {
-      repo: { owner: "pingdotgg", repo: "t2code" },
+      repo: { owner: "ashutoshpw", repo: "t2code" },
       payload: {
         workflow_run: {
           id: 2,
@@ -409,7 +409,7 @@ test("does not publish a stale result after the PR head advances", async () => {
         },
       },
     },
-    { repo: { owner: "pingdotgg", repo: "t2code" } },
+    { repo: { owner: "ashutoshpw", repo: "t2code" } },
     { info: (message) => info.push(message) },
     5350,
     "old-head-sha",
@@ -448,7 +448,7 @@ test("preserves a successful result when a same-SHA rerun has no artifact", asyn
         },
       },
     },
-    { repo: { owner: "pingdotgg", repo: "t2code" } },
+    { repo: { owner: "ashutoshpw", repo: "t2code" } },
     { info: () => {} },
     5350,
     sha,
