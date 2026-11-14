@@ -583,7 +583,11 @@ const make = Effect.gen(function* () {
       let branch: string | null;
       if (generatedTemporaryBranch) {
         const uuid = yield* randomUuidV4;
-        branch = buildTemporaryWorktreeBranchName(() => uuid.replaceAll("-", ""));
+        const { worktreeBranchPrefix } = yield* serverSettings.getSettings;
+        branch = buildTemporaryWorktreeBranchName(
+          () => uuid.replaceAll("-", ""),
+          worktreeBranchPrefix,
+        );
         const settings = yield* serverSettings.getSettings.pipe(
           Effect.map((settings) => resolveProjectSettings(settings, input.projectId).settings),
           Effect.orElseSucceed(() => null),

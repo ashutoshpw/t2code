@@ -21,7 +21,7 @@ import type {
 } from "@t2code/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import * as Option from "effect/Option";
-import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
 import { useDeadlinePassed } from "../hooks/useDeadline";
 import { useNowSecond } from "../hooks/useNowSecond";
 import { flushSync } from "react-dom";
@@ -105,7 +105,8 @@ import {
   useDiffPanelStore,
 } from "~/diffPanelStore";
 import { useClientSettings } from "~/hooks/useSettings";
-import { serverEnvironment } from "~/state/server";
+import { primaryServerSettingsAtom, serverEnvironment } from "~/state/server";
+import { temporaryWorktreeBranchPrefixes } from "@t2code/shared/git";
 import { sourceControlEnvironment } from "~/state/sourceControl";
 import { threadEnvironment } from "~/state/threads";
 import { useAtomCommand } from "~/state/use-atom-command";
@@ -1093,6 +1094,11 @@ export default function GitActionsControl({
       ? "Uncommitted"
       : `vs ${resolvedChangesTotals.baseRef}`
     : null;
+  const primaryServerSettings = useAtomValue(primaryServerSettingsAtom);
+  const temporaryBranchPrefixes = useMemo(
+    () => temporaryWorktreeBranchPrefixes(primaryServerSettings.worktreeBranchPrefix),
+    [primaryServerSettings.worktreeBranchPrefix],
+  );
 
   const allFiles = gitStatusForActions?.workingTree.files ?? [];
   // Changed-file paths are repository-relative, so they must resolve against
@@ -1131,6 +1137,7 @@ export default function GitActionsControl({
     const branchUpdate = resolveLiveThreadBranchUpdate({
       threadBranch: activeDraftThread?.branch ?? null,
       gitStatus: gitStatusForActions,
+      temporaryBranchPrefixes,
     });
     if (!branchUpdate) {
       return;
@@ -1144,6 +1151,8 @@ export default function GitActionsControl({
     isGitActionRunning,
     isProjectCloning,
     isSelectingWorktreeBase,
+    persistThreadBranchSync,
+    temporaryBranchPrefixes,
   ]);
 
   const isDefaultRef = gitStatusForActions?.isDefaultRef ?? false;
