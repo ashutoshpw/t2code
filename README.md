@@ -48,6 +48,7 @@ It works with Claude Code, Codex, Cursor, OpenCode, Grok Build, Antigravity, Kir
 | Debian, Ubuntu | `.deb` from [Releases](https://github.com/ashutoshpw/t2code/releases) |
 | Arch Linux     | `yay -S t2code-bin`                                                  |
 
+
 ### Try it out (install-free)
 
 The easiest way to test T2 Code is to run the server in your terminal (requires Node.js 22.16+, 23.11+, or 24.10+):
@@ -94,7 +95,7 @@ We wanted something performant, remote-ready, and truly open. If we ever go the 
 - [Connect outside agents over MCP](./docs/user/outside-agents.md)
 - [Keeping app and server in sync](./docs/user/updating.md)
 - [Run T2 Code as a background service](./docs/user/background-service.md)
-- Multiple accounts: [Codex](./docs/user/providers-codex.md) · [Claude](./docs/user/providers-claude.md)
+- Provider guides: [Codex](./docs/user/providers-codex.md) · [Claude](./docs/user/providers-claude.md) · [fx](./docs/user/providers-fx.md)
 - [FAQ](./docs/user/faq.md)
 
 [All docs](./docs/README.md) has the full list.
