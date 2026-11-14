@@ -117,7 +117,7 @@ function PreviewPanelShellFrame(
     if (from === null || from === lastBlurred.current) return;
     focusOrigin.current = from instanceof HTMLElement ? from : null;
   };
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- on unmount, returns DOM focus to where it came from if removal dropped it on the body
+  // oxlint-disable-next-line t2code/react-effect-budget -- on unmount, returns DOM focus to where it came from if removal dropped it on the body
   useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host || !collapsible) return;
@@ -132,7 +132,7 @@ function PreviewPanelShellFrame(
       });
     };
   }, [collapsible, hostRef]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- moves focus out of the host and sets inert on it before a collapse paints
+  // oxlint-disable-next-line t2code/react-effect-budget -- moves focus out of the host and sets inert on it before a collapse paints
   useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host) return;

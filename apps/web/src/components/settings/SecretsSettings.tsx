@@ -1,4 +1,4 @@
-import type { EnvironmentId, SecretProviderConfig, SecretProviderId } from "@t3tools/contracts";
+import type { EnvironmentId, SecretProviderConfig, SecretProviderId } from "@t2code/contracts";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 

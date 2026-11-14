@@ -1,4 +1,4 @@
-import type { ScopedThreadRef } from "@t3tools/contracts";
+import type { ScopedThreadRef } from "@t2code/contracts";
 import { useEffect } from "react";
 
 import { restoreFocusOnThreadEnter } from "../../lib/terminalFocus";
@@ -11,7 +11,7 @@ export function useFocusComposerOnThreadOpen(
   terminalOpen: boolean,
   focusComposer: () => void,
 ) {
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- restores DOM focus on thread entry and after the drawer opens or closes
+  // oxlint-disable-next-line t2code/react-effect-budget -- restores DOM focus on thread entry and after the drawer opens or closes
   useEffect(() => {
     if (!threadRef || !enabled || !root) return;
     let frame: number | undefined;

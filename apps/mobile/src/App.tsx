@@ -19,7 +19,7 @@ import {
   type NavigationState,
 } from "@react-navigation/native";
 import { pipe } from "effect/Function";
-import { DEFAULT_HOSTED_APP_URL } from "@t3tools/shared/connectAuth";
+import { DEFAULT_HOSTED_APP_URL } from "@t2code/shared/connectAuth";
 
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { ProjectChipIconRasterizer } from "./native/ProjectChipIconImages";
@@ -230,13 +230,13 @@ function SplashScreenCoordinator() {
   const [waitEnded, setWaitEnded] = useState(false);
   const hidden = useRef(false);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- starts the limit on how long the native splash screen waits for cached shells and their rows
+  // oxlint-disable-next-line t2code/react-effect-budget -- hides the native splash screen once appearance preferences have loaded
   useEffect(() => {
     const timer = setTimeout(() => setWaitEnded(true), SPLASH_WAIT_MS);
     return () => clearTimeout(timer);
   }, []);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- hides the native splash screen once preferences have loaded and the cached rows are laid out
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- hides the native splash screen once preferences have loaded and the cached rows are laid out
   useEffect(() => {
     const canHide = splashCanHide({
       preferencesReady: isReady,
@@ -271,7 +271,7 @@ function AppContent() {
   const { themeAppearance } = useAppearancePreferences();
   const navigationTheme = useMobileNavigationTheme();
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- matches the Android navigation bar to the app theme, as StatusBar does for the status bar
+  // oxlint-disable-next-line t2code/react-effect-budget -- matches the Android navigation bar to the app theme, as StatusBar does for the status bar
   useEffect(() => {
     if (Platform.OS !== "android") return;
     void requireNativeModule<{ setNavigationBarStyle(light: boolean): Promise<void> }>(

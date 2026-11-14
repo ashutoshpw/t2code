@@ -31,7 +31,7 @@ import * as ServerActivation from "../serverActivation.ts";
 import * as ProjectionStore from "./ProjectionStore.ts";
 import * as SqlClient from "effect/sql/SqlClient";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
-import { EventId } from "@t3tools/contracts";
+import { EventId } from "@t2code/contracts";
 import * as Orchestrator from "./Orchestrator.ts";
 import * as ThreadPullRequestService from "./ThreadPullRequestService.ts";
 

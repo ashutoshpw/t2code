@@ -8,14 +8,7 @@ export const CLI_RELEASES_PAGE_URL = `https://github.com/${CLI_RELEASE_REPOSITOR
 export const CLI_RELEASE_CHECKSUMS_FILE = "SHA256SUMS";
 /** Overrides the download origin for mirrors and air-gapped installs. */
 export const CLI_RELEASE_BASE_URL_ENV = "T2CODE_RELEASE_BASE_URL";
-/** Pre-rename name, still honored by the update paths during the migration window. */
-export const CLI_RELEASE_BASE_URL_LEGACY_ENV = "T3CODE_RELEASE_BASE_URL";
 
-<<<<<<< HEAD
-// Keep archive keys aligned with the Linux matrix, Windows ARM64 build, and cli_archive rows in release.yml,
-// and with the SSH runner's host check in packages/ssh/src/tunnel.ts.
-// Node single-executables do not support darwin-x64 and segfault at startup.
-=======
 /** Prefix used by newly published self-contained CLI release archives. */
 const CLI_ARCHIVE_PREFIX = "t2";
 /** Prefix used by archives published before the fork's public rename. */
@@ -29,7 +22,6 @@ export const CLI_ARCHIVE_LEGACY_PREFIX = "t3";
  */
 // No darwin-x64: Node single-executables are unsupported on x64 macOS (the
 // SEA docs list macOS as arm64 only) and the binary segfaults on start.
->>>>>>> 6b98c72db0 (fix(release): align CLI archive and npm publishing)
 const CLI_ARCHIVE_PLATFORM_KEYS = [
   "darwin-arm64",
   "linux-arm64",

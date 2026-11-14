@@ -39,7 +39,7 @@ import {
   pullRequestProjectQueries,
   type PullRequestHostAvailability,
 } from "./pullRequestProjectAssignment.logic";
-import { pullRequestFilterProjects } from "@t3tools/client-runtime/pull-request-project-filter";
+import { pullRequestFilterProjects } from "@t2code/client-runtime/pull-request-project-filter";
 import { pullRequestListEntryId } from "./pullRequestListGroups.logic";
 
 export interface PullRequestsSearch extends PullRequestListPreferences {
@@ -193,7 +193,7 @@ export function usePullRequestScope(
 
 export function usePullRequestQueryFilters(search: PullRequestsSearch, typedQuery: string) {
   const [sentQuery, setSentQuery] = useState(typedQuery);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- debounce timer that sends the typed query after SEARCH_DEBOUNCE_MS
+  // oxlint-disable-next-line t2code/react-effect-budget -- debounce timer that sends the typed query after SEARCH_DEBOUNCE_MS
   useEffect(() => {
     const timer = window.setTimeout(() => setSentQuery(typedQuery), SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);

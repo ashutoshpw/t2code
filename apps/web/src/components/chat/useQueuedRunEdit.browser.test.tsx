@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import {
   ATTACHMENT_ONLY_BOOTSTRAP_PROMPT,
   threadContextRecord,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 import { toastManager } from "../ui/toast";
 
 import { act, render } from "../../../test/render";

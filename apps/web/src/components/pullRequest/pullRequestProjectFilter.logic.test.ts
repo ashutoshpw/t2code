@@ -2,7 +2,7 @@ import { EnvironmentId, ProjectId } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { findScopedProject } from "./pullRequestList.logic";
-import { pullRequestFilterProjects } from "@t3tools/client-runtime/pull-request-project-filter";
+import { pullRequestFilterProjects } from "@t2code/client-runtime/pull-request-project-filter";
 
 const cups = EnvironmentId.make("env-cups");
 const nucbox = EnvironmentId.make("env-nucbox");
@@ -57,6 +57,20 @@ describe("pull request project filter choices", () => {
     expect(findScopedProject(choices, nucbox, "worktree")).toBeDefined();
     expect(findScopedProject(choices, nucbox, "main")).toBeUndefined();
     expect(findScopedProject(choices, cups, "worktree")).toBeDefined();
+  });
+
+  it("matches canonical repositories regardless of casing", () => {
+    const main = project("main");
+    const worktree = project("worktree", nucbox, "GitHub.com/PingDotGG/T2Code");
+
+    expect(pullRequestFilterProjects([main, worktree], labels)).toEqual([main]);
+  });
+
+  it("does not add a server suffix after duplicate checkouts have collapsed", () => {
+    const main = project("main");
+
+    expect(pullRequestFilterProjects([main, project("worktree")], labels)).toEqual([main]);
+    expect(main.title).toBe("t3code");
   });
 
   it("distinguishes same-named repositories on one server by checkout path", () => {

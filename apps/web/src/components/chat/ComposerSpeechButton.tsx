@@ -46,7 +46,7 @@ function formatElapsed(seconds: number) {
 function RecordingStatus(props: { level: number; recordingLimitSeconds?: number | undefined }) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- owns the timer displaying the native recording duration
+  // oxlint-disable-next-line t2code/react-effect-budget -- owns the timer displaying the native recording duration
   useEffect(() => {
     const startedAt = Date.now();
     const timer = window.setInterval(

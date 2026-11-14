@@ -128,7 +128,7 @@ const make = Effect.gen(function* () {
         publicKey: input.environmentPublicKey,
         token: input.request.proof,
         typ: RELAY_ACTIVITY_PUBLISH_TYP,
-        issuer: `t3-env:${input.environmentId}`,
+        issuer: `t2-env:${input.environmentId}`,
         audience: normalizeRelayIssuer(config.relayIssuer),
       }).pipe(
         Effect.provideService(Signature.Signature, signature),

@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode, type RefObject } from "react";
 
 import { TextFieldSpeechControls, useTextFieldSpeech } from "~/speech/useTextFieldSpeech";
 import { pullRequestEnvironment } from "~/state/pullRequests";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 
 import { isCommentSubmitShortcut } from "../diffs/commentSubmitShortcut";
 import { Button } from "../ui/button";
@@ -92,7 +92,7 @@ export function PullRequestReviewForm({
     disabled: !active || pending,
   });
   const { cancel } = speech;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- discards a recording when the hidden form can no longer be submitted
+  // oxlint-disable-next-line t2code/react-effect-budget -- discards a recording when the hidden form can no longer be submitted
   useEffect(() => {
     if (!active) cancel();
   }, [active, cancel]);
