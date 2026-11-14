@@ -39,9 +39,25 @@ interface CloudEnvironmentRowsProps {
   readonly onRemoveEnvironment: (environmentId: EnvironmentId) => void;
   readonly showcaseAvailableEnvironments?: ReadonlyArray<RelayEnvironmentView>;
   readonly showcaseSignedIn?: boolean;
+  /**
+   * Hide the "T2 Connect" section title + refresh button for hosts that
+   * provide their own chrome (the onboarding sheet's native header and
+   * pull-to-refresh).
+   */
   readonly showHeader?: boolean;
 }
 
+/**
+ * "T2 Connect" section: every environment published to the signed-in account,
+ * with connect switches, availability status, refresh, and loading/error
+ * states. Shared between the Settings environments screen and the T2 Connect
+ * onboarding sheet.
+ *
+ * Already-connected relay environments render even without cloud config or a
+ * signed-in account — they are registered on this device and must stay
+ * reachable and removable. Only discovery (the available list, refresh, and
+ * its errors) requires a signed-in session.
+ */
 export function CloudEnvironmentRows(props: CloudEnvironmentRowsProps) {
   // Showcase lacks ClerkProvider; use fixture auth state to avoid a throwing useAuth call.
   if (props.showcaseSignedIn !== undefined) {
@@ -97,8 +113,29 @@ function CloudEnvironmentRowsContent(
   return (
     <View collapsable={false} className={cn("gap-3", showHeader && "mt-5")}>
       {showHeader ? (
-        <View className="px-1">
-          <Text className="text-sm font-t3-bold uppercase text-foreground-muted">T3 Connect</Text>
+        <View className="flex-row items-center justify-between px-1">
+          <Text className="text-sm font-t3-bold uppercase text-foreground-muted">T2 Connect</Text>
+          {discoveryAvailable ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={controller.relayDiscovery.isRefreshing}
+              onPress={() => {
+                void controller.refreshRelayEnvironments();
+              }}
+              className="h-9 w-9 items-center justify-center rounded-full bg-subtle active:opacity-70 disabled:opacity-50"
+            >
+              {controller.relayDiscovery.isRefreshing ? (
+                <ActivityIndicator colorClassName={"accent-icon"} size="small" />
+              ) : (
+                <SymbolView
+                  name="arrow.clockwise"
+                  size={14}
+                  tintColorClassName={"accent-icon"}
+                  type="monochrome"
+                />
+              )}
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 
@@ -153,7 +190,7 @@ function CloudEnvironmentRowsContent(
       !controller.relayDiscovery.isRefreshing ? (
         <View collapsable={false} className="gap-3 rounded-[24px] bg-grouped-card p-5">
           <Text className="text-base font-t3-bold text-foreground">
-            Could not load T3 Connect environments
+            Could not load T2 Connect environments
           </Text>
           <Text className="text-sm text-foreground-muted">{controller.relayDiscovery.error}</Text>
           {controller.relayDiscovery.errorTraceId ? (
