@@ -145,14 +145,14 @@ describe("ElectronProtocol", () => {
         Effect.gen(function* () {
           const protocol = yield* ElectronProtocol.ElectronProtocol;
           yield* protocol.registerDesktopProtocol({
-            scheme: "t3code-dev",
+            scheme: "t2code-dev",
             targetOrigin: new URL("http://127.0.0.1:5733/"),
             clerkFrontendApiHostname: undefined,
           });
           yield* Effect.promise(() =>
-            handler!(new Request("t3code-dev://app//example.com/src/main.tsx?t=1")),
+            handler!(new Request("t2code-dev://app//example.com/src/main.tsx?t=1")),
           );
-          yield* Effect.promise(() => handler!(new Request("t3code-dev://app/\\example.com/")));
+          yield* Effect.promise(() => handler!(new Request("t2code-dev://app/\\example.com/")));
         }),
       );
 

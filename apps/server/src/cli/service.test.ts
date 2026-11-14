@@ -107,14 +107,14 @@ it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("service commands
   );
 
   it.effect.each([
-    { label: "a new service", installed: false, env: "", expected: "T3CODE_LAN=false\n" },
-    // Services installed before T3CODE_LAN existed keep listening on the local network.
+    { label: "a new service", installed: false, env: "", expected: "T2CODE_LAN=false\n" },
+    // Services installed before T2CODE_LAN existed keep listening on the local network.
     { label: "an older service", installed: true, env: "", expected: "" },
     {
       label: "a set host",
       installed: false,
-      env: "T3CODE_HOST=::\n",
-      expected: "T3CODE_HOST=::\n",
+      env: "T2CODE_HOST=::\n",
+      expected: "T2CODE_HOST=::\n",
     },
     {
       label: "a quoted multiline value",
@@ -125,7 +125,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("service commands
   ])("install keeps $label off the local network only when it is new", (input) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-cli-test-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-cli-test-" });
       yield* fs.writeFileString(`${baseDir}/service.env`, input.env);
       const { service } = makeTestService({
         ...status,
@@ -162,7 +162,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("service commands
   it.effect("protect refuses root before creating any T3 directories", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-cli-test-" });
+      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-cli-test-" });
       const baseDir = `${parent}/t3`;
       vi.spyOn(BootService, "layer").mockReturnValue(
         Layer.succeed(BootService.BootService, makeTestService(status).service),
