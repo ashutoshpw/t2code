@@ -637,7 +637,7 @@ const make = Effect.gen(function* () {
     function* (environmentId) {
       const notLinked = new PeerLinkError({
         reason: "unknown_link",
-        message: `This environment is not linked to ${environmentId}. t3_environment_links lists the linked ones.`,
+        message: `This environment is not linked to ${environmentId}. t2_environment_links lists the linked ones.`,
       });
       const row = yield* readRow(environmentId);
       if (Option.isNone(row)) return yield* notLinked;
