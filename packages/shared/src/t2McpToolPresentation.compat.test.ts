@@ -77,8 +77,8 @@ describe("resolveT2McpToolPresentation", () => {
   it("matches the separator variants ACP registry agents emit", () => {
     for (const name of [
       "mcp_t3-code_delegate_task",
-      "t2_code:delegate_task",
-      "t3code/delegate_task",
+      "t3_code:delegate_task",
+      "t2code/delegate_task",
       "t3-code delegate_task",
       "T2 Code delegate_task",
       "t3-code__delegate_task",

@@ -10,7 +10,7 @@ To reproduce an archive, use Node 24 and the repository's pinned Yarn from a
 clean fork checkout at the source commit recorded in its `t3-fork.json`:
 
 ```sh
-yarn --cwd /tmp/t3-screens-fork pack:t3 /absolute/path/to/t3code/apps/mobile/deps
+yarn --cwd /tmp/t3-screens-fork pack:t3 /absolute/path/to/t2code/apps/mobile/deps
 ```
 
 For an update, sync the fork's `main` with upstream, merge it and the required

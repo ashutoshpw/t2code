@@ -2,11 +2,11 @@ import { describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const rule = createOxlintRuleHarness("t3code/no-hookless-use-function", {
+const rule = createOxlintRuleHarness("t2code/no-hookless-use-function", {
   filename: "fixture.tsx",
 });
 
-describe("t3code/no-hookless-use-function", () => {
+describe("t2code/no-hookless-use-function", () => {
   rule.valid(
     "allows a hook that calls useState",
     `function useCount() { const [count] = useState(0); return count; }`,

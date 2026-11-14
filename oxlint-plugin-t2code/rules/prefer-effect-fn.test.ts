@@ -2,9 +2,9 @@ import { assert, describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const rule = createOxlintRuleHarness("t3code/prefer-effect-fn");
+const rule = createOxlintRuleHarness("t2code/prefer-effect-fn");
 
-describe("t3code/prefer-effect-fn", () => {
+describe("t2code/prefer-effect-fn", () => {
   rule.valid(
     "allows inline programs and layer construction",
     `

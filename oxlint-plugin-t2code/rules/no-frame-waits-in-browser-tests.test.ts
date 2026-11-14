@@ -2,14 +2,14 @@ import { describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const browserTest = createOxlintRuleHarness("t3code/no-frame-waits-in-browser-tests", {
+const browserTest = createOxlintRuleHarness("t2code/no-frame-waits-in-browser-tests", {
   filename: "Widget.browser.test.tsx",
 });
-const unitTest = createOxlintRuleHarness("t3code/no-frame-waits-in-browser-tests", {
+const unitTest = createOxlintRuleHarness("t2code/no-frame-waits-in-browser-tests", {
   filename: "widget.test.tsx",
 });
 
-describe("t3code/no-frame-waits-in-browser-tests", () => {
+describe("t2code/no-frame-waits-in-browser-tests", () => {
   browserTest.valid(
     "allows retrying assertions and the full fake timer set",
     [

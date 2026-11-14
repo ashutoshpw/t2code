@@ -29,7 +29,7 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as References from "effect/References";
 import * as Schema from "effect/Schema";
-// oxlint-disable-next-line t3code/no-raw-mcp-registration -- the eval calls the device tools McpHttpServer registered and registers none.
+// oxlint-disable-next-line t2code/no-raw-mcp-registration -- the eval calls the device tools McpHttpServer registered and registers none.
 import { McpSchema, McpServer } from "effect/ai";
 
 import * as ServerConfig from "../../apps/server/src/config.ts";

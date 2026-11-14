@@ -2,7 +2,7 @@ import { assert, describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const rule = createOxlintRuleHarness("t3code/no-real-time-wait-in-tests", {
+const rule = createOxlintRuleHarness("t2code/no-real-time-wait-in-tests", {
   filename: "fixture.test.ts",
 });
 
@@ -10,7 +10,7 @@ const REAL_CLOCK = /Real-clock wait in a test/;
 const UNDRIVEN = /never fire without `TestClock.adjust`/;
 const MIXED = /they never meet/;
 
-describe("t3code/no-real-time-wait-in-tests", () => {
+describe("t2code/no-real-time-wait-in-tests", () => {
   rule.valid(
     "allows TestClock-driven sleeps and timeout safety nets",
     `
@@ -255,7 +255,7 @@ describe("t3code/no-real-time-wait-in-tests", () => {
   );
 });
 
-const productionRule = createOxlintRuleHarness("t3code/no-real-time-wait-in-tests");
+const productionRule = createOxlintRuleHarness("t2code/no-real-time-wait-in-tests");
 
 productionRule.valid(
   "ignores non-test files",
