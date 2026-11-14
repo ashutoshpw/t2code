@@ -1,11 +1,8 @@
 /**
- * Where development state lives, and how to keep it away from the shared
- * `~/.t2` that a user's installed T2 Code runs against.
- *
- * A linked git worktree gets its own (gitignored) `.t2`: feature work in a
- * throwaway branch must not share a database with the real app, and an ambient
- * `T2CODE_HOME` counts as an explicit base dir — flipping the state directory
- * from `<base>/dev` to `<base>/userdata`, the live production database.
+ * Where development state lives, kept away from the shared `~/.t2` an
+ * installed T2 Code runs against. A linked worktree gets its own (gitignored)
+ * `.t2`: throwaway work must not share the live database. An ambient
+ * `T2CODE_HOME` counts as explicit and flips `<base>/dev` to `<base>/userdata`.
  */
 
 import * as Effect from "effect/Effect";

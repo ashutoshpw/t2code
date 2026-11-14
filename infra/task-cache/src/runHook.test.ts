@@ -37,9 +37,9 @@ it("sends telemetry from a detached flusher that the task runner does not wait f
     if (!address || typeof address === "string") throw new Error("Missing HTTP address");
     const endpoint = `http://127.0.0.1:${address.port}/projects/test`;
     await NodeFSP.writeFile(NodePath.join(root, ".task-cache.json"), JSON.stringify({ endpoint }));
-    await NodeFSP.mkdir(NodePath.join(root, ".config/t3-task-cache"), { recursive: true });
+    await NodeFSP.mkdir(NodePath.join(root, ".config/t2-task-cache"), { recursive: true });
     await NodeFSP.writeFile(
-      NodePath.join(root, ".config/t3-task-cache/credentials.json"),
+      NodePath.join(root, ".config/t2-task-cache/credentials.json"),
       JSON.stringify({ [endpoint]: { name: "maria", token: "secret" } }),
     );
     vi.stubEnv("HOME", root);
@@ -185,9 +185,9 @@ it("installs without masking .profile and configures CI through bash", async () 
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Missing HTTP address");
     await NodeFSP.writeFile(NodePath.join(home, ".profile"), "export EXISTING_PROFILE=preserved\n");
-    await NodeFSP.mkdir(NodePath.join(home, ".config/t3-task-cache"), { recursive: true });
+    await NodeFSP.mkdir(NodePath.join(home, ".config/t2-task-cache"), { recursive: true });
     await NodeFSP.writeFile(
-      NodePath.join(home, ".config/t3-task-cache/credentials.json"),
+      NodePath.join(home, ".config/t2-task-cache/credentials.json"),
       "{partial",
     );
     await run(
@@ -225,13 +225,13 @@ it("installs without masking .profile and configures CI through bash", async () 
     expect(output).toContain("/infra/task-cache/src/preload.mjs");
     await NodeFSP.rm(NodePath.join(home, ".local/share/t3-task-cache/preload.mjs"));
     const missing = await run(["bash", "-c", `node -e 'console.log("missing preload is safe")'`], {
-      BASH_ENV: NodePath.join(home, ".config/t3-task-cache/env"),
+      BASH_ENV: NodePath.join(home, ".config/t2-task-cache/env"),
     });
     expect(missing).toContain("missing preload is safe");
 
     await NodeFSP.writeFile(
       NodePath.join(home, ".bash_profile"),
-      '. "$HOME/.config/t3-task-cache/env"\n',
+      '. "$HOME/.config/t2-task-cache/env"\n',
     );
     await run(
       [
@@ -248,7 +248,7 @@ it("installs without masking .profile and configures CI through bash", async () 
     expect(await NodeFSP.readFile(NodePath.join(home, ".profile"), "utf8")).not.toContain(
       "t3-task-cache/env",
     );
-    expect(await NodeFSP.readdir(NodePath.join(home, ".config/t3-task-cache"))).not.toContain(
+    expect(await NodeFSP.readdir(NodePath.join(home, ".config/t2-task-cache"))).not.toContain(
       "credentials.json",
     );
     const remaining = await run(
@@ -302,9 +302,9 @@ it("does not send an old endpoint's token after changing the URL interactively",
       NodePath.join(import.meta.dirname, "nativeHook.js"),
       NodePath.join(root, "infra/task-cache/src/nativeHook.js"),
     );
-    await NodeFSP.mkdir(NodePath.join(root, ".config/t3-task-cache"), { recursive: true });
+    await NodeFSP.mkdir(NodePath.join(root, ".config/t2-task-cache"), { recursive: true });
     await NodeFSP.writeFile(
-      NodePath.join(root, ".config/t3-task-cache/credentials.json"),
+      NodePath.join(root, ".config/t2-task-cache/credentials.json"),
       JSON.stringify({
         [endpoint]: { name: "maria", token: "different-saved-endpoint-credential" },
       }),

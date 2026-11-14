@@ -60,10 +60,7 @@ const event = (type: string, data: Record<string, unknown>): ProviderReplayEntry
 });
 const labelled = (entry: ProviderReplayEntry, label: string): ProviderReplayEntry =>
   entry.type === "runtime_exit" ? entry : { ...entry, label };
-/**
- * T2's own rules after a mode's: every thread's T2 MCP server is denied, and
- * then this thread's own is allowed again (last match wins).
- */
+/** MCP rules are last-match-wins; allow this thread after denying all T3 servers. */
 const mcpRules = (name: string) => [
   { action: "t2-code-*", resource: "*", effect: "deny" },
   { action: `t2-code-thread_${name}_*`, resource: "*", effect: "allow" },

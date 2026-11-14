@@ -130,7 +130,6 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         assert.equal(manifest.name, "@t2code/cli");
         assert.equal(manifest.version, VERSION);
         assert.deepStrictEqual(manifest.bin, { t2code: "./bin/t2code.mjs" });
-        // Nothing for npm to resolve, so nothing that can lag behind the launcher.
         assert.isUndefined(manifest.dependencies);
         assert.isUndefined(manifest.optionalDependencies);
         assert.isAbove(npmReleaseDatabaseMigration(manifest) ?? 0, 0);
@@ -197,8 +196,6 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
           );
         }
 
-        // Services installed before 0.0.41 fork dist/bin.mjs and talk to the
-        // server over IPC; the channel and SIGTERM must reach the executable.
         const ipcServer = path.join(home, "runtime/versions", VERSION, "t2");
         yield* fs.writeFileString(
           ipcServer,

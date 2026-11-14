@@ -48,8 +48,7 @@ const pageSource = Effect.fn("HtmlToolkit.pageSource")(function* (input: {
 });
 
 const handlers = {
-  // The headless browser runs on the host and can open local files, so only
-  // agents T2 launched, which already work on this machine, get it.
+  // Local-file access limits this host browser to T3-launched agents.
   html_preview: McpToolAccess.readsAsCaller((input) =>
     Effect.gen(function* () {
       const htmlRender = yield* HtmlRender.HtmlRender;

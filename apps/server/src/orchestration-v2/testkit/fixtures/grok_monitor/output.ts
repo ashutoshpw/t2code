@@ -1,5 +1,6 @@
 import { assert } from "@effect/vitest";
 import type { ProviderReplayTranscript } from "@t2code/contracts";
+import { derivePendingBackgroundWork } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
 
 import type { OrchestratorV2ScenarioResult } from "../../OrchestratorScenario.ts";
 import { cancelledTurnItemWork } from "../../../RestartBackgroundNote.ts";

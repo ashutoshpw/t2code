@@ -17,7 +17,7 @@ import { filePreviewKind } from "@t2code/shared/filePreview";
 import { imageMimeType } from "@t2code/shared/image";
 import { videoMimeType } from "@t2code/shared/video";
 
-/** The working row while T3 Code's own compaction runs. */
+/** The working row while T2 Code's own compaction runs. */
 export const IDLE_COMPACTING_LABELS = {
   beforeCacheExpires: "Compacting before the cache expires…",
   onReturn: "Compacting…",
@@ -68,7 +68,7 @@ export function resolveUserMessagePresentation(message: {
   readonly context?: { readonly guest?: GuestMessageAttribution | undefined } | undefined;
 }): {
   readonly text: string;
-  readonly attribution: "automation" | "agent" | "t2code" | null;
+  readonly attribution: "automation" | "agent" | "t2code" | "guest" | null;
   readonly scheduledTaskId: ScheduledTaskId | undefined;
   /** Set when `attribution` is "guest". */
   readonly guestName?: string;

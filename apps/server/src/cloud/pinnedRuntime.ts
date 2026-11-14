@@ -31,21 +31,15 @@ const CLI_PACKAGE_NAME = "@t2code/cli";
 
 /**
  * A pinned runtime is an exact t2 release archive unpacked into
- * <baseDir>/runtime/versions/<version>: the self-contained executable, the
- * web client, and the native packages beside it. The boot service points its
- * unit or launch agent at the executable, and server self-update installs the
- * target version here before switching over. The runtime never depends on a
- * Node or npm on the machine; the only npm involvement in T2 Code is the
- * `@t2code/cli` package for people who prefer `npx @t2code/cli` or
- * `npm install -g @t2code/cli`, and even a CLI installed that way pins an
- * archive when it sets up the service.
+ * <baseDir>/runtime/versions/<version>: the self-contained executable, the web
+ * client, and the native packages beside it. The boot service points at the
+ * executable; self-update installs here before switching over. No Node/npm.
  */
 const PINNED_RUNTIME_DIR = "runtime";
 const PINNED_RUNTIME_INSTALL_TIMEOUT = Duration.minutes(10);
 const PINNED_RUNTIME_DOWNLOAD_STALL_TIMEOUT = Duration.minutes(1);
-const PINNED_RUNTIME_ARCHIVE_FILE = "t2-runtime-archive";
-// Boot-service setup and remote update can construct separate layers. Serialize
-// the complete install transaction across every caller in this process.
+const PINNED_RUNTIME_ARCHIVE_FILE = "t3-runtime-archive";
+// Separate layers share one install lock across this process.
 const pinnedRuntimeInstallLock = Semaphore.makeUnsafe(1);
 
 export interface PinnedRuntimePaths {
@@ -250,9 +244,8 @@ const installFromArchive = Effect.fn("cloud.pinned_runtime.install_archive")(fun
       ),
     );
   input.onProgress?.({ stage: "extract" });
-  const extractStep = "extracting the t2 release archive";
-  // The archive wraps everything in one directory named after its stem;
-  // strip it so the executable lands at <versionDir>/t2.
+  const extractStep = "extracting the t3 release archive";
+  // Strip the archive's stem directory so the executable lands at <versionDir>/t3.
   yield* input.runner
     .run({
       command: cliArchiveTarCommand(input.platform, process.env),
