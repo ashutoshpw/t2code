@@ -67,9 +67,9 @@ const makeHandler = Effect.fnUntraced(function* (
             .pipe(Effect.ignore),
         })
         .pipe(
-          Effect.map(Option.some),
+          Effect.asSome,
           Effect.catchTags({
-            DesktopBrowserHostUnavailableError: () => Effect.succeed(Option.none()),
+            DesktopBrowserHostUnavailableError: () => Effect.succeedNone,
           }),
         );
       if (Option.isNone(session)) {

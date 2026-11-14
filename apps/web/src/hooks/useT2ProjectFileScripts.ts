@@ -5,7 +5,6 @@ import {
   type T2ProjectFileScript,
 } from "@t2code/contracts";
 import { parseT2ProjectFile } from "@t2code/shared/t2ProjectFile";
-import { useMemo } from "react";
 
 import { useProjectFileQuery } from "~/components/files/projectFilesQueryState";
 
