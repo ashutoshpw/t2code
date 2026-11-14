@@ -3,11 +3,15 @@ import { ConnectionTraceId } from "./ConnectionTraceId";
 import { SymbolView } from "../../components/ui/AppSymbol";
 import { hasSavedBearerRoute, hostFreezeNotice } from "@t2code/client-runtime/connection";
 import type { AtomCommandResult } from "@t2code/client-runtime/state/runtime";
-import { type EnvironmentId, resolveEnvironmentMachineKind } from "@t2code/contracts";
+import {
+  AuthOrchestrationOperateScope,
+  type EnvironmentId,
+  resolveEnvironmentMachineKind,
+} from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 
@@ -19,6 +23,7 @@ import { ThemedSwitch } from "../../components/ui/ThemedSwitch";
 import { cn } from "../../lib/cn";
 import type { ConnectedEnvironmentSummary } from "../../state/remote-runtime-types";
 import { serverEnvironment } from "../../state/server";
+import { environmentSession } from "../../state/session";
 import { environmentPresentations } from "../../state/presentation";
 import { ConnectionDiagnosisDetails, useConnectionDiagnosis } from "./ConnectionDiagnosisDetails";
 import { ConnectionFormField } from "./ConnectionFormField";
@@ -44,12 +49,12 @@ export function ConnectionEnvironmentRow(props: {
   readonly onReconnect: (environmentId: EnvironmentId) => void;
   readonly onRemove: (environmentId: EnvironmentId) => void;
   readonly onSetEnabled: (environmentId: EnvironmentId, enabled: boolean) => void;
+  readonly onRename: (environmentId: EnvironmentId) => void;
   readonly onUpdate: (
     environmentId: EnvironmentId,
-    updates: { readonly label: string; readonly displayUrl: string },
+    updates: { readonly label?: string; readonly displayUrl: string },
   ) => Promise<AtomCommandResult<unknown, unknown>>;
 }) {
-  const [label, setLabel] = useState(props.environment.environmentLabel);
   const [url, setUrl] = useState(props.environment.displayUrl);
   const [label, setLabel] = useState(props.environment.environmentLabel);
   const serverConfig = useAtomValue(
@@ -75,9 +80,16 @@ export function ConnectionEnvironmentRow(props: {
     enabled &&
     (props.environment.connectionState === "connecting" ||
       props.environment.connectionState === "reconnecting");
-  const handleSave = async () => {
+  const sessionState = useAtomValue(
+    environmentSession.sessionStateValueAtom(props.environment.environmentId),
+  );
+  const canRename =
+    props.environment.connectionState === "connected" &&
+    Boolean(
+      sessionState?.authenticated && sessionState.scopes?.includes(AuthOrchestrationOperateScope),
+    );
+  const handleSave = useCallback(async () => {
     const result = await props.onUpdate(props.environment.environmentId, {
-      label: label.trim(),
       displayUrl: url.trim(),
     });
     if (AsyncResult.isSuccess(result)) {
@@ -89,7 +101,7 @@ export function ConnectionEnvironmentRow(props: {
       "Could not update environment",
       error instanceof Error ? error.message : "The environment could not be updated.",
     );
-  };
+  }, [url, props]);
 
   return (
     <Animated.View layout={LinearTransition.duration(250)} className="bg-grouped-card">
@@ -187,13 +199,33 @@ export function ConnectionEnvironmentRow(props: {
             justifyContent: "center",
           }}
         >
-          <SymbolView
-            name={props.opensDetails ? "chevron.right" : "chevron.down"}
-            size={12}
-            tintColorClassName="accent-icon-subtle"
-            type="monochrome"
-            style={{ transform: [{ rotate: props.expanded ? "180deg" : "0deg" }] }}
-          />
+          <View className="flex-row items-center gap-2">
+            {canRename ? (
+              <Pressable
+                accessibilityLabel={`Rename ${props.environment.environmentLabel}`}
+                accessibilityRole="button"
+                className="h-8 w-8 items-center justify-center rounded-full active:bg-subtle"
+                onPress={(event) => {
+                  event.stopPropagation();
+                  props.onRename(props.environment.environmentId);
+                }}
+              >
+                <SymbolView
+                  name="pencil"
+                  size={13}
+                  tintColorClassName="accent-icon-subtle"
+                  type="monochrome"
+                />
+              </Pressable>
+            ) : null}
+            <SymbolView
+              name={props.opensDetails ? "chevron.right" : "chevron.down"}
+              size={12}
+              tintColorClassName="accent-icon-subtle"
+              type="monochrome"
+              style={{ transform: [{ rotate: props.expanded ? "180deg" : "0deg" }] }}
+            />
+          </View>
         </Pressable>
       </View>
 

@@ -391,6 +391,12 @@ function ConnectionsSettingsContent({
   );
   const canReadAccess = useEnvironmentScope(accessEnvironmentId, AuthAccessReadScope);
   const canWriteAccess = useEnvironmentScope(accessEnvironmentId, AuthAccessWriteScope);
+  const canRenamePrimary = useEnvironmentScope(primaryEnvironmentId, AuthOrchestrationOperateScope);
+  const environmentLabels = environments.map((environment) => ({
+    environmentId: environment.environmentId,
+    label: environment.label,
+  }));
+
   const canReadRelay = useEnvironmentScope(accessEnvironmentId, AuthRelayReadScope);
   const canMaintain = useEnvironmentScope(accessEnvironmentId, AuthEnvironmentMaintainScope);
   const canManageRelay = useEnvironmentScope(accessEnvironmentId, AuthRelayWriteScope);
@@ -1665,6 +1671,24 @@ function ConnectionsSettingsContent({
             title="No environment selected"
             description="Connect an environment to view its settings and access."
           />
+          {primaryEnvironment && primaryEnvironmentId ? (
+            <SettingsRow
+              title="Environment name"
+              description="Shown to clients connected to this environment. Clear the name to use the machine name."
+              control={
+                <EnvironmentLabelControl
+                  environmentId={primaryEnvironmentId}
+                  label={primaryEnvironment.label}
+                  environmentLabels={environmentLabels}
+                  canRename={canRenamePrimary}
+                  showValue
+                />
+              }
+            />
+          ) : null}
+          {canReadRelay || canManageRelay ? (
+            <CloudLinkRow canReadRelay={canReadRelay} canManageRelay={canManageRelay} />
+          ) : null}
         </SettingsSection>
       )}
     </>
@@ -1702,6 +1726,7 @@ function ConnectionsSettingsContent({
           <SavedBackendListRow
             key={environment.environmentId}
             environment={environment}
+            environmentLabels={environmentLabels}
             removingEnvironmentId={removingSavedEnvironmentId}
             onSetEnabled={handleSetSavedBackendEnabled}
             onRemove={handleRemoveSavedBackend}
