@@ -228,7 +228,7 @@ const layerGitFixtureTemplates = Layer.effect(
     yield* fs.writeFileString(NodePath.join(repo, "README.md"), "hello\n");
     yield* runGit(repo, ["add", "README.md"]);
     yield* runGit(repo, ["commit", "-m", "Initial commit"]);
-    const bareRemote = yield* makeTempDir("t3code-git-remote-template-");
+    const bareRemote = yield* makeTempDir("t2code-git-remote-template-");
     yield* runGit(bareRemote, ["init", "--bare", "--template="]);
     yield* fs.makeDirectory(NodePath.join(bareRemote, "hooks"), { recursive: true });
     return { repo, bareRemote };
@@ -255,7 +255,7 @@ function createBareRemote(): Effect.Effect<
   return Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const templates = yield* GitFixtureTemplates;
-    const remoteDir = yield* makeTempDir("t3code-git-remote-");
+    const remoteDir = yield* makeTempDir("t2code-git-remote-");
     yield* fs.copy(templates.bareRemote, remoteDir, { overwrite: true });
     return remoteDir;
   });
@@ -1108,7 +1108,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("a warm branch PR lookup starts no git process", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -1408,7 +1408,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
               {
                 number: 216,
                 title: "Saved branch PR",
-                url: "https://github.com/pingdotgg/t3code/pull/216",
+                url: "https://github.com/pingdotgg/t2code/pull/216",
                 baseRefName: "main",
                 headRefName: "feature/saved-branch",
                 headSha: "a".repeat(40),
@@ -1428,7 +1428,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       expect(pullRequest).toMatchObject({
         number: 216,
         title: "Saved branch PR",
-        url: "https://github.com/pingdotgg/t3code/pull/216",
+        url: "https://github.com/pingdotgg/t2code/pull/216",
         baseRef: "main",
         headRef: "feature/saved-branch",
         headSha: "a".repeat(40),
@@ -1509,7 +1509,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
               {
                 number: 217,
                 title: "Deleted local branch PR",
-                url: "https://github.com/pingdotgg/t3code/pull/217",
+                url: "https://github.com/pingdotgg/t2code/pull/217",
                 baseRefName: "main",
                 headRefName: "feature/deleted-local-branch",
                 state: "merged",
@@ -2060,7 +2060,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
               {
                 number: 215,
                 title: "Merged branch was deleted",
-                url: "https://github.com/pingdotgg/t3code/pull/215",
+                url: "https://github.com/pingdotgg/t2code/pull/215",
                 baseRefName: "main",
                 headRefName: "feature/merged-branch-deleted",
                 state: "merged",
@@ -2078,7 +2078,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       expect(status.pr).toEqual({
         number: 215,
         title: "Merged branch was deleted",
-        url: "https://github.com/pingdotgg/t3code/pull/215",
+        url: "https://github.com/pingdotgg/t2code/pull/215",
         baseRef: "main",
         headRef: "feature/merged-branch-deleted",
         state: "merged",
@@ -2150,7 +2150,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("status reports nothing to ship after a squash merge kept the remote branch", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -2175,7 +2175,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("status still reports work to ship for a commit added after a squash merge", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -2200,7 +2200,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("status still reports work against main after a merge into another base", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const initialSha = (yield* runGit(repoDir, ["rev-parse", "HEAD"])).stdout.trim();
       const remoteDir = yield* createBareRemote();
@@ -2513,13 +2513,13 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
                 {
                   number: 1661,
                   title: "Fork PR from main",
-                  url: "https://github.com/pingdotgg/t3code/pull/1661",
+                  url: "https://github.com/pingdotgg/t2code/pull/1661",
                   baseRefName: "main",
                   headRefName: "main",
                   state: "open",
                   updatedAt: "2026-04-01T15:00:00Z",
                   isCrossRepository: true,
-                  headRepositoryNameWithOwner: "lnieuwenhuis/t3code",
+                  headRepositoryNameWithOwner: "lnieuwenhuis/t2code",
                   headRepositoryOwnerLogin: "lnieuwenhuis",
                 },
               ],
@@ -2582,7 +2582,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       });
 
       const status = yield* manager.status({ cwd: repoDir });
-      expect(status.refName).toBe("t3code/pr-488/statemachine");
+      expect(status.refName).toBe("t2code/pr-488/statemachine");
       expect(status.pr).toEqual({
         number: 488,
         title: "Rebase this PR on latest main",
@@ -2643,7 +2643,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       });
 
       const status = yield* manager.status({ cwd: repoDir });
-      expect(status.refName).toBe("t3code/pr-777/main");
+      expect(status.refName).toBe("t2code/pr-777/main");
       expect(status.pr).toEqual({
         number: 777,
         title: "Fork PR from main",
@@ -2701,7 +2701,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
                 {
                   number: 1618,
                   title: "Correct PR",
-                  url: "https://github.com/pingdotgg/t3code/pull/1618",
+                  url: "https://github.com/pingdotgg/t2code/pull/1618",
                   baseRefName: "main",
                   headRefName: "effect-atom",
                   state: "open",
@@ -2712,7 +2712,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
                 {
                   number: 1518,
                   title: "Wrong PR",
-                  url: "https://github.com/pingdotgg/t3code/pull/1518",
+                  url: "https://github.com/pingdotgg/t2code/pull/1518",
                   baseRefName: "main",
                   headRefName: "upstream/effect-atom",
                   state: "open",
@@ -2728,7 +2728,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
         expect(status.pr).toEqual({
           number: 1618,
           title: "Correct PR",
-          url: "https://github.com/pingdotgg/t3code/pull/1618",
+          url: "https://github.com/pingdotgg/t2code/pull/1618",
           baseRef: "main",
           headRef: "effect-atom",
           state: "open",
@@ -3442,7 +3442,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("prefers a V2-native thread's project settings over an explicit project", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       NodeFS.writeFileSync(NodePath.join(repoDir, "README.md"), "hello\nproject\n");
       const projectId = ProjectId.make("project:git-settings");
@@ -3538,7 +3538,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "a failed generation preserves staging changed while generating (paths: %s)",
     (filePaths) =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         NodeFS.writeFileSync(NodePath.join(repoDir, "README.md"), "hello\nstaged\n");
         yield* runGit(repoDir, ["add", "README.md"]);
@@ -4253,8 +4253,8 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
   it.effect("accepts fork PR metadata when origin is the fork checkout remote", () =>
     Effect.sync(() => {
       const headContext = {
-        headBranch: "t3code/git-audit-stability",
-        headRepositoryNameWithOwner: "justsomelegs/t3code",
+        headBranch: "t2code/git-audit-stability",
+        headRepositoryNameWithOwner: "justsomelegs/t2code",
         headRepositoryOwnerLogin: "justsomelegs",
         isCrossRepository: false,
       };
@@ -4264,13 +4264,13 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
           {
             number: 2284,
             title: "Improve branch mismatch warnings",
-            url: "https://github.com/pingdotgg/t3code/pull/2284",
+            url: "https://github.com/pingdotgg/t2code/pull/2284",
             baseRefName: "main",
-            headRefName: "t3code/git-audit-stability",
+            headRefName: "t2code/git-audit-stability",
             state: "open",
             updatedAt: Option.none(),
             isCrossRepository: true,
-            headRepositoryNameWithOwner: "justsomelegs/t3code",
+            headRepositoryNameWithOwner: "justsomelegs/t2code",
             headRepositoryOwnerLogin: "justsomelegs",
           },
           headContext,
@@ -4798,12 +4798,12 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
                 {
                   number: 1661,
                   title: "Fork PR with same branch name",
-                  url: "https://github.com/pingdotgg/t3code/pull/1661",
+                  url: "https://github.com/pingdotgg/t2code/pull/1661",
                   baseRefName: "main",
                   headRefName: "feature/no-fork-match",
                   state: "open",
                   isCrossRepository: true,
-                  headRepositoryNameWithOwner: "lnieuwenhuis/t3code",
+                  headRepositoryNameWithOwner: "lnieuwenhuis/t2code",
                   headRepositoryOwnerLogin: "lnieuwenhuis",
                 },
               ],
@@ -6199,7 +6199,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
           pullRequest: {
             number: 642,
             title: "fix: use commit as the default git action without origin",
-            url: "https://github.com/pingdotgg/t3code/pull/642",
+            url: "https://github.com/pingdotgg/t2code/pull/642",
             baseRefName: "main",
             headRefName: "fix/git-action-default-without-origin",
             state: "open",
@@ -6207,7 +6207,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
             headRepositoryOwnerLogin: "binbandit",
           },
           repositoryCloneUrls: {
-            "binbandit/t3code": {
+            "binbandit/t2code": {
               url: forkDir,
               sshUrl: forkDir,
             },

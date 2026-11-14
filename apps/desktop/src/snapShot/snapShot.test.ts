@@ -429,8 +429,8 @@ describe("findAccessibleWindow", () => {
   });
 
   it.each([
-    ["⠋ t3code", "t3code"],
-    ["t3code", "⠙ t3code"],
+    ["⠋ t2code", "t2code"],
+    ["t2code", "⠙ t2code"],
   ])("matches a Wayland spinner starting or stopping: %s → %s", (title, name) => {
     const windows = [{ name, bounds: captured.bounds }];
 
@@ -438,10 +438,10 @@ describe("findAccessibleWindow", () => {
   });
 
   it.each([
-    ["⠋ t3code", "⠙ private"],
-    ["t3code ⠋", "t3code ⠙"],
-    ["⠋t3code", "⠙t3code"],
-    ["⠁ t3code", "⠙ t3code"],
+    ["⠋ t2code", "⠙ private"],
+    ["t2code ⠋", "t2code ⠙"],
+    ["⠋t2code", "⠙t2code"],
+    ["⠁ t2code", "⠙ t2code"],
     ["⠋", "⠋"],
   ])("does not guess a Wayland title match: %s → %s", (title, name) => {
     expect(
