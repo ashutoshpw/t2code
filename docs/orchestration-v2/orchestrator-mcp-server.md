@@ -8,7 +8,7 @@ agent can use this endpoint to:
 - create an app-owned sub-agent on any supported provider instance;
 - wait for or poll the sub-agent's durable result;
 - cancel an active delegated task; and
-- create one or more ordinary top-level T3 threads;
+- create one or more ordinary top-level T2 threads;
 - list a project's threads and incrementally read any thread;
 - rename threads, regenerate titles, and link or unlink pull requests;
 - send or steer follow-up messages;
@@ -41,8 +41,8 @@ preview toolkit and the orchestration toolkit.
 Before `ProviderSessionManager` opens a new V2 provider session, it asks
 `McpSessionRegistry` for a credential scoped to:
 
-- the T3 environment;
-- the parent T3 thread;
+- the T2 environment;
+- the parent T2 thread;
 - the concrete provider instance; and
 - the provider session.
 
@@ -160,8 +160,8 @@ extension into the server cache and spawns
 `pi --mode rpc --extension <cache>/pi-t2-mcp-extension.ts` with:
 
 ```text
-T3_MCP_URL=http://127.0.0.1:<port>/mcp
-T3_MCP_BEARER_TOKEN=<provider-session-token>
+T2_MCP_URL=http://127.0.0.1:<port>/mcp
+T2_MCP_BEARER_TOKEN=<provider-session-token>
 ```
 
 The extension preserves public names under `mcp__t3-code__` for saved loadouts
@@ -355,7 +355,7 @@ optional cancellation reason.
 
 ### `create_threads`
 
-Creates between one and twenty ordinary top-level T3 threads:
+Creates between one and twenty ordinary top-level T2 threads:
 
 ```ts
 type CreateThreadsInput = {
@@ -411,7 +411,7 @@ the environment by thread ID. A deleted thread returns `thread_not_found`. The
 default `messages` view returns user messages, assistant
 messages, and proposed plans. The `activity` view also returns summarized tool,
 reasoning, checkpoint, handoff, and runtime-request items. Large item text is
-bounded and reports whether it was truncated. An agent in a T3 thread that
+bounded and reports whether it was truncated. An agent in a T2 thread that
 reads without a cursor gets the newest items, and `beforePosition=earlierPosition`
 reads older ones. Client callers (the CLI, linked environments, outside MCP
 clients) start at the oldest item instead, because the CLI and linked

@@ -1,5 +1,5 @@
 // @effect-diagnostics globalTimers:off - The release timer runs in web and native clients, outside an Effect runtime.
-import type { EnvironmentId, OrchestrationV2ShellSnapshot } from "@t3tools/contracts";
+import type { EnvironmentId, OrchestrationV2ShellSnapshot } from "@t2code/contracts";
 import { AsyncResult, Atom } from "effect/reactivity";
 
 import { AVAILABLE_CONNECTION_STATE, type SupervisorConnectionState } from "../connection/model.ts";

@@ -176,7 +176,9 @@ class TerminalProcessSignalError extends Schema.TaggedError<TerminalProcessSigna
 
 export class TerminalCwdRecovery extends Context.Reference<
   (error: TerminalCwdNotFoundError) => Effect.Effect<void, TerminalCwdNotFoundError>
->("t3/terminal/TerminalCwdRecovery", { defaultValue: () => (error) => Effect.fail(error) }) {}
+>("@t2code/cli/terminal/TerminalCwdRecovery", {
+  defaultValue: () => (error) => Effect.fail(error),
+}) {}
 
 export class TerminalManager extends Context.Service<
   TerminalManager,

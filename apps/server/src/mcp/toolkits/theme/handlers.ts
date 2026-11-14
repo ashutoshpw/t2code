@@ -1,6 +1,6 @@
-import { OrchestratorMcpFailure } from "@t3tools/contracts";
-import { THEME_GUIDE } from "@t3tools/shared/themeCss";
-import { BUILT_IN_THEME_IDS } from "@t3tools/shared/themePalettes";
+import { OrchestratorMcpFailure } from "@t2code/contracts";
+import { THEME_GUIDE } from "@t2code/shared/themeCss";
+import { BUILT_IN_THEME_IDS } from "@t2code/shared/themePalettes";
 import * as Effect from "effect/Effect";
 import * as Struct from "effect/Struct";
 import * as EnvironmentTheme from "../../../environmentTheme.ts";

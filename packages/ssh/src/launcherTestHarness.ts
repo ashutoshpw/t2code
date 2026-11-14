@@ -28,7 +28,7 @@ export const captureLauncherFor = Effect.fn("test.captureLauncher")(function* (
       }
       return ChildProcessSpawner.makeHandle({
         pid: ChildProcessSpawner.ProcessId(123),
-        stdout: Stream.make(new TextEncoder().encode('{"remotePort":3773}\n')),
+        stdout: Stream.make(new TextEncoder().encode('{"remotePort":3772}\n')),
         stderr: Stream.empty,
         all: Stream.empty,
         exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(0)),

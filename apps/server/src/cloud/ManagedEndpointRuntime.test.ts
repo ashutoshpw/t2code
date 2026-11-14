@@ -262,7 +262,7 @@ describe("CloudManagedEndpointRuntime", () => {
   it.effect("reads the public hostname and its origin from cloudflared's remote config", () =>
     Effect.gen(function* () {
       let ingress: unknown = [
-        { hostname: "env.example.t3.codes", service: "http://127.0.0.1:3773" },
+        { hostname: "env.example.t2.codes", service: "http://127.0.0.1:3772" },
         { service: "http_status:404" },
       ];
       const httpClient = HttpClient.make((request) =>
@@ -310,8 +310,8 @@ describe("CloudManagedEndpointRuntime", () => {
 
       expect(yield* runtime.inspectConnector).toMatchObject({
         readyConnections: 4,
-        hostname: "env.example.t3.codes",
-        origin: "http://127.0.0.1:3773",
+        hostname: "env.example.t2.codes",
+        origin: "http://127.0.0.1:3772",
       });
       // Before the edge pushes a config, the origin is unknown rather than wrong.
       for (const missing of [null, undefined]) {

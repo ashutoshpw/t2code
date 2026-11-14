@@ -6,9 +6,9 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import * as ChildProcess from "effect/process/ChildProcess";
-import { spawnAndCollect } from "@t3tools/provider-core/server/snapshotProbe";
+import { spawnAndCollect } from "@t2code/provider-core/server/snapshotProbe";
 import { parse as parseJsonc, type ParseError } from "jsonc-parser";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 // The SDK's own placeholder grammar: `${env:NAME}`, `${NAME}` and `${NAME:-default}`.
 const PLACEHOLDER_PATTERN = /\$\{(?:env:([A-Za-z_][A-Za-z0-9_]*)|([^:}]+)(?::-([^}]*))?)\}/g;

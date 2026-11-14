@@ -1,4 +1,4 @@
-import type { OrchestrationV2Run, OrchestrationV2ThreadProjection } from "@t3tools/contracts";
+import type { OrchestrationV2Run, OrchestrationV2ThreadProjection } from "@t2code/contracts";
 
 export function unsentManualContinuationSource(
   run: OrchestrationV2Run | undefined,

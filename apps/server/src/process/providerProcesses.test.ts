@@ -7,8 +7,8 @@ import * as NodePath from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, expect, it } from "@effect/vitest";
-import * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Context from "effect/Context";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";

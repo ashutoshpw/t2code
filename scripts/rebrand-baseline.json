@@ -5,12 +5,12 @@
     "reason": "Shared task cache endpoint is upstream's; setup-ci-deps leaves the cache off unless T2_TASK_CACHE_REPOSITORY is set. Replace once the fork has its own cache worker."
   },
   {
-    "file": "apps/mobile/deps/react-native-enriched-markdown-1.2.0-t3.18-497fbe63.tgz",
+    "file": "apps/mobile/deps/react-native-enriched-markdown-1.2.0-t3.18-16db4c75.tgz",
     "line": "",
     "reason": "Third-party patched dependency tarball whose upstream-assigned filename carries a -t3 version suffix; renaming needs a rebuild and republish."
   },
   {
-    "file": "apps/mobile/deps/react-native-screens-5.0.0-t3.48.tgz",
+    "file": "apps/mobile/deps/react-native-screens-5.0.0-t3.50.tgz",
     "line": "",
     "reason": "Third-party patched dependency tarball whose upstream-assigned filename carries a -t3 version suffix; renaming needs a rebuild and republish."
   },

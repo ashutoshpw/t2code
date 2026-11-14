@@ -1,4 +1,4 @@
-import { EnvironmentId, ThreadId, type OrchestrationV2ThreadShell } from "@t3tools/contracts";
+import { EnvironmentId, ThreadId, type OrchestrationV2ThreadShell } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import { expect, it, vi } from "vite-plus/test";
 

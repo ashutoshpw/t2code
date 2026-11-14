@@ -1,4 +1,4 @@
-import { MISSING_FILE_ACCESS_MESSAGE } from "@t3tools/client-runtime/state/assets";
+import { MISSING_FILE_ACCESS_MESSAGE } from "@t2code/client-runtime/state/assets";
 import { createContext, useContext } from "react";
 import { MediaVideoPlayer } from "../../components/MediaVideoPlayer";
 import { useAssetUrlState, useRefreshAssetUrl } from "../../state/assets";

@@ -29,7 +29,7 @@ import {
 vi.mock(import("../state/server"), async (original) => {
   const { Atom } = await import("effect/reactivity");
   const { compileResolvedKeybindingsConfig, DEFAULT_KEYBINDINGS } =
-    await import("@t3tools/shared/keybindings");
+    await import("@t2code/shared/keybindings");
   return {
     ...(await original()),
     primaryServerKeybindingsAtom: Atom.make(

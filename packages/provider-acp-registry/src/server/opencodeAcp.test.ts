@@ -1,4 +1,4 @@
-import type { AcpAdapterV2Flavor } from "@t3tools/provider-acp/server/adapter";
+import type { AcpAdapterV2Flavor } from "@t2code/provider-acp/server/adapter";
 import { describe, expect, it } from "vite-plus/test";
 
 import { extractOpenCodeElicitationForm } from "./opencodeAcp.ts";

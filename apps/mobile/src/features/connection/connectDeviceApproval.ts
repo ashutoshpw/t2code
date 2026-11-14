@@ -1,4 +1,4 @@
-import type { AuthClientMetadata, AuthPairingLink } from "@t3tools/contracts";
+import type { AuthClientMetadata, AuthPairingLink } from "@t2code/contracts";
 
 export interface ConnectDeviceApprovalPrompt {
   readonly pairingLinkId: string;
@@ -32,7 +32,7 @@ export function connectDeviceApprovalPrompts(input: {
     .map(({ link, verificationCode, client: device }) => ({
       pairingLinkId: link.id,
       title: "Approve this device?",
-      message: `${describeConnectDevice(device)} wants to connect to ${input.environmentLabel} through T3 Connect. It shows code ${verificationCode}. Approve it only if that code matches.`,
+      message: `${describeConnectDevice(device)} wants to connect to ${input.environmentLabel} through T2 Connect. It shows code ${verificationCode}. Approve it only if that code matches.`,
     }));
 }
 

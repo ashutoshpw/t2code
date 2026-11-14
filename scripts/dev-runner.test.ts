@@ -530,7 +530,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
-          baseEnv: { T2CODE_PORT: "3773", T2CODE_HOST: "0.0.0.0", T2CODE_LAN: "true" },
+          baseEnv: { T2CODE_PORT: "3772", T2CODE_HOST: "0.0.0.0", T2CODE_LAN: "true" },
           serverOffset: 0,
           webOffset: 0,
           t3Home: undefined,
@@ -621,7 +621,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           encoding: "utf8",
           env: {
             ...process.env,
-            T2CODE_PORT: "3773",
+            T2CODE_PORT: "3772",
             T2CODE_HOST: "0.0.0.0",
           },
         },
@@ -630,7 +630,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       assert.equal(result.status, 0, result.stderr);
       const output = `${result.stdout}${result.stderr}`;
       assert.match(output, /serverPort=\d+ /);
-      assert.notMatch(output, /serverPort=3773 /);
+      assert.notMatch(output, /serverPort=3772 /);
     });
   });
 
@@ -1070,7 +1070,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         Effect.gen(function* () {
           const { env, tailscaleCalls } = yield* shareSpawned({ built: true, host: "localhost" });
           const serve = tailscaleCalls.find((args) => args.includes("--bg"));
-          assert.equal(serve?.at(-1), `http://localhost:${env?.T3CODE_PORT}`);
+          assert.equal(serve?.at(-1), `http://localhost:${env?.T2CODE_PORT}`);
         }),
       );
 

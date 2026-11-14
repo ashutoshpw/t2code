@@ -33,7 +33,7 @@ describe("retryManagedTunnelRegistration", () => {
 });
 
 describe("watchManagedTunnelOrigin", () => {
-  const localOrigin = "http://127.0.0.1:3773";
+  const localOrigin = "http://127.0.0.1:3772";
 
   /** Runs the watcher for `minutes`, serving each check the next ingress in `ingress`. */
   const watch = (input: {

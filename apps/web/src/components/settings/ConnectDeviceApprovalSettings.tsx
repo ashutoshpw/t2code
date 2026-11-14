@@ -1,8 +1,8 @@
-import type { AuthConnectDevice, EnvironmentId } from "@t3tools/contracts";
+import type { AuthConnectDevice, EnvironmentId } from "@t2code/contracts";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import * as DateTime from "effect/DateTime";
 import { useState } from "react";
 
@@ -57,7 +57,7 @@ export function ConnectDeviceApprovalSettings({
   };
 
   return (
-    <SettingsSection id="connect-devices" title="T3 Connect devices">
+    <SettingsSection id="connect-devices" title="T2 Connect devices">
       {requests.map((request) => {
         const connectRequest = request.connectDeviceRequest;
         if (!connectRequest) return null;
@@ -154,7 +154,7 @@ export function ConnectDeviceApprovalSettings({
       {devices.length === 0 && requests.length === 0 ? (
         <div className={ITEM_ROW_CLASSNAME}>
           <p className="text-xs text-muted-foreground/60">
-            No device has connected through T3 Connect yet.
+            No device has connected through T2 Connect yet.
           </p>
         </div>
       ) : null}

@@ -4,7 +4,7 @@ import {
   type EnvironmentThemeFile,
   ProviderInstanceId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";

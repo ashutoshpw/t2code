@@ -1,9 +1,9 @@
-import type { ThreadTitleRegenerationOutcome } from "@t3tools/contracts";
+import type { ThreadTitleRegenerationOutcome } from "@t2code/contracts";
 import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 
 import { stackedThreadToast } from "./ui/toast";
 

@@ -65,7 +65,7 @@ exchange from credential reuse; it does not make a compromised relay signing
 key harmless. Keep that trust assumption explicit when changing the protocol.
 
 Device approval, off by default, limits what that authority buys. With
-`requireConnectDeviceApproval` on, the environment trusts T3 Connect device
+`requireConnectDeviceApproval` on, the environment trusts T2 Connect device
 keys, meaning DPoP thumbprints, and not the relay. A mint for an untrusted key
 still succeeds, so the relay protocol does not change. The credential it returns
 cannot be spent until someone with `access:write` on the environment approves

@@ -59,7 +59,7 @@ it("prefers a LAN address over a tailnet one for a private-network pairing URL",
 
 it("targets the bound interface when the listener binds a specific address", () => {
   const hostFor = (ip: string) =>
-    loopbackUrlHostForAddress(NetAddress.inetAddressFromIpStringUnsafe(ip, 3773));
+    loopbackUrlHostForAddress(NetAddress.inetAddressFromIpStringUnsafe(ip, 3772));
 
   expect(hostFor("0.0.0.0")).toBe("127.0.0.1");
   expect(hostFor("::")).toBe("127.0.0.1");

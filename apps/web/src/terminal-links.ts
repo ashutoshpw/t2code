@@ -3,9 +3,9 @@ import {
   parseFileUrlHref,
   resolvePathLinkTarget,
   splitFilePathPosition,
-} from "@t3tools/shared/fileLinks";
-import { safeDecodeURIComponent } from "@t3tools/shared/markdownLinks";
-import { stripSlashPrefixedWindowsDrive } from "@t3tools/shared/path";
+} from "@t2code/shared/fileLinks";
+import { safeDecodeURIComponent } from "@t2code/shared/markdownLinks";
+import { stripSlashPrefixedWindowsDrive } from "@t2code/shared/path";
 import { isMacPlatform } from "./lib/utils";
 
 export type TerminalLinkKind = "url" | "path";

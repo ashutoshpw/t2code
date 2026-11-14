@@ -1,4 +1,4 @@
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import type { Certificate, Session, WebContents } from "electron";
 import { BrowserWindow, session } from "electron";
 import * as Context from "effect/Context";
@@ -483,7 +483,7 @@ export const make = Effect.gen(function* BrowserSessionMake() {
                       Effect.andThen(
                         electronDialog.showErrorBox(
                           `Could not trust the certificate for ${host}`,
-                          "T3 Code could not save this approval, so the page stays blocked. Check that the disk is not full and its data folder is writable, then try again.",
+                          "T2 Code could not save this approval, so the page stays blocked. Check that the disk is not full and its data folder is writable, then try again.",
                         ),
                       ),
                       Effect.as(false),

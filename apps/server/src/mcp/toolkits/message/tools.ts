@@ -1,5 +1,5 @@
-import { OrchestratorMcpFailure } from "@t3tools/contracts";
-import { SEND_TO_USER_MAX_LENGTH, SEND_TO_USER_TOOL_NAME } from "@t3tools/shared/toolOutput";
+import { OrchestratorMcpFailure } from "@t2code/contracts";
+import { SEND_TO_USER_MAX_LENGTH, SEND_TO_USER_TOOL_NAME } from "@t2code/shared/toolOutput";
 import * as Schema from "effect/Schema";
 import { Tool, Toolkit } from "effect/ai";
 

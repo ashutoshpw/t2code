@@ -149,9 +149,9 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
     }),
   );
 
-  it.effect("keeps the arguments, so root runs setup on the same T3 home", () =>
+  it.effect("keeps the arguments, so root runs setup on the same T2 home", () =>
     Effect.gen(function* () {
-      const args = ["--base-dir", "/srv/t3 home"];
+      const args = ["--base-dir", "/srv/t2 home"];
       expect(
         yield* rootCommand({
           node: "/home/theo/.local/node/bin/node",
@@ -159,7 +159,7 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
           path: yield* pathWithT3,
           args,
         }),
-      ).toBe(`sudo env "PATH=$PATH" t3 browser setup --base-dir '/srv/t3 home'`);
+      ).toBe(`sudo env "PATH=$PATH" t3 browser setup --base-dir '/srv/t2 home'`);
       expect(
         yield* rootCommand({
           node: "/opt/t2code/t2code",
@@ -260,8 +260,8 @@ it.layer(NodeServices.layer)("host CLI commands", (it) => {
             "C:\\Program Files\\T2 Code\\t2code.exe",
           ),
           Effect.provideService(HostProcess.Arguments, [
-            "C:\\Program Files\\T3 Code\\t3.exe",
-            "C:\\Program Files\\T3 Code\\resources\\app.asar\\apps\\server\\dist\\bin.mjs",
+            "C:\\Program Files\\T2 Code\\t3.exe",
+            "C:\\Program Files\\T2 Code\\resources\\app.asar\\apps\\server\\dist\\bin.mjs",
           ]),
           Effect.provideService(HostProcess.IsExecutable, false),
           Effect.provideService(HostProcess.Platform, platform),

@@ -792,7 +792,7 @@ it.effect("linking a picked machine that answers nowhere names it and links noth
   ).pipe(Effect.provide(NodeHttpServer.layerTest)),
 );
 
-it.live("linking an address with nothing listening says so, unlike one that is not T3 Code", () =>
+it.live("linking an address with nothing listening says so, unlike one that is not T2 Code", () =>
   Effect.scoped(
     Effect.gen(function* () {
       const closed = yield* Effect.scoped(
@@ -808,7 +808,7 @@ it.live("linking an address with nothing listening says so, unlike one that is n
         a.links.link({ url, pairingCode: "unused", access: "auto" }).pipe(Effect.flip);
       expect((yield* linking(closed)).message).toBe(`${closed} did not answer (ECONNREFUSED).`);
       expect((yield* linking(notT3)).message).toBe(
-        `${notT3} answered, but not as a T3 Code environment this version understands.`,
+        `${notT3} answered, but not as a T2 Code environment this version understands.`,
       );
       expect(yield* a.links.list).toEqual([]);
     }),

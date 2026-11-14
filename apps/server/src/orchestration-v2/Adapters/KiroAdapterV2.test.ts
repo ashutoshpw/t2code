@@ -320,7 +320,7 @@ const runKiroScript = Effect.fn("runKiroScript")(function* (input: {
       model: string,
       options?: ModelSelection["options"],
     ) => Effect.Effect<void, ProviderAdapterV2Error>;
-    /** Runs T3's compact action as turn `ordinal`. */
+    /** Runs T2's compact action as turn `ordinal`. */
     readonly compact: (ordinal: number) => Effect.Effect<void, ProviderAdapterV2Error>;
     readonly interrupt: (
       providerTurnId: ProviderTurnId,

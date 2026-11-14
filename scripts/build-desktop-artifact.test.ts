@@ -19,7 +19,7 @@ import * as Path from "effect/Path";
 import * as Sink from "effect/Sink";
 import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
-import { fromYaml } from "@t3tools/shared/schemaYaml";
+import { fromYaml } from "@t2code/shared/schemaYaml";
 
 import {
   BundleNotSelfContainedError,
@@ -1949,7 +1949,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     ).pipe(
       Effect.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromEnv({ env: { T3CODE_DESKTOP_UNTRUSTED_BUNDLE: "true" } }),
+          ConfigProvider.fromEnv({ env: { T2CODE_DESKTOP_UNTRUSTED_BUNDLE: "true" } }),
         ),
       ),
     ),

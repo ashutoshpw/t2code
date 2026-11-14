@@ -1,7 +1,7 @@
 import {
   effectiveSnoozed,
   type ThreadSnoozeShell,
-} from "@t3tools/client-runtime/state/thread-settled";
+} from "@t2code/client-runtime/state/thread-settled";
 
 export type ThreadNotificationKind = "input" | "completion";
 

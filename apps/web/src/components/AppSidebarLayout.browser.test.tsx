@@ -6,7 +6,7 @@ import { render } from "../../test/render";
 vi.mock(import("../state/server"), async (original) => {
   const actual = await original();
   const { Atom } = await import("effect/reactivity");
-  const { compileResolvedKeybindingsConfig } = await import("@t3tools/shared/keybindings");
+  const { compileResolvedKeybindingsConfig } = await import("@t2code/shared/keybindings");
   const keybindings = compileResolvedKeybindingsConfig([
     { key: "mod+b", command: "sidebar.toggle", when: "!terminalFocus" },
   ]);

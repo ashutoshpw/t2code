@@ -3,8 +3,8 @@ import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import { AuthAccessWriteScope, type EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/runtime";
+import { AuthAccessWriteScope, type EnvironmentId } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import { useEffect, useRef, useState } from "react";
 
@@ -17,7 +17,7 @@ import { describeConnectDeviceClient } from "./settings/ConnectionsSettings.logi
 import { toastManager } from "./ui/toast";
 import { stackedThreadToast } from "./ui/toastHelpers";
 
-/** Asks whoever can approve to look at T3 Connect devices waiting on an environment. */
+/** Asks whoever can approve to look at T2 Connect devices waiting on an environment. */
 export function ConnectDeviceApprovalCoordinator() {
   const { environments } = useEnvironments();
   return environments.map((environment) =>

@@ -231,7 +231,7 @@ it.layer(NodeServices.layer)("service state persistence", (it) => {
       yield* fs.writeFileString(databasePath, "before trial");
       const childSource = `
 const fs = require("node:fs");
-const context = JSON.parse(process.env.T3_SERVICE_LAUNCHER_CONTEXT);
+const context = JSON.parse(process.env.T2_SERVICE_LAUNCHER_CONTEXT);
 if (context.update?.status === "pending") {
   if (context.childVersion !== context.update.targetVersion) throw new Error("wrong trial version");
   if (fs.readFileSync(${JSON.stringify(path.dirname(backupPath))} + "/" + context.update.id + "/database", "utf8") !== "before trial") {
@@ -578,7 +578,7 @@ setInterval(() => {}, 1_000);
         vi.stubEnv("HOME", home);
         // environment.d changes what services inherit, not where the manager reads units.
         vi.stubEnv("XDG_CONFIG_HOME", path.join(home, "service-config"));
-        vi.stubEnv("T3_BOOT_SERVICE_UNIT", "t3code.service");
+        vi.stubEnv("T2_BOOT_SERVICE_UNIT", "t3code.service");
 
         yield* Effect.promise(() =>
           expect(runLauncher(root)).rejects.toThrow("Active child exited unexpectedly (0)."),
@@ -619,7 +619,7 @@ setInterval(() => {}, 1_000);
         }),
       );
       vi.stubEnv("HOME", home);
-      vi.stubEnv("T3_BOOT_SERVICE_UNIT", "t3code.plist");
+      vi.stubEnv("T2_BOOT_SERVICE_UNIT", "t3code.plist");
 
       yield* Effect.promise(() =>
         expect(runLauncher(root)).rejects.toThrow("Active child exited unexpectedly (0)."),
@@ -663,7 +663,7 @@ process.exit(0);
     }),
   );
 
-  it.effect("starts the runtime in a T3 home whose name ends in a space", () =>
+  it.effect("starts the runtime in a T2 home whose name ends in a space", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -928,7 +928,7 @@ process.exit(0);
       yield* Effect.acquireRelease(
         Effect.sync(() =>
           vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-            if (String(chunk).includes("owns this T3 home")) refused.resolve();
+            if (String(chunk).includes("owns this T2 home")) refused.resolve();
             return true;
           }),
         ),
@@ -988,7 +988,7 @@ process.exit(0);
               `const db = new (require("node:sqlite").DatabaseSync)(${JSON.stringify(ownerPath)});`,
               `try { db.exec("PRAGMA busy_timeout = 0; BEGIN EXCLUSIVE;"); }`,
               `catch { process.exit(${SERVER_EXIT_CODE_STATE_DIR_OWNED}); }`,
-              "const context = JSON.parse(process.env.T3_SERVICE_LAUNCHER_CONTEXT);",
+              "const context = JSON.parse(process.env.T2_SERVICE_LAUNCHER_CONTEXT);",
               `require("node:fs").appendFileSync(${JSON.stringify(startsPath)}, context.childVersion + "\\n");`,
               'if (context.update?.status === "pending") {',
               `  require("node:fs").writeFileSync(${JSON.stringify(databasePath)}, "migrated by failed trial");`,
@@ -1019,7 +1019,7 @@ process.exit(0);
         yield* Effect.acquireRelease(
           Effect.sync(() =>
             vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-              if (String(chunk).includes("owns this T3 home")) refused.resolve();
+              if (String(chunk).includes("owns this T2 home")) refused.resolve();
               return true;
             }),
           ),
@@ -1121,7 +1121,7 @@ process.exit(0);
     }),
   );
 
-  it.effect("treats the T3 home as owned while the lock or a pre-lock server holds it", () =>
+  it.effect("treats the T2 home as owned while the lock or a pre-lock server holds it", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;

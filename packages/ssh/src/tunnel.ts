@@ -534,7 +534,7 @@ if ! t2_runtime_ready; then
     elif command -v wget >/dev/null 2>&1; then wget -q --timeout=30 --tries=1 "$1" -O "$2"
     else printf 'Remote host needs curl or wget to download %s.\\n' "$T2_ARCHIVE" >&2; exit 1
     fi || {
-      printf 'Could not download t3 %s from %s. If this host cannot reach it, install t3 %s on it with https://t3.codes/install.sh (T2CODE_VERSION=%s; T2CODE_RELEASE_BASE_URL selects a mirror).\\n' "$T2_ARCHIVE_VERSION" "$1" "$T2_ARCHIVE_VERSION" "$T2_ARCHIVE_VERSION" >&2
+      printf 'Could not download t3 %s from %s. If this host cannot reach it, install t3 %s on it with https://t2.codes/install.sh (T2CODE_VERSION=%s; T2CODE_RELEASE_BASE_URL selects a mirror).\\n' "$T2_ARCHIVE_VERSION" "$1" "$T2_ARCHIVE_VERSION" "$T2_ARCHIVE_VERSION" >&2
       exit 1
     }
   }
@@ -954,7 +954,7 @@ while [ -z "$REMOTE_PORT" ] && ! managed_server_running "$(cat "$PID_FILE" 2>/de
   REMOTE_PORT=""
   REMOTE_MANAGED=""
   if [ "$OWNER_WAITED" -ge @@T2_READY_TIMEOUT_SECONDS@@ ] || [ "$(date +%s)" -ge "$OWNER_DEADLINE" ]; then
-    printf 'A T3 server or boot service holds %s but did not become ready, so no second server was started. Retry once it has started.\\n' "$DEFAULT_SERVER_HOME" >&2
+    printf 'A T2 server or boot service holds %s but did not become ready, so no second server was started. Retry once it has started.\\n' "$DEFAULT_SERVER_HOME" >&2
     exit 1
   fi
   sleep 1

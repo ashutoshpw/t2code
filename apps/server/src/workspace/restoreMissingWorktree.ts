@@ -1,4 +1,4 @@
-import { ThreadId, type ProjectId, type TerminalCwdNotFoundError } from "@t3tools/contracts";
+import { ThreadId, type ProjectId, type TerminalCwdNotFoundError } from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -201,7 +201,7 @@ export class ThreadWorktreeRestore extends Context.Service<
       thread: WorktreeThread,
     ) => Effect.Effect<void, WorktreeRecreateError | WorktreeRecreateNoBaseError>;
   }
->()("t3/workspace/restoreMissingWorktree/ThreadWorktreeRestore") {}
+>()("@t2code/cli/workspace/restoreMissingWorktree/ThreadWorktreeRestore") {}
 
 // Turn start restores under the same lease, so concurrent restores see each other's worktree.
 export const layerThreadWorktreeRestore = Layer.effect(

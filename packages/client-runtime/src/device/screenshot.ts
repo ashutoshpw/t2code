@@ -1,6 +1,6 @@
 // @effect-diagnostics globalFetch:off - This browser transport runs without an Effect runtime, like the live stream.
 import * as Schema from "effect/Schema";
-import { extractPng } from "@t3tools/shared/png";
+import { extractPng } from "@t2code/shared/png";
 import { withDeviceHubQuery } from "./hubAccess.ts";
 import type { DeviceStreamTarget } from "./stream.ts";
 

@@ -1,4 +1,4 @@
-import type { AuthPairingLink } from "@t3tools/contracts";
+import type { AuthPairingLink } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import { describe, expect, it } from "vite-plus/test";
 

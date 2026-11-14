@@ -4,7 +4,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 
-import { T3_HOME } from "../e2e.config.ts";
+import { T2_HOME } from "../e2e.config.ts";
 import { makeState, runPromise, test, WEB } from "./t3.ts";
 
 const SettingsJson = Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown));
@@ -13,7 +13,7 @@ const encodeSettings = Schema.encodeEffect(SettingsJson);
 
 const threadRuntimeSettings = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
-  const settingsPath = (yield* Path.Path).join(T3_HOME, "userdata/settings.json");
+  const settingsPath = (yield* Path.Path).join(T2_HOME, "userdata/settings.json");
   const original = yield* fs.readFileString(settingsPath);
   const settings = yield* decodeSettings(original);
   return {
@@ -41,7 +41,7 @@ test(
         messages: ["Change the file"],
         model: "approval",
       });
-      const { cli } = makeState(T3_HOME);
+      const { cli } = makeState(T2_HOME);
       await runPromise(cli(["thread", "send", thread.threadId, "Queued message"]));
       await t3.open(thread);
 

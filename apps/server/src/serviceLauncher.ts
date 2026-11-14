@@ -1043,7 +1043,7 @@ export class Launcher {
     ]);
     const free = Math.min(...available);
     return free < MIN_SERVICE_START_FREE_BYTES
-      ? `T3 Code needs at least ${MIN_SERVICE_START_FREE_BYTES} bytes free before starting the server; ${free} bytes available.`
+      ? `T2 Code needs at least ${MIN_SERVICE_START_FREE_BYTES} bytes free before starting the server; ${free} bytes available.`
       : undefined;
   }
 
@@ -1490,7 +1490,7 @@ export class Launcher {
     if (this.#stateDirFreeProbes < 2) return;
     this.#clearTimer();
     await this.#claimServing();
-    this.#log("[service-launcher] The T3 home is free again. Starting the server.\n");
+    this.#log("[service-launcher] The T2 home is free again. Starting the server.\n");
     const update = this.#state.update;
     if (update?.status === "pending") await this.#startTrial(update);
     else await this.#startChild(this.#state.activeVersion, "active", update);

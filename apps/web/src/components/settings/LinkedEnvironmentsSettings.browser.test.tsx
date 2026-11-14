@@ -1,5 +1,5 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import { EnvironmentId, type PeerLinkSummary } from "@t3tools/contracts";
+import { EnvironmentId, type PeerLinkSummary } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import { AsyncResult, AtomRegistry } from "effect/reactivity";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -13,7 +13,7 @@ const hostId = EnvironmentId.make("mac");
 const vmLink: PeerLinkSummary = {
   environmentId: EnvironmentId.make("vm"),
   label: "boat-task",
-  urls: ["http://boat-task.example.ts.net:3773"],
+  urls: ["http://boat-task.example.ts.net:3772"],
   access: "full-access",
   linkedAt: DateTime.makeUnsafe("2026-11-01T00:00:00.000Z"),
   expiresAt: DateTime.makeUnsafe("2099-01-01T00:00:00.000Z"),

@@ -219,7 +219,7 @@ describe("createManagedRelayQueryManager", () => {
       yield* TestClock.adjust("12 seconds");
 
       expect((yield* Fiber.join(readFiber)).message).toBe(
-        "Timed out obtaining the T3 Connect session token.",
+        "Timed out obtaining the T2 Connect session token.",
       );
       expect(readClerkToken).toHaveBeenCalledTimes(3);
     }),

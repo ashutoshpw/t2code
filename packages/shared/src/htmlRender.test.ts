@@ -136,7 +136,7 @@ describe("readHtmlRenderImageRequest", () => {
     const request = (overrides: object) =>
       readHtmlRenderImageRequest({
         jsonrpc: "2.0",
-        method: "t3/notifications/open-image",
+        method: "@t2code/cli/notifications/open-image",
         params: { ...params, ...overrides },
       });
     expect(request({})).toEqual({

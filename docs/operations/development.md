@@ -2,7 +2,7 @@
 
 ## First checkout
 
-T3 Code uses [Vite+](https://viteplus.dev/guide/). Install its global `vp` command:
+T2 Code uses [Vite+](https://viteplus.dev/guide/). Install its global `vp` command:
 
 ```sh
 curl -fsSL https://vite.plus | bash

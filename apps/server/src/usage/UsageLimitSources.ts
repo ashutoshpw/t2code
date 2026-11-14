@@ -246,7 +246,7 @@ export class UsageLimitResetFallback extends Context.Reference<{
     endpoint: string,
     model: string | null,
   ) => Effect.Effect<string | null>;
-}>("t3/usage/UsageLimitResetFallback", {
+}>("@t2code/cli/usage/UsageLimitResetFallback", {
   defaultValue: () => ({ resetAt: () => Effect.succeed(null) }),
 }) {}
 

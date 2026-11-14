@@ -1,6 +1,6 @@
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Console from "effect/Console";
@@ -91,7 +91,7 @@ it.effect(
       calls.length = 0;
       const state = yield* makePersistedServerRuntimeState({
         config: { host: undefined, devUrl: undefined },
-        port: 3773,
+        port: 3772,
       });
       const refused = yield* Effect.scoped(
         acquireServerOwnership(serverRuntimeStatePath).pipe(
@@ -101,7 +101,7 @@ it.effect(
       ).pipe(Effect.flip);
       assert.equal(
         refused.message,
-        `Stop T3 Code server process ${state.pid}, which the background service did not start, before repairing the database.`,
+        `Stop T2 Code server process ${state.pid}, which the background service did not start, before repairing the database.`,
       );
       assert.deepEqual(calls, ["pause", "resume"]);
     }).pipe(Effect.provide(layerHost)),

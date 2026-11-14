@@ -9,7 +9,7 @@ import {
   type OrchestrationProjectShell,
   type ThreadPullRequestLink,
   SourceControlProviderKind,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Effect from "effect/Effect";
@@ -40,9 +40,9 @@ function makeProject(
       remoteUrl: "git@github.com:T3Tools/T3Code.git",
     },
     provider: SourceControlProviderKind.make("github"),
-    displayName: "T3Tools/T3Code",
-    owner: "T3Tools",
-    name: "T3Code",
+    displayName: "Ashutoshpw/T2Code",
+    owner: "Ashutoshpw",
+    name: "T2Code",
   },
 ): OrchestrationProjectShell {
   return {
@@ -87,7 +87,7 @@ function makeLink(
   const { headBranch, baseBranch, ...rest } = overrides;
   return {
     host: "github.com",
-    repository: "t3tools/t3code",
+    repository: "ashutoshpw/t2code",
     number,
     url: `https://github.com/t3tools/t3code/pull/${number}`,
     source: "manual",
@@ -195,7 +195,7 @@ describe("PullRequestWatchService", () => {
       const missing = new PullRequestUnavailableError({
         reason: "cli-missing",
         provider: SourceControlProviderKind.make("gitlab"),
-        requirement: "Install glab on the T3 server's PATH.",
+        requirement: "Install glab on the T2 server's PATH.",
       });
       const harness = yield* makeHarness({ readFailure: missing });
       const target = { url: "https://gitlab.example.com/team/project/-/merge_requests/42" };
@@ -214,7 +214,7 @@ describe("PullRequestWatchService", () => {
     Effect.gen(function* () {
       const freshMerged = yield* makeHarness({ readState: "merged" });
       const freshError = yield* freshMerged
-        .setWatching(true, { repository: "t3tools/t3code", number: 1 })
+        .setWatching(true, { repository: "ashutoshpw/t2code", number: 1 })
         .pipe(Effect.flip);
       expect(freshError).toMatchObject({ _tag: "PullRequestNotOpenError", state: "merged" });
       expect(yield* Ref.get(freshMerged.commands)).toEqual([]);
@@ -240,14 +240,14 @@ describe("PullRequestWatchService", () => {
         ]),
       });
       const error = yield* harness
-        .setWatching(true, { repository: "t3tools/t3code", number: 1 })
+        .setWatching(true, { repository: "ashutoshpw/t2code", number: 1 })
         .pipe(Effect.flip);
       expect(error).toMatchObject({ _tag: "PullRequestNotOpenError", state: "merged" });
       expect(
-        yield* harness.setWatching(true, { repository: "t3tools/t3code", number: 3 }),
+        yield* harness.setWatching(true, { repository: "ashutoshpw/t2code", number: 3 }),
       ).toMatchObject({ watching: true, wasWatching: true });
       expect(
-        yield* harness.setWatching(false, { repository: "t3tools/t3code", number: 3 }),
+        yield* harness.setWatching(false, { repository: "ashutoshpw/t2code", number: 3 }),
       ).toMatchObject({ wasWatching: true });
       expect(yield* Ref.get(harness.commands)).toMatchObject([
         { type: "thread.pull-request.watch", number: 3, watching: true },
@@ -265,7 +265,7 @@ describe("PullRequestWatchService", () => {
           { ...closed, snapshot: closed.snapshot && { ...closed.snapshot, state: "closed" } },
         ]),
       });
-      yield* harness.setWatching(true, { repository: "t3tools/t3code", number: 1 });
+      yield* harness.setWatching(true, { repository: "ashutoshpw/t2code", number: 1 });
       expect(yield* Ref.get(harness.commands)).toMatchObject([
         { type: "thread.pull-request.watch", number: 1, watching: true },
       ]);
@@ -285,7 +285,7 @@ describe("PullRequestWatchService", () => {
         },
       });
       const error = yield* harness
-        .setWatching(true, { repository: "t3tools/t3code", number: 1 })
+        .setWatching(true, { repository: "ashutoshpw/t2code", number: 1 })
         .pipe(Effect.flip);
       expect(error).toMatchObject({ _tag: "PullRequestWatchFromSubagentError" });
       expect(yield* Ref.get(harness.commands)).toEqual([]);

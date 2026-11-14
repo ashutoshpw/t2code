@@ -47,15 +47,15 @@ OpenCode background service, T2 Code then restarts it on the new version. The UR
 must use the service's own protocol, host, and port. For a service listening on
 `0.0.0.0` use `127.0.0.1`, and for `[::]` use `[::1]`.
 
-Restarting interrupts running turns, and the service then runs with T3 Code's
+Restarting interrupts running turns, and the service then runs with T2 Code's
 environment. Set any variables it needs with `opencode service set env <name> <value>`.
 
-T3 Code does not restart any other server, including the background service
+T2 Code does not restart any other server, including the background service
 reached through `localhost`. That server can still report the previous version
-until you restart it. For a loopback URL, T3 Code shows that restart requirement
+until you restart it. For a loopback URL, T2 Code shows that restart requirement
 instead of treating the CLI update as a failure.
 
-T3 Code waits for a local server it started to recover after a lost connection.
+T2 Code waits for a local server it started to recover after a lost connection.
 You can stop the turn while it reconnects. If the server exits or an external
 connection cannot be restored, send another prompt to resume the same OpenCode
 session.

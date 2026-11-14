@@ -634,7 +634,7 @@ describe("t2 pair", () => {
         path: NodePath.join(baseDir, "userdata", "server-runtime.json"),
         state: yield* makePersistedServerRuntimeState({
           config: { host: "127.0.0.2", devUrl: undefined },
-          port: 3773,
+          port: 3772,
         }),
       });
       const spawner = ChildProcessSpawner.make((command) => {
@@ -676,7 +676,7 @@ describe("t2 pair", () => {
           Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
           Effect.provideService(HostProcess.Platform, "darwin"),
           Effect.provideService(FetchHttpClient.Fetch, async (input) => {
-            if (String(input) === "http://127.0.0.2:3773/.well-known/t3/environment") {
+            if (String(input) === "http://127.0.0.2:3772/.well-known/t3/environment") {
               return Response.json(testDescriptor);
             }
             assert.equal(String(input), "https://pair-test.tail.ts.net/.well-known/t3/environment");

@@ -1,7 +1,7 @@
 import { Service } from "@opencode/client/effect/service";
-import { AgentScope } from "@t3tools/shared/AgentScope";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveCommandPath, resolveSpawnCommand } from "@t3tools/shared/shell";
+import { AgentScope } from "@t2code/shared/AgentScope";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { resolveCommandPath, resolveSpawnCommand } from "@t2code/shared/shell";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Option from "effect/Option";
@@ -64,7 +64,7 @@ export const replaceOutdatedService = Effect.fn("OpenCode2Service.replaceOutdate
     // Configured variables below can change PATH, which a bare name would then resolve against.
     const executable = yield* resolveCommandPath(input.binaryPath, { env: input.environment });
     if (executable === null) return;
-    // A scope of its own keeps the service alive when T3 Code's systemd unit stops.
+    // A scope of its own keeps the service alive when T2 Code's systemd unit stops.
     const launch = yield* (yield* AgentScope).wrap({
       command: executable,
       args: ["serve", "--service"],

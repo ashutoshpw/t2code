@@ -69,7 +69,7 @@ console.log(
 const run = NodeCrypto.randomBytes(16).toString("hex");
 const env = {
   ...process.env,
-  T3_CACHED_TESTS: JSON.stringify({
+  T2_CACHED_TESTS: JSON.stringify({
     run,
     files,
     groupSize,

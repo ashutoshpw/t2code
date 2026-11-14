@@ -2294,7 +2294,7 @@ describe("CursorAdapterV2", () => {
             "argument-only": { "command": "node", "args": ["server.mjs", "--workspace", "\${workspaceFolder}"] },
             "env-only": { "command": "node", "args": ["server.mjs"], "env": { "PROJECT_ROOT": "\${workspaceFolder}" } },
             "cwd-only": { "command": "node", "args": ["server.mjs"], "cwd": "\${workspaceFolder}" },
-            "unset-env": { "command": "node", "env": { "CONFIG": "\${env:T3_MCP_UNSET}" } },
+            "unset-env": { "command": "node", "env": { "CONFIG": "\${env:T2_MCP_UNSET}" } },
             "wrapped": { "command": "proto", "args": ["run", "node", "--", "\${workspaceFolder}/server.mjs"] },
             "label": { "command": "node", "args": ["server.mjs", "--label", "\${workspaceFolder}/client"] },
             "env-file": { "command": "node", "args": ["\${workspaceFolder}/server.mjs"], "envFile": ".env.mcp" },
@@ -2451,7 +2451,7 @@ describe("CursorAdapterV2", () => {
           },
           "cwd-only": { command: "node", args: ["server.mjs"], cwd: projectRoot },
         };
-        // The agent is created with T3's server only; the resolved servers go with each turn.
+        // The agent is created with T2's server only; the resolved servers go with each turn.
         assert.deepEqual(openedWith?.mcpServers, t3Servers);
         yield* sendTurn(1);
         assert.deepEqual(sentWith[0], { ...expectedServers, ...t3Servers });

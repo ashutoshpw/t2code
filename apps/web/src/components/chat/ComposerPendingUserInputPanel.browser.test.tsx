@@ -1,4 +1,4 @@
-import { EnvironmentId, RuntimeRequestId, ThreadId } from "@t3tools/contracts";
+import { EnvironmentId, RuntimeRequestId, ThreadId } from "@t2code/contracts";
 import type { ReactNode } from "react";
 import { expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";

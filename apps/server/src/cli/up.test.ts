@@ -274,7 +274,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       status: { current: false, otherBaseDir: "/srv/t2 home" },
       reportStatus: true,
       json: {
-        service: { otherBaseDir: "/srv/t3 home" },
+        service: { otherBaseDir: "/srv/t2 home" },
         lan: { enabled: false, inheritedDefault: false },
       },
       env: "",

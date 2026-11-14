@@ -1,12 +1,12 @@
 import * as Context from "effect/Context";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import * as SqlClient from "effect/sql/SqlClient";
 import * as SqlSchema from "effect/sql/SqlSchema";
 
-import { AuthClientMetadata } from "@t3tools/contracts";
+import { AuthClientMetadata } from "@t2code/contracts";
 
 import { type AuthPairingLinkRepositoryError, PersistenceSqlError } from "./Errors.ts";
 
@@ -29,7 +29,7 @@ const RemoveAllExceptInput = Schema.Struct({
   keepProofKeyThumbprint: Schema.NullOr(Schema.String),
 });
 
-/** T3 Connect device keys this environment lets in without asking. A key leaves when revoked. */
+/** T2 Connect device keys this environment lets in without asking. A key leaves when revoked. */
 export class AuthConnectDeviceRepository extends Context.Service<
   AuthConnectDeviceRepository,
   {
@@ -51,7 +51,7 @@ export class AuthConnectDeviceRepository extends Context.Service<
       keepProofKeyThumbprint: string | null,
     ) => Effect.Effect<number, AuthPairingLinkRepositoryError>;
   }
->()("t3/persistence/AuthConnectDevices/AuthConnectDeviceRepository") {}
+>()("@t2code/cli/persistence/AuthConnectDevices/AuthConnectDeviceRepository") {}
 
 const sqlError = (operation: string) => (cause: unknown) =>
   new PersistenceSqlError({ operation, cause });

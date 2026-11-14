@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import { type ModelSelection, ProviderInstanceId } from "@t3tools/contracts";
+import { type ModelSelection, ProviderInstanceId } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as Option from "effect/Option";

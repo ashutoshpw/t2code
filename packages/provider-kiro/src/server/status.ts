@@ -1,4 +1,4 @@
-import { resolveProviderProbeTimeoutMs } from "@t3tools/provider-core/server/snapshotProbe";
+import { resolveProviderProbeTimeoutMs } from "@t2code/provider-core/server/snapshotProbe";
 import {
   type ModelCapabilities,
   ProviderDriverKind,
