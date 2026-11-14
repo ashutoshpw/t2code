@@ -96,7 +96,7 @@ describe("remote environment authorization", () => {
         credential: "one-time-credential",
         dpopProof: "token-proof",
         clientMetadata: {
-          label: "T3 Code Mobile",
+          label: "T2 Code Mobile",
           deviceType: "mobile",
           os: "iOS",
         },
@@ -111,7 +111,7 @@ describe("remote environment authorization", () => {
         url: "https://remote.example.com/oauth/token",
         method: "POST",
         headers: { dpop: "token-proof", "content-type": "application/x-www-form-urlencoded" },
-        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=one-time-credential&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&client_label=T3+Code+Mobile&client_device_type=mobile&client_os=iOS",
+        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=one-time-credential&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&client_label=T2+Code+Mobile&client_device_type=mobile&client_os=iOS",
       });
       expectFetchCall(fetch.calls, 2, {
         url: "https://remote.example.com/api/auth/websocket-ticket",
@@ -121,6 +121,81 @@ describe("remote environment authorization", () => {
           dpop: "resource-proof",
         },
       });
+    }),
+  );
+
+  it.effect("submits optional client display metadata during bearer token exchange", () =>
+    Effect.gen(function* () {
+      const fetch = recordedFetch(
+        Response.json(
+          {
+            access_token: "bearer-token",
+            issued_token_type: "urn:ietf:params:oauth:token-type:access_token",
+            token_type: "Bearer",
+            expires_in: 3600,
+            scope:
+              "orchestration:read orchestration:operate terminal:operate review:write relay:read",
+          },
+          { status: 200 },
+        ),
+      );
+
+      yield* bootstrapRemoteBearerSession({
+        httpBaseUrl: "https://remote.example.com/",
+        credential: "pairing-token",
+        clientMetadata: {
+          label: "T2 Code Mobile",
+          deviceType: "mobile",
+          os: "iOS",
+        },
+      }).pipe(provideRemoteHttp(fetch.fetchFn));
+
+      expectFetchCall(fetch.calls, 1, {
+        url: "https://remote.example.com/oauth/token",
+        method: "POST",
+        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=pairing-token&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&client_label=T2+Code+Mobile&client_device_type=mobile&client_os=iOS",
+      });
+    }),
+  );
+
+  it.effect("keeps OS sentinels in telemetry but out of display metadata", () =>
+    Effect.gen(function* () {
+      const tokenResponse = () =>
+        Response.json(
+          {
+            access_token: "bearer-token",
+            issued_token_type: "urn:ietf:params:oauth:token-type:access_token",
+            token_type: "Bearer",
+            expires_in: 3600,
+            scope: "orchestration:read",
+          },
+          { status: 200 },
+        );
+      const fetch = recordedFetch(tokenResponse(), tokenResponse());
+
+      for (const os of ["unknown", "other"] as const) {
+        yield* bootstrapRemoteBearerSession({
+          httpBaseUrl: "https://remote.example.com/",
+          credential: "pairing-token",
+          clientMetadata: {
+            label: "T2 Code Web",
+            deviceType: "desktop",
+            os,
+          },
+        }).pipe(provideRemoteHttp(fetch.fetchFn));
+      }
+
+      for (const [, init] of fetch.calls) {
+        expect(String(init.body)).not.toContain("client_os=");
+      }
+
+      const websocketUrl = new URL("wss://remote.example.com/ws");
+      appendClientConnectionParams(websocketUrl, {
+        surface: "web",
+        deviceType: "desktop",
+        os: "unknown",
+      });
+      expect(websocketUrl.searchParams.get("clientOs")).toBe("unknown");
     }),
   );
 
