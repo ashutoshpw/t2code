@@ -256,6 +256,9 @@ import {
   ProjectSearchEntriesError,
   ProjectSearchEntriesInput,
   ProjectSearchEntriesResult,
+  ProjectFileCreateUploadUrlInput,
+  ProjectFileCreateUploadUrlResult,
+  ProjectFileUploadError,
   ProjectWriteFileError,
   ProjectWriteFileInput,
   ProjectWriteFileResult,
@@ -421,6 +424,7 @@ export const WS_METHODS = {
   projectsSearchContents: "projects.searchContents",
   projectsSearchEntries: "projects.searchEntries",
   projectsWriteFile: "projects.writeFile",
+  projectsCreateFileUploadUrl: "projects.createFileUploadUrl",
   projectsMutate: "projects.mutate",
   projectsEnsureScratch: "projects.ensureScratch",
   projectsCreateNew: "projects.createNew",
@@ -1425,6 +1429,12 @@ const WsProjectsCreateFromThreadRpc = Rpc.make(WS_METHODS.projectsCreateFromThre
   error: Schema.Union([OrchestrationDispatchCommandError, EnvironmentAuthorizationError]),
 });
 
+const WsProjectsCreateFileUploadUrlRpc = Rpc.make(WS_METHODS.projectsCreateFileUploadUrl, {
+  payload: ProjectFileCreateUploadUrlInput,
+  success: ProjectFileCreateUploadUrlResult,
+  error: Schema.Union([ProjectFileUploadError, EnvironmentAuthorizationError]),
+});
+
 const WsShellOpenInEditorRpc = Rpc.make(WS_METHODS.shellOpenInEditor, {
   payload: LaunchEditorInput,
   error: Schema.Union([ExternalLauncherError, EnvironmentAuthorizationError]),
@@ -2099,7 +2109,7 @@ const WsSubscribeResourceTelemetryRpc = Rpc.make(WS_METHODS.subscribeResourceTel
 });
 
 export class RpcScopeAuthorization extends RpcMiddleware.Service<RpcScopeAuthorization>()(
-  "t3/contracts/RpcScopeAuthorization",
+  "@t2code/contracts/RpcScopeAuthorization",
   { error: EnvironmentAuthorizationError },
 ) {}
 
@@ -2234,6 +2244,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsProjectsCreateFromThreadRpc,
   WsProjectsWriteFileRpc,
   WsProjectsMutateRpc,
+  WsProjectsCreateFileUploadUrlRpc,
   WsShellOpenInEditorRpc,
   WsFilesystemBrowseRpc,
   WsFilesystemGetMetadataRpc,

@@ -98,7 +98,7 @@ it.effect.each([
         mode: "web",
         cwd: "/bootstrap-project",
         host: "localhost",
-        port: 3773,
+        port: 3772,
         devUrl: undefined,
         noBrowser: true,
         startupPresentation: "browser",
@@ -216,7 +216,7 @@ it.effect.each([
       Layer.mock(EnvironmentAuth.EnvironmentAuth)({}),
       Layer.mock(ExternalLauncher.ExternalLauncher)({}),
       Layer.mock(HttpServer.HttpServer)({
-        address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3773),
+        address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3772),
       }),
     );
     yield* Effect.gen(function* () {
@@ -291,7 +291,7 @@ it.effect("enqueueCommand fails queued work when readiness fails", () =>
       new ServerRuntimeStartup.ServerRuntimeStartupError({
         mode: "web",
         host: "127.0.0.1",
-        port: 3773,
+        port: 3772,
         cause: new Error("test startup failure"),
       }),
     );
@@ -382,6 +382,8 @@ it.effect("environment label updates subscribe before reading the initial snapsh
           ready: Effect.void,
           getSettings: PubSub.publish(changes, freshSettings).pipe(Effect.as(staleSettings)),
           updateSettings: () => Effect.die("unused"),
+          updateProviderInstance: () => Effect.die("unused"),
+          withSettingsSnapshot: (use) => use(staleSettings),
           streamChanges: Stream.empty,
           subscribeChanges: PubSub.subscribe(changes).pipe(
             Effect.map((subscription) => Stream.fromSubscription(subscription)),
