@@ -4,7 +4,7 @@ const path = require("node:path");
 const ARTIFACT_NAME = "thread-transfer-results";
 const RESULT_FILE = "thread-transfer-result.json";
 const SCENARIOS_FILE = "thread-transfer-scenarios.json";
-const COMMENT_MARKER = "<!-- t3-thread-transfer-report -->";
+const COMMENT_MARKER = "<!-- t2-thread-transfer-report -->";
 const PROVIDERS = ["codex", "claudeAgent"];
 const OBSERVED_KEYS = [
   "totalWireBytes",
@@ -37,7 +37,7 @@ const SCENARIO_LABEL = /^[A-Za-z0-9][A-Za-z0-9 ,-]{0,79}$/;
 const MAX_SCENARIO_ROWS = 100;
 
 function resultShaMarker(sha) {
-  return `<!-- t3-thread-transfer-result-sha:${sha} -->`;
+  return `<!-- t2-thread-transfer-result-sha:${sha} -->`;
 }
 
 function assertObject(value, label) {
