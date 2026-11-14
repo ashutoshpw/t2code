@@ -11,7 +11,11 @@ import {
   threadPullRequestKeysEqual,
   visibleThreadPullRequests,
 } from "@t2code/client-runtime/thread-pull-requests";
-import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { findProjectForChangeRequest } from "@t2code/client-runtime/change-request-links";
+import {
+  sourceControlClients,
+  type ChangeRequestLink,
+} from "@t2code/client-runtime/source-control-clients";
 import { useAtomValue } from "@effect/atom-react";
 import { Atom } from "effect/reactivity";
 import { appAtomRegistry } from "~/rpc/atomRegistry";
