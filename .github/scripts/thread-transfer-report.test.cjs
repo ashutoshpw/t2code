@@ -131,6 +131,39 @@ test("lists scenario rows that changed or failed above the collapsed table", () 
   assert.doesNotMatch(render(undefined, scenarios()), /Other scenarios/);
 });
 
+test("renders baseline, impact, ceiling, and ceiling changes", () => {
+  const baseline = result();
+  const current = result({ measuredTurnWebSocketWireBytes: 260_000 });
+  current.providers.codex.ceiling = {
+    ...current.providers.codex.ceiling,
+    measuredTurnWebSocketWireBytes: 330_000,
+  };
+  const comment = renderComment({
+    current,
+    baseline,
+    currentRun: {
+      sha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      conclusion: "success",
+      url: "https://github.com/pingdotgg/t2code/actions/runs/2",
+    },
+    baselineRun: {
+      sha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      matchesBase: true,
+      url: "https://github.com/pingdotgg/t2code/actions/runs/1",
+    },
+  });
+
+  assert.match(comment, /Main baseline \| This PR \| Impact \| PR ceiling/);
+  assert.match(comment, /\+9\.8 KiB \(\+4\.0%\)/);
+  assert.match(comment, /This PR changes transfer ceilings/);
+  assert.match(comment, /312\.5 KiB → 322\.3 KiB/);
+  assert.match(comment, /<!-- t3-thread-transfer-report -->/);
+  assert.match(
+    comment,
+    /<!-- t3-thread-transfer-result-sha:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb -->/,
+  );
+});
+
 test("resolves a fallback PR with a redacted head repo and exact main baseline", async () => {
   const outputs = {};
   const listWorkflowRunArtifacts = () => {};
@@ -185,7 +218,7 @@ test("resolves a fallback PR with a redacted head repo and exact main baseline",
   await resolve({
     github,
     context: {
-      repo: { owner: "pingdotgg", repo: "t3code" },
+      repo: { owner: "pingdotgg", repo: "t2code" },
       payload: {
         workflow_run: {
           id: 2,
@@ -193,7 +226,7 @@ test("resolves a fallback PR with a redacted head repo and exact main baseline",
           workflow_id: 3,
           head_sha: "head-sha",
           head_branch: "feature-branch",
-          head_repository: { full_name: "pingdotgg/t3code" },
+          head_repository: { full_name: "pingdotgg/t2code" },
           conclusion: "success",
           pull_requests: [],
         },
@@ -228,7 +261,7 @@ test("does not guess when a fallback commit belongs to multiple PRs", async () =
           head: {
             sha: "head-sha",
             ref: "feature-branch",
-            repo: { full_name: "pingdotgg/t3code" },
+            repo: { full_name: "pingdotgg/t2code" },
           },
         }));
       },
@@ -243,7 +276,7 @@ test("does not guess when a fallback commit belongs to multiple PRs", async () =
       },
     },
     context: {
-      repo: { owner: "pingdotgg", repo: "t3code" },
+      repo: { owner: "pingdotgg", repo: "t2code" },
       payload: {
         workflow_run: {
           id: 2,
@@ -251,7 +284,7 @@ test("does not guess when a fallback commit belongs to multiple PRs", async () =
           workflow_id: 3,
           head_sha: "head-sha",
           head_branch: "feature-branch",
-          head_repository: { full_name: "pingdotgg/t3code" },
+          head_repository: { full_name: "pingdotgg/t2code" },
           conclusion: "success",
           pull_requests: [],
         },
@@ -376,7 +409,7 @@ test("does not publish a stale result after the PR head advances", async () => {
         },
       },
     },
-    { repo: { owner: "pingdotgg", repo: "t3code" } },
+    { repo: { owner: "pingdotgg", repo: "t2code" } },
     { info: (message) => info.push(message) },
     5350,
     "old-head-sha",
@@ -415,7 +448,7 @@ test("preserves a successful result when a same-SHA rerun has no artifact", asyn
         },
       },
     },
-    { repo: { owner: "pingdotgg", repo: "t3code" } },
+    { repo: { owner: "pingdotgg", repo: "t2code" } },
     { info: () => {} },
     5350,
     sha,

@@ -63,7 +63,7 @@ export interface SshChildEnvironmentOptions {
   readonly authSecret?: string | null;
 }
 
-const SSH_ASKPASS_DIR_NAME = "t3code-ssh-askpass";
+const SSH_ASKPASS_DIR_NAME = "t2code-ssh-askpass";
 
 function joinSshAskpassPath(
   directory: string,
@@ -231,7 +231,7 @@ export const buildSshChildEnvironment = Effect.fn("ssh/auth.buildSshChildEnviron
     SSH_ASKPASS: sshAskpass,
     SSH_ASKPASS_REQUIRE: "force",
     ...(input.authSecret === undefined ? {} : { T2_SSH_AUTH_SECRET: input.authSecret ?? "" }),
-    ...(platform === "win32" || baseEnv.DISPLAY || hostDisplay ? {} : { DISPLAY: "t3code" }),
+    ...(platform === "win32" || baseEnv.DISPLAY || hostDisplay ? {} : { DISPLAY: "t2code" }),
   };
 });
 

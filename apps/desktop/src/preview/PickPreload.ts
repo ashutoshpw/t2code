@@ -49,8 +49,8 @@ import {
   START_PICK_CHANNEL,
   THUMB_PRESS_CHANNEL,
 } from "./GuestProtocol.ts";
-const OVERLAY_ATTRIBUTE = "data-t3code-annotation-ui";
-const INPUT_LAYER_ATTRIBUTE = "data-t3code-annotation-input";
+const OVERLAY_ATTRIBUTE = "data-t2code-annotation-ui";
+const INPUT_LAYER_ATTRIBUTE = "data-t2code-annotation-input";
 const Z_INDEX_OVERLAY = 2147483646;
 const PRIMARY = "var(--t2-primary)";
 const PRIMARY_FILL = "color-mix(in srgb, var(--t2-primary) 10%, transparent)";
@@ -574,7 +574,7 @@ function startAnnotation(
   root.style.cssText = "pointer-events:none";
   const cursorStyle = document.createElement("style");
   cursorStyle.setAttribute(OVERLAY_ATTRIBUTE, "");
-  cursorStyle.textContent = `html[data-t3code-annotation-tool] body, html[data-t3code-annotation-tool] body * { cursor: crosshair !important; } [${OVERLAY_ATTRIBUTE}], [${OVERLAY_ATTRIBUTE}] * { cursor: default !important; } [${OVERLAY_ATTRIBUTE}] input[type=number]::-webkit-inner-spin-button, [${OVERLAY_ATTRIBUTE}] input[type=number]::-webkit-outer-spin-button { appearance:none; margin:0; }`;
+  cursorStyle.textContent = `html[data-t2code-annotation-tool] body, html[data-t2code-annotation-tool] body * { cursor: crosshair !important; } [${OVERLAY_ATTRIBUTE}], [${OVERLAY_ATTRIBUTE}] * { cursor: default !important; } [${OVERLAY_ATTRIBUTE}] input[type=number]::-webkit-inner-spin-button, [${OVERLAY_ATTRIBUTE}] input[type=number]::-webkit-outer-spin-button { appearance:none; margin:0; }`;
   document.documentElement.appendChild(cursorStyle);
   shadowRoot.appendChild(root);
 
@@ -940,7 +940,7 @@ function startAnnotation(
     }
     if (tool !== "select") hoverOutline.style.display = "none";
     if (tool !== "marquee") marqueeBox.style.display = "none";
-    document.documentElement.setAttribute("data-t3code-annotation-tool", tool);
+    document.documentElement.setAttribute("data-t2code-annotation-tool", tool);
   };
 
   const removeSelected = (target: SelectedElement): void => {
@@ -1639,7 +1639,7 @@ function startAnnotation(
     ipcRenderer.off(ANNOTATION_CAPTURED_CHANNEL, onCaptured);
     ipcRenderer.off(ANNOTATION_VOICE_STATE_CHANNEL, onVoiceState);
     if (elapsedTimer !== null) clearInterval(elapsedTimer);
-    document.documentElement.removeAttribute("data-t3code-annotation-tool");
+    document.documentElement.removeAttribute("data-t2code-annotation-tool");
     cursorStyle.remove();
     inputLayer?.remove();
     host.remove();
