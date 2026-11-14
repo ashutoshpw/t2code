@@ -49,10 +49,12 @@ import {
   resolveProjectSettings,
 } from "@t2code/shared/projectSettings";
 import {
+  LEGACY_WORKTREE_BRANCH_PREFIXES,
   mergeGitStatusParts,
   resolveAutoFeatureBranchName,
   sanitizeBranchFragment,
   sanitizeFeatureBranchName,
+  WORKTREE_BRANCH_PREFIX,
 } from "@t2code/shared/git";
 import { isSshRemoteUrl } from "@t2code/shared/sourceControl";
 import {
@@ -274,7 +276,8 @@ function resolveHeadRepositoryNameWithOwner(pullRequest: PullRequestHeadRemoteIn
 
 // Both names `resolvePullRequestWorktreeLocalBranchName` gives a fork pull request's branch.
 function isPullRequestWorktreeLocalBranchName(branch: string): boolean {
-  return /^t3code[/-]pr-\d+[/-]/u.test(branch);
+  const prefixes = [WORKTREE_BRANCH_PREFIX, ...LEGACY_WORKTREE_BRANCH_PREFIXES].join("|");
+  return new RegExp(`^(?:${prefixes})[/-]pr-\\d+[/-]`, "u").test(branch);
 }
 
 function resolvePullRequestWorktreeLocalBranchName(
@@ -287,18 +290,18 @@ function resolvePullRequestWorktreeLocalBranchName(
 
   const sanitizedHeadBranch = sanitizeBranchFragment(pullRequest.headBranch).trim();
   const suffix = sanitizedHeadBranch.length > 0 ? sanitizedHeadBranch : "head";
-  // Git cannot create a ref whose path is a parent or child of an existing one (`t3code` blocks `t3code/...`).
+  // Git cannot create a ref whose path is a parent or child of an existing one (`t2code` blocks `t2code/...`).
   const isCreatable = (name: string) =>
     !name
       .split("/")
       .slice(0, -1)
       .some((_, index, segments) => localBranches.has(segments.slice(0, index + 1).join("/"))) &&
     ![...localBranches].some((branch) => branch.startsWith(`${name}/`));
-  const preferred = `t3code/pr-${pullRequest.number}/${suffix}`;
+  const preferred = `${WORKTREE_BRANCH_PREFIX}/pr-${pullRequest.number}/${suffix}`;
   if (isCreatable(preferred)) {
     return preferred;
   }
-  const flat = `t3code-pr-${pullRequest.number}-${suffix.replaceAll("/", "-")}`;
+  const flat = `${WORKTREE_BRANCH_PREFIX}-pr-${pullRequest.number}-${suffix.replaceAll("/", "-")}`;
   for (let attempt = 1; ; attempt++) {
     const candidate = attempt === 1 ? flat : `${flat}-${attempt}`;
     if (isCreatable(candidate)) {
