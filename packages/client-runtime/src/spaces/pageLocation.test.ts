@@ -8,6 +8,7 @@ import {
 } from "@t2code/contracts/spaces";
 import { EnvironmentId, WS_METHODS } from "@t2code/contracts";
 import * as Deferred from "effect/Deferred";
+import { MixedScheduler } from "effect/Scheduler";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Queue from "effect/Queue";
@@ -218,7 +219,18 @@ const setupLocationRuntime = Effect.fn("SpacePageLocationTest.setupRuntime")(fun
     followStream,
     stateChanges: () => SubscriptionRef.changes(state),
   } as unknown as EnvironmentRegistry["Service"]);
-  const registry = AtomRegistry.make();
+  const cleanup = new MixedScheduler("async").makeDispatcher();
+  const registry = AtomRegistry.make({
+    scheduleTask: (task) => {
+      let active = true;
+      cleanup.scheduleTask(() => {
+        if (active) task();
+      }, 0);
+      return () => {
+        active = false;
+      };
+    },
+  });
   yield* Effect.addFinalizer(() => Effect.sync(() => registry.dispose()));
   const queries = createSpacesEnvironmentAtoms(
     Atom.runtime(Layer.succeed(EnvironmentRegistry, environments)),
@@ -229,6 +241,7 @@ const setupLocationRuntime = Effect.fn("SpacePageLocationTest.setupRuntime")(fun
   };
   return {
     registry,
+    flushCleanup: () => cleanup.flush(),
     requests,
     sessions,
     state,
@@ -272,6 +285,7 @@ it.effect(
         const secondOwner = h.location();
         const stopSecond = yield* Effect.sync(() => {
           stopFirst();
+          h.flushCleanup();
           const stop = h.registry.mount(secondOwner);
           const initial = Option.getOrNull(AsyncResult.value(h.registry.get(secondOwner)));
           expect(initial?.page.spaceId).not.toBe(spaceId);
@@ -303,6 +317,7 @@ it.effect(
         expect(current.current()?.page.spaceId).toBe(destination);
         expect(h.executions()).toBe(4);
         stopSecond();
+        h.flushCleanup();
         const thirdOwner = h.location();
         const stopThird = h.registry.mount(thirdOwner);
         yield* Effect.addFinalizer(() => Effect.sync(stopThird));
