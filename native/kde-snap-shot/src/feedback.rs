@@ -3,7 +3,7 @@
 use super::*;
 use std::io::BufRead;
 
-const OBJECT: &str = "/com/t3tools/KdeCapture/Feedback";
+const OBJECT: &str = "/com/t2code/KdeCapture/Feedback";
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -165,7 +165,7 @@ pub(super) fn run(connection: &Connection, directory: &Path, options: &str) -> R
     });
 
     let path = directory.join("feedback.qml");
-    let name = format!("t3-capture-feedback-{}", std::process::id());
+    let name = format!("t2-capture-feedback-{}", std::process::id());
     let bus = serde_json::to_string(
         connection
             .unique_name()

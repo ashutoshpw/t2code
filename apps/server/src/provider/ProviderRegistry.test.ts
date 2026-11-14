@@ -2686,7 +2686,7 @@ it.layer(
             Layer.provideMerge(instanceRegistryLayer),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-shared-refresh-",
+                prefix: "t2-provider-registry-shared-refresh-",
               }),
             ),
             Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
@@ -3054,7 +3054,7 @@ it.layer(
             Layer.provideMerge(layerInstanceRegistry),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-merged-persist-",
+                prefix: "t2-provider-registry-merged-persist-",
               }),
             ),
             Layer.provideMerge(layerBackgroundPolicyAlwaysRun),
@@ -3344,7 +3344,7 @@ it.layer(
               Layer.provideMerge(layerInstanceRegistry),
               Layer.provideMerge(
                 ServerConfig.layerTest(process.cwd(), {
-                  prefix: "t3-provider-registry-opencode-authoritative-persist-",
+                  prefix: "t2-provider-registry-opencode-authoritative-persist-",
                 }),
               ),
               Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
@@ -3448,7 +3448,7 @@ it.layer(
             Layer.provideMerge(layerInstanceRegistry),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-refresh-failure-",
+                prefix: "t2-provider-registry-refresh-failure-",
               }),
             ),
             Layer.provideMerge(layerBackgroundPolicyAlwaysRun),
@@ -3532,6 +3532,135 @@ it.layer(
           }),
       );
     });
+    it.effect("keeps consuming registry changes after one sync fails", () =>
+      Effect.gen(function* () {
+        const codexDriver = ProviderDriverKind.make("codex");
+        const codexInstanceId = ProviderInstanceId.make("codex");
+        const claudeDriver = ProviderDriverKind.make("claudeAgent");
+        const claudeInstanceId = ProviderInstanceId.make("claudeAgent");
+        const codexProvider = {
+          instanceId: codexInstanceId,
+          driver: codexDriver,
+          status: "ready",
+          enabled: true,
+          installed: true,
+          auth: { status: "authenticated" },
+          checkedAt: "2026-04-29T10:00:00.000Z",
+          version: "1.0.0",
+          models: [],
+          slashCommands: [],
+          skills: [],
+        } as const satisfies ServerProvider;
+        const claudeProvider = {
+          instanceId: claudeInstanceId,
+          driver: claudeDriver,
+          status: "ready",
+          enabled: true,
+          installed: true,
+          auth: { status: "authenticated" },
+          checkedAt: "2026-04-29T10:01:00.000Z",
+          version: "1.0.0",
+          models: [],
+          slashCommands: [],
+          skills: [],
+        } as const satisfies ServerProvider;
+        const makeInstance = (provider: ServerProvider): ProviderInstance => ({
+          instanceId: provider.instanceId,
+          driverKind: provider.driver,
+          continuationIdentity: {
+            driverKind: provider.driver,
+            continuationKey: `${provider.driver}:instance:${provider.instanceId}`,
+          },
+          displayName: undefined,
+          enabled: true,
+          snapshot: {
+            resolveMaintenance: () =>
+              Effect.succeed(
+                makeManualOnlyProviderMaintenanceCapabilities({
+                  provider: provider.driver,
+                  packageName: null,
+                }),
+              ),
+            getSnapshot: Effect.succeed(provider),
+            refresh: Effect.succeed(provider),
+            streamChanges: Stream.empty,
+            applyUsageLimits: () => Effect.void,
+          },
+          orchestrationAdapter: {} as ProviderInstance["orchestrationAdapter"],
+          textGeneration: {} as ProviderInstance["textGeneration"],
+        });
+        const codexInstance = makeInstance(codexProvider);
+        const claudeInstance = makeInstance(claudeProvider);
+        const changes = yield* PubSub.unbounded<void>();
+        const instancesRef = yield* Ref.make<ReadonlyArray<ProviderInstance>>([codexInstance]);
+        const failNextList = yield* Ref.make(false);
+        const wait = () => Effect.yieldNow;
+        const layerInstanceRegistry = Layer.succeed(
+          ProviderInstanceRegistry.ProviderInstanceRegistry,
+          {
+            getInstance: (instanceId) =>
+              Ref.get(instancesRef).pipe(
+                Effect.map((instances) =>
+                  instances.find((instance) => instance.instanceId === instanceId),
+                ),
+              ),
+            listInstances: Effect.gen(function* () {
+              const shouldFail = yield* Ref.get(failNextList);
+              if (shouldFail) {
+                yield* Ref.set(failNextList, false);
+                return yield* Effect.die(new Error("simulated registry list failure"));
+              }
+              return yield* Ref.get(instancesRef);
+            }),
+            listUnavailable: Effect.succeed([]),
+            streamChanges: Stream.fromPubSub(changes),
+            subscribeChanges: PubSub.subscribe(changes),
+          },
+        );
+        const scope = yield* Scope.make();
+        yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void));
+        const runtimeServices = yield* Layer.build(
+          ProviderRegistry.layer.pipe(
+            Layer.provideMerge(layerInstanceRegistry),
+            Layer.provideMerge(
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "t2-provider-registry-sync-failure-",
+              }),
+            ),
+            Layer.provideMerge(layerBackgroundPolicyAlwaysRun),
+            Layer.provideMerge(NodeServices.layer),
+          ),
+        ).pipe(Scope.provide(scope));
+
+        yield* Effect.gen(function* () {
+          const registry = yield* ProviderRegistry.ProviderRegistry;
+          assert.deepStrictEqual(yield* registry.getProviders, [
+            withBundledCompatibility(codexProvider),
+          ]);
+
+          yield* Ref.set(failNextList, true);
+          yield* PubSub.publish(changes, undefined);
+
+          yield* Ref.set(instancesRef, [codexInstance, claudeInstance]);
+          yield* PubSub.publish(changes, undefined);
+
+          let providers = yield* registry.getProviders;
+          for (
+            let attempt = 0;
+            attempt < 50 && !providers.some((provider) => provider.instanceId === claudeInstanceId);
+            attempt += 1
+          ) {
+            yield* wait();
+            providers = yield* registry.getProviders;
+          }
+
+          assert.deepStrictEqual(
+            providers.map((provider) => provider.instanceId).toSorted(),
+            [codexInstanceId, claudeInstanceId].toSorted(),
+          );
+        }).pipe(Effect.provide(runtimeServices));
+      }),
+    );
 
     it.effect("re-probes when settings change the codex binaryPath", () =>
       Effect.gen(function* () {
@@ -3584,7 +3713,7 @@ it.layer(
           Layer.provideMerge(ServerSecretStore.layer),
           Layer.provideMerge(
             ServerConfig.layerTest(process.cwd(), {
-              prefix: "t3-provider-registry-",
+              prefix: "t2-provider-registry-",
             }),
           ),
           Layer.provideMerge(layerTestHttpClient),
@@ -3710,7 +3839,7 @@ it.layer(
           Layer.provideMerge(ServerSecretStore.layer),
           Layer.provideMerge(
             ServerConfig.layerTest(process.cwd(), {
-              prefix: "t3-provider-registry-",
+              prefix: "t2-provider-registry-",
             }),
           ),
           Layer.provideMerge(layerTestHttpClient),

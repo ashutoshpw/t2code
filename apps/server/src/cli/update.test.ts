@@ -295,7 +295,7 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
         yield* fs.writeFileString(launcher, edited);
         assert.isTrue(Option.isNone(yield* repoint({ PATH: path.dirname(launcher) })));
         assert.equal(yield* fs.readFileString(launcher), edited);
-      }).pipe(Effect.scoped, Effect.provideService(HostProcess.Platform, "linux")),
+      }).pipe(Effect.scoped, Effect.provideService(HostProcess.Platform, "linux")),>>>>>>> f21e14bf5 (refactor(cli)!: drop the t3 binary name and every t3 compat seam)
   );
 
   it.effect.each([
