@@ -123,7 +123,7 @@ describe("buildComposerPromptHistoryEntries", () => {
       {
         id: "m1",
         role: "user",
-        text: `Agent in ${threadChip} finished on ${machineChip}. See [Gone](t3-context://v1/thread/gone) ![shot](t3-context://v1/image/img-1)`,
+        text: `Agent in ${threadChip} finished on ${machineChip}. See [Gone](t2-context://v1/thread/gone) ![shot](t2-context://v1/image/img-1)`,
         context: { version: 1, records: [thread, unmentioned, machine] },
       },
     ]);
@@ -144,7 +144,7 @@ describe("buildComposerPromptHistoryEntries", () => {
     });
   });
 
-  it("skips messages sent by automations, agents, and T3 Code", () => {
+  it("skips messages sent by automations, agents, and T2 Code", () => {
     const typed = buildComposerPromptHistoryEntries([
       { id: "m1", role: "user", text: "typed" },
       { id: "m2", role: "user", text: "scheduled", scheduledTaskId: ScheduledTaskId.make("task") },
