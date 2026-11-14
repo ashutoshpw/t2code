@@ -1,11 +1,18 @@
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
+import * as Schema from "effect/Schema";
 
 import * as SpacesSql from "../SpacesSql.ts";
+import { parseJson } from "./Json.ts";
 import * as Liveness from "./Liveness.ts";
 import * as SchemaStore from "./SchemaStore.ts";
 import type { Snapshot } from "./SchemaStore.ts";
 import type { DatabaseRecord } from "./Types.ts";
+
+const decodeHomeBlock = Schema.decodeUnknownOption(C.SpaceDatabaseBlock, {
+  onExcessProperty: "error",
+});
 
 export const wireDatabase = Effect.fn("SpacesDatabases.wireDatabase")(function* (
   record: DatabaseRecord,
@@ -17,15 +24,23 @@ export const wireDatabase = Effect.fn("SpacesDatabases.wireDatabase")(function* 
       : yield* sql<{
           readonly page_id: C.SpacePageId;
           readonly block_id: C.SpaceBlockId;
-        }>`SELECT page_id, block_id FROM spaces_blocks WHERE block_id = ${record.home_block_id} AND deleted = 0`;
+          readonly payload: string;
+        }>`SELECT page_id, block_id, payload FROM spaces_blocks WHERE block_id = ${record.home_block_id} AND deleted = 0`;
   const live = home !== undefined && (yield* Liveness.pageLive(home.page_id));
+  const homeBlock = home ? decodeHomeBlock(parseJson(home.payload)) : Option.none();
   return {
     id: record.database_id,
     spaceId: record.space_id,
     title: record.title,
     ...(record.icon ? { icon: record.icon } : {}),
     revision: record.revision,
-    home: home ? { pageId: home.page_id, blockId: home.block_id } : null,
+    home: home
+      ? {
+          pageId: home.page_id,
+          blockId: home.block_id,
+          ...(Option.isSome(homeBlock) ? { viewIds: [...homeBlock.value.content.viewIds] } : {}),
+        }
+      : null,
     live,
     createdAt: record.created_at,
     updatedAt: record.updated_at,

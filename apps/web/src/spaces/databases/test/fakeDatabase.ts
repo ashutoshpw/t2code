@@ -504,7 +504,13 @@ export class FakeDatabase {
         update: run(
           "update",
           (input) => {
-            this.database = { ...this.database, title: String(input.title ?? this.database.title) };
+            const { icon: _, ...rest } = this.database;
+            const icon = input.icon === undefined ? this.database.icon : input.icon;
+            this.database = {
+              ...rest,
+              title: String(input.title ?? this.database.title),
+              ...(typeof icon === "string" ? { icon } : {}),
+            };
             return { revision: ++this.revision };
           },
           "database",
@@ -561,6 +567,15 @@ export class FakeDatabase {
               affectedDataSourceIds: [FIXTURE_IDS.dataSource],
             };
           },
+          "database",
+        ),
+        createDataSource: run(
+          "createDataSource",
+          () => ({
+            dataSourceId: `ds-new-${this.#nextId++}`,
+            propertyIds: [],
+            revision: ++this.revision,
+          }),
           "database",
         ),
         createView: run(

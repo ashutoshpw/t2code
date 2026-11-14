@@ -1,5 +1,7 @@
+import { nextOptionColor } from "@t2code/client-runtime/spaces";
+import type { SpaceDatabaseOption } from "@t2code/contracts/spaces";
 import { useState } from "react";
-import { ScrollView, View, useColorScheme } from "react-native";
+import { Pressable, ScrollView, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText as Text, AppTextInput as TextInput } from "../../../components/ui/AppText";
@@ -9,6 +11,7 @@ import { ListSection } from "../../../components/ui/ListSection";
 import { Sheet } from "../../../components/ui/Sheet";
 import { optionColor } from "./optionColors";
 import {
+  choiceRows,
   commitValue,
   type CellDraft,
   type CellEditor,
@@ -42,10 +45,24 @@ export function CellEditSheet(props: {
    */
   readonly onCommit: (value: Extract<CommitResult, { ok: true }>["value"]) => string | null;
   readonly onClose: () => void;
+  /** Adds an option to the property and resolves its id; null when it could not be added. */
+  readonly onCreateOption?: (name: string) => Promise<string | null>;
 }) {
-  const { editor } = props;
   const insets = useSafeAreaInsets();
   const [error, setError] = useState<string | null>(null);
+  // Options created here stay until the property refreshes, so their chips render and validate.
+  const [created, setCreated] = useState<ReadonlyArray<SpaceDatabaseOption>>([]);
+  const base = props.editor;
+  const editor: SheetEditor =
+    base.kind === "choice"
+      ? {
+          ...base,
+          options: [
+            ...base.options,
+            ...created.filter((fresh) => !base.options.some((o) => o.id === fresh.id)),
+          ],
+        }
+      : base;
   const submit = (draft: CellDraft) => {
     const result = commitValue(editor, draft);
     if (!result.ok) {
@@ -71,7 +88,28 @@ export function CellEditSheet(props: {
         {editor.kind === "text" ? (
           <TextBody editor={editor} error={error} onSubmit={submit} onEdit={() => setError(null)} />
         ) : editor.kind === "choice" ? (
-          <ChoiceBody editor={editor} error={error} onSubmit={submit} />
+          <ChoiceBody
+            editor={editor}
+            error={error}
+            onSubmit={submit}
+            onCreateOption={
+              props.onCreateOption === undefined
+                ? undefined
+                : async (name) => {
+                    const id = await props.onCreateOption?.(name);
+                    if (id === null || id === undefined) return null;
+                    setCreated((list) => [
+                      ...list,
+                      {
+                        id: id as SpaceDatabaseOption["id"],
+                        name,
+                        color: nextOptionColor(editor.options.map((option) => option.color)),
+                      },
+                    ]);
+                    return id;
+                  }
+            }
+          />
         ) : (
           <DateBody editor={editor} error={error} onSubmit={submit} onEdit={() => setError(null)} />
         )}
@@ -119,10 +157,14 @@ function ChoiceBody(props: {
   readonly editor: Extract<SheetEditor, { kind: "choice" }>;
   readonly error: string | null;
   readonly onSubmit: (draft: CellDraft) => void;
+  readonly onCreateOption: ((name: string) => Promise<string | null>) | undefined;
 }) {
   const { editor } = props;
   const scheme = useColorScheme() === "dark" ? "dark" : "light";
   const [selected, setSelected] = useState(editor.selected);
+  const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
+  const rows = choiceRows(editor.options, query, props.onCreateOption !== undefined);
   const toggle = (id: string) => {
     if (!editor.multiple) {
       props.onSubmit({ kind: "choice", selected: selected.includes(id) ? [] : [id] });
@@ -132,10 +174,61 @@ function ChoiceBody(props: {
       current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id],
     );
   };
+  const remove = (id: string) => {
+    if (!editor.multiple) props.onSubmit({ kind: "choice", selected: [] });
+    else setSelected((current) => current.filter((entry) => entry !== id));
+  };
+  const create = async (name: string) => {
+    setCreating(true);
+    const id = await props.onCreateOption?.(name);
+    setCreating(false);
+    if (id === null || id === undefined) return;
+    setQuery("");
+    if (editor.multiple) setSelected((current) => [...current, id]);
+    else props.onSubmit({ kind: "choice", selected: [id] });
+  };
+  const chosen = selected.flatMap((id) => editor.options.find((option) => option.id === id) ?? []);
   return (
     <>
-      <ListSection footer={ADD_OPTIONS_FOOTER}>
-        {editor.options.map((option, index) => (
+      {chosen.length === 0 ? null : (
+        <View className="flex-row flex-wrap gap-1.5">
+          {chosen.map((option) => {
+            const color = optionColor(option.color, scheme);
+            return (
+              <View
+                key={option.id}
+                className="flex-row items-center gap-1 rounded-md px-2 py-1"
+                style={{ backgroundColor: color.background }}
+              >
+                <Text className="text-sm" style={{ color: color.text }}>
+                  {option.name}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${option.name}`}
+                  hitSlop={8}
+                  onPress={() => remove(option.id)}
+                >
+                  <Text className="text-sm" style={{ color: color.text }}>
+                    ×
+                  </Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      )}
+      <TextInput
+        accessibilityLabel="Search or create an option"
+        placeholder="Search or create an option"
+        value={query}
+        onChangeText={setQuery}
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="search"
+      />
+      <ListSection footer={props.onCreateOption === undefined ? ADD_OPTIONS_FOOTER : undefined}>
+        {rows.options.map((option, index) => (
           <ListChoiceRow
             key={option.id}
             label={option.name}
@@ -150,6 +243,15 @@ function ChoiceBody(props: {
             onPress={() => toggle(option.id)}
           />
         ))}
+        {rows.create === null ? null : (
+          <ListChoiceRow
+            label={`Create \u201c${rows.create}\u201d`}
+            selected={false}
+            separated={rows.options.length > 0}
+            disabled={creating}
+            onPress={() => void create(rows.create ?? "")}
+          />
+        )}
       </ListSection>
       <ErrorLine message={props.error} />
       {editor.multiple ? (

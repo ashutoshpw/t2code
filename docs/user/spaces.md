@@ -61,10 +61,14 @@ Choose **Media → Upload** in the page header to add an image, PDF or video to 
 
 A database is a set of pages, called rows, that share properties such as a status, a date or an owner. Type **/** and choose **Database** to add one inline on a page. A page that holds only a database opens as a full-page database. Every row is a page: open it to see its properties above a body you can write in. A database holds up to 25,000 rows, 100 properties and 50 views.
 
+Hover the database title and open **…** to view the database as a full page, rename it, change its icon or layout, or hide the title. Show it again from the block's menu.
+
 Each database has saved views. Add one to look at the same rows another way, and each view keeps its own filters, sorts, grouping and visible properties.
 
+Views appear as tabs above the database; when they do not fit, **N more…** lists the rest with a search box, and you can drag views to reorder them. Use **+** to add a view or a new data source. Each view's **View settings** (the sliders icon) holds its layout, visible properties, filter, sort, group, sub-items, load limit and how pages open, and lets you copy a link to the view, duplicate or delete it. The double-chevron button hides the tabs and toolbar for you only.
+
 - **Table** is a grid for editing many rows at once.
-- **Board** groups rows into columns, such as status, and is the one to use for workflow.
+- **Board** groups rows into columns, such as status, and is the one to use for workflow. New boards tint columns grouped by a select or status with its colors; turn this on or off with **Color columns** in **View settings → Layout**.
 - **List** is a compact line per row.
 - **Gallery** shows cards, with a cover or a property as the preview.
 - **Calendar** places rows on a date property. A range shows up to 500 items.
@@ -74,7 +78,7 @@ Views can filter, sort, group and sub-group, and show a calculation (count, sum,
 
 ### Properties
 
-Properties are text, number, select, multi-select, status, date, checkbox, URL, email, phone, files, relation, rollup, formula, created time, last edited time and unique ID. Deleted properties can be restored.
+Properties are text, number, select, multi-select, status, date, checkbox, URL, email, phone, files, relation, rollup, formula, created time, last edited time and unique ID. Deleted properties can be restored. In a select, multi-select or status cell, type to find an option or create one; open **…** beside an option to rename it, change its color or delete it, and drag options to reorder them.
 
 - **Relation** links rows to rows of another database. Choose the database, whether a row links to one page or has no limit, and whether to show the link on the other database too. The target database cannot be changed afterwards.
 - **Rollup** summarizes a property of the related rows, for example the sum of their estimates or the earliest date. A rollup cannot read another rollup.
@@ -86,7 +90,7 @@ Choose **Linked view of database** from the **/** menu to show an existing datab
 
 While the original database is in the trash, a linked view shows a message instead of rows until you restore it. A database whose block was removed keeps its rows for 30 days and comes back if you undo the removal (editor undo or **Undo saved change**) in that time. Emptying its page from the trash cannot be undone. After 30 days its rows are removed permanently. A database whose page is in the trash is kept until the trash is emptied.
 
-Sub-items let rows have child rows of the same database. Turn them on in a table or list view's layout settings, then show them in a hierarchy or as plain rows.
+Sub-items let rows have child rows of the same database. Turn them on in a table or list view's **View settings**, then show them in a hierarchy or as plain rows.
 
 Templates pre-fill new rows. Use **New template** in the new-row menu, edit it like any row, and set one as the default. A row made from a template copies its icon, properties and body, but not its title.
 
@@ -181,7 +185,7 @@ On mobile, open **Spaces** from the thread list, Settings, or the command palett
 
 Tabs show as a switcher at the top of each tab group, and synced blocks show their original content. Both are read-only on mobile. Open pages update when they change elsewhere.
 
-Databases open on mobile in every view type, drawn as lists and cards suited to a phone. Calendars and timelines show as a month agenda, and **Open database** on a page's database shows the full list. Views apply as saved on desktop; change filters, sorting, layout, properties, formulas, relations and templates there. Open a row to read it and edit its title, text, number, checkbox, select, multi-select, status, date, URL, email and phone values, and use **New row** to add one. Cell changes save right away and are not kept as a draft; if one cannot be sent, retry or discard it. Dates are entered as YYYY-MM-DD; dates with a time and formatted text are edited on desktop. Long views stop at 500 rows, or 200 per group, and point you to desktop for the rest.
+Databases open on mobile in every view type, drawn as lists and cards suited to a phone. Calendars and timelines show as a month agenda, and **Open database** on a page's database shows the full list. Views apply as saved on desktop; change filters, sorting, layout, properties, formulas, relations and templates there. Open a row to read it and edit its title, text, number, checkbox, select, multi-select, status, date, URL, email and phone values, add options to a select, multi-select or status there, and use **New row** to add one. A database title you hid on desktop stays hidden. Cell changes save right away and are not kept as a draft; if one cannot be sent, retry or discard it. Dates are entered as YYYY-MM-DD; dates with a time and formatted text are edited on desktop. Long views stop at 500 rows, or 200 per group, and point you to desktop for the rest.
 
 Read comments, reply, resolve or reopen them, and send a comment to a session. Highlights for commented text are not shown on mobile; the quoted text appears in the comment.
 

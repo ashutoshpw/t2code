@@ -69,6 +69,8 @@ export interface ViewForm {
   readonly notes: ReadonlyArray<string>;
   /** Replaces the body when the view cannot be drawn. */
   readonly message: string | null;
+  /** A board whose columns are tinted by their group option's color. */
+  readonly tint: boolean;
 }
 
 interface Layout {
@@ -79,6 +81,7 @@ interface Layout {
   readonly datePropertyId: string | undefined;
   readonly startPropertyId: string | undefined;
   readonly endPropertyId: string | undefined;
+  readonly colorColumns: boolean;
 }
 
 const record = (value: unknown): Record<string, unknown> =>
@@ -99,6 +102,7 @@ function layoutOf(view: SpaceDatabaseView): Layout {
     datePropertyId: text(layout["datePropertyId"]),
     startPropertyId: text(layout["startPropertyId"]),
     endPropertyId: text(layout["endPropertyId"]),
+    colorColumns: layout["colorColumns"] === true,
   };
 }
 
@@ -128,6 +132,7 @@ const messageForm = (type: string, message: string): ViewForm => ({
   agenda: null,
   notes: [],
   message,
+  tint: false,
 });
 
 /** Decides how a saved view is drawn on a phone, and which properties it needs. */
@@ -170,6 +175,7 @@ export function viewForm(
       agenda: { start, end: own },
       notes: ["Rows without a date are listed on desktop."],
       message: null,
+      tint: false,
     };
   }
   const lines = LINES[view.type];
@@ -210,6 +216,7 @@ export function viewForm(
         ? ["Cover images are shown on desktop."]
         : [],
     message: null,
+    tint: board && layout.colorColumns,
   };
 }
 
@@ -290,6 +297,9 @@ export type ListItem =
       readonly count: number | null;
       /** The section a grouped view's header stands for; null on an agenda day. */
       readonly bucket: SpaceGroupKey | null;
+      /** The option color a tinted board section carries. */
+      readonly tint?: string;
+      readonly last?: true;
     }
   | {
       readonly kind: "row";
@@ -297,6 +307,8 @@ export type ListItem =
       readonly row: SpaceDatabaseRow;
       /** An agenda item that spans days: "Nov 9 → Nov 12". */
       readonly span: string | null;
+      readonly tint?: string;
+      readonly last?: true;
     }
   | {
       readonly kind: "more";
@@ -353,15 +365,26 @@ function groupItems(form: ViewForm, source: ListSource): ReadonlyArray<ListItem>
   for (const bucket of shown) {
     if (form.kind !== "board" && bucket.count === 0) continue;
     const id = canonicalJson(bucket.key);
+    const label = groupLabel(bucket, known, name, source.optionHint);
+    const tint = form.tint && label.color !== undefined ? { tint: label.color } : {};
+    const start = items.length;
     items.push({
       kind: "header",
       key: `header:${id}`,
-      label: groupLabel(bucket, known, name, source.optionHint),
+      label,
       count: bucket.count,
       bucket: bucket.key,
+      ...tint,
     });
     for (const row of bucket.rows)
-      items.push({ kind: "row", key: rowKey(source.dataSourceId, row, `${id}:`), row, span: null });
+      items.push({
+        kind: "row",
+        key: rowKey(source.dataSourceId, row, `${id}:`),
+        row,
+        span: null,
+        ...tint,
+      });
+    if (tint.tint !== undefined) markLast(items, start);
     if (bucket.nextCursor !== null)
       items.push(
         bucket.rows.length >= MAX_SECTION_ROWS
@@ -376,6 +399,13 @@ function groupItems(form: ViewForm, source: ListSource): ReadonlyArray<ListItem>
       );
   }
   return items;
+}
+
+/** The last header or row of a tinted section closes its rounded background. */
+function markLast(items: ListItem[], start: number) {
+  const item = items[items.length - 1];
+  if (items.length > start && (item?.kind === "header" || item?.kind === "row"))
+    items[items.length - 1] = { ...item, last: true };
 }
 
 function agendaItems(form: ViewForm, source: ListSource): ReadonlyArray<ListItem> {
@@ -431,5 +461,8 @@ export function previewItems(items: ReadonlyArray<ListItem>, max: number): Reado
     out.push(item);
   }
   while (out.length > 0 && out[out.length - 1]?.kind === "header") out.pop();
+  const end = out[out.length - 1];
+  if ((end?.kind === "row" || end?.kind === "header") && end.tint !== undefined && !end.last)
+    out[out.length - 1] = { ...end, last: true };
   return out;
 }

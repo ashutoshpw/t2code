@@ -28,6 +28,7 @@ export interface ViewModel {
   readonly cardPreview: SpaceCardPreview | undefined;
   readonly cardSize: "small" | "medium" | "large";
   readonly fitImage: boolean;
+  readonly colorColumns: boolean;
   readonly showPropertyNames: boolean;
   readonly wrapCells: boolean;
   readonly weekStart: "sunday" | "monday";
@@ -60,6 +61,7 @@ export function viewModel(view: SpaceSharedDatabaseView, source: SpaceSharedData
     cardPreview: isPreview(layout.cardPreview) ? layout.cardPreview : undefined,
     cardSize: size === "small" || size === "large" ? size : "medium",
     fitImage: flag(layout.fitImage),
+    colorColumns: flag(layout.colorColumns),
     showPropertyNames: flag(layout.showPropertyNames),
     wrapCells: flag(layout.wrapCells),
     weekStart: layout.weekStart === "monday" ? "monday" : "sunday",

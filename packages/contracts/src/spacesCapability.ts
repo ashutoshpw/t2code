@@ -188,6 +188,7 @@ export const SpaceCapability = Schema.Struct({
       tabs: Schema.optionalKey(Schema.Literal(true)),
       syncedBlocks: Schema.optionalKey(Schema.Literal(true)),
       comments: Schema.optionalKey(Schema.Literal(true)),
+      databaseHideTitle: Schema.optionalKey(Schema.Literal(true)),
     }),
   ),
 });

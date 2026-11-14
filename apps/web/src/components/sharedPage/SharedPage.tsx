@@ -293,6 +293,7 @@ function SharedDocument({
             pageId={page.id}
             credential={credential}
             layout={fullPageDatabase ? "page" : "inline"}
+            hideTitle={block.content.hideTitle === true}
             rowHref={(blockId, viewId, rowId) => rowHref(page.id, blockId, viewId, rowId)}
             openRow={onOpenHref}
           />

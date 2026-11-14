@@ -2,7 +2,9 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   commitCheckbox,
+  choiceRows,
   commitValue,
+  newOptionOperation,
   DATE_ERROR,
   DATE_START_ERROR,
   DESKTOP_ONLY_NOTE,
@@ -342,5 +344,46 @@ describe("newRowInput", () => {
         zone: "UTC",
       }),
     ).toEqual({ dataSourceId: "source1", rows: [{}] });
+  });
+});
+
+describe("choiceRows", () => {
+  const typed = options as never as Parameters<typeof choiceRows>[0];
+  it("filters case-insensitively and offers create for a new name", () => {
+    expect(choiceRows(typed, "AL", true)).toEqual({ options: [typed[0]], create: "AL" });
+    expect(choiceRows(typed, "et", true).options).toEqual([typed[1]]);
+  });
+  it.each([
+    ["", true, null],
+    ["alpha", true, null],
+    ["Gamma", false, null],
+    ["  Gamma ", true, "Gamma"],
+  ])("create for %j (permission %s) is %j", (query, canCreate, create) => {
+    expect(choiceRows(typed, query, canCreate).create).toBe(create);
+  });
+});
+
+describe("newOptionOperation", () => {
+  const typed = options as never as Parameters<typeof choiceRows>[0];
+  it("adds a trimmed option in the next palette color", () => {
+    const made = newOptionOperation(
+      { id: "p1" as never, type: "select", options: typed },
+      " Gamma ",
+      () => "o1",
+    );
+    expect(made.optionId).toBe("o1");
+    expect(made.operation).toEqual({
+      op: "addOption",
+      propertyId: "p1",
+      option: { id: "o1", name: "Gamma", color: "gray" },
+    });
+  });
+  it("puts a status option in the todo group", () => {
+    const made = newOptionOperation(
+      { id: "p1" as never, type: "status", options: [] },
+      "New",
+      () => "o2",
+    );
+    expect(made.operation).toMatchObject({ option: { group: "todo" } });
   });
 });

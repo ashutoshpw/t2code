@@ -3,7 +3,8 @@ import "~/index.css";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
-import { FakeDatabase } from "../test/fakeDatabase";
+import { EditableFakeDatabase } from "../test/editableDatabase";
+import { FakeDatabase, type FakeDatabaseOptions } from "../test/fakeDatabase";
 import { readyWhen } from "../test/readyWhen";
 
 import { mountTable } from "./tableHarness";
@@ -36,8 +37,13 @@ const EXTRA = [
 ];
 
 /** The fixture plus url, files, relation and created_time columns, all visible. */
-async function mount() {
-  const fake = new FakeDatabase({ quietRowWrites: true, rows: 10 });
+async function mount(options: FakeDatabaseOptions & { readonly editable?: boolean } = {}) {
+  const { editable = false, ...rest } = options;
+  const fake = new (editable ? EditableFakeDatabase : FakeDatabase)({
+    quietRowWrites: true,
+    rows: 10,
+    ...rest,
+  });
   fake.dataSource = {
     ...fake.dataSource,
     properties: {
@@ -133,6 +139,109 @@ describe("option editors", () => {
   });
 });
 
+const operationsOf = (fake: FakeDatabase) =>
+  fake
+    .callsOf("updateSchema")
+    .flatMap((call) => call.input.operations as Record<string, unknown>[]);
+
+describe("option editor management", () => {
+  it("shows chips with a remove button that keeps the popover open", async () => {
+    const { fake, screen, cell } = await mount({ editable: true });
+    await using _screen = screen;
+    await userEvent.click(locate(cell("row-1", "tags")));
+    await userEvent.click(page.getByRole("option", { name: "Bug" }));
+    await userEvent.click(page.getByRole("button", { name: "Remove Bug" }));
+    await vi.waitFor(() => expect(lastWrite(fake)).toEqual({ tags: [] }));
+    await expect.element(page.getByRole("listbox", { name: "Tags" })).toBeVisible();
+  });
+
+  it("renames, recolors and deletes an option from its menu", async () => {
+    const { fake, screen, cell } = await mount({ editable: true });
+    await using _screen = screen;
+    await userEvent.click(locate(cell("row-1", "tags")));
+    await userEvent.click(page.getByRole("button", { name: "Edit Bug" }));
+    await userEvent.fill(page.getByRole("textbox", { name: "Option name" }), "Defect");
+    await userEvent.keyboard("{Enter}");
+    await vi.waitFor(() =>
+      expect(operationsOf(fake)).toContainEqual(
+        expect.objectContaining({ op: "updateOption", optionId: "bug", name: "Defect" }),
+      ),
+    );
+    await userEvent.click(page.getByRole("radio", { name: "purple" }));
+    await vi.waitFor(() =>
+      expect(operationsOf(fake)).toContainEqual(
+        expect.objectContaining({ op: "updateOption", optionId: "bug", color: "purple" }),
+      ),
+    );
+    await userEvent.click(page.getByRole("button", { name: "Delete option" }));
+    await userEvent.click(page.getByRole("button", { name: "Delete", exact: true }));
+    await vi.waitFor(() =>
+      expect(operationsOf(fake)).toContainEqual({
+        op: "removeOption",
+        propertyId: "tags",
+        optionId: "bug",
+      }),
+    );
+  });
+
+  it("creates an option with the next palette color and selects it", async () => {
+    const { fake, screen, cell } = await mount({ editable: true });
+    await using _screen = screen;
+    await userEvent.click(locate(cell("row-1", "tags")));
+    await userEvent.fill(page.getByRole("combobox", { name: "Search Tags" }), "Perf");
+    await expect.element(page.getByRole("option", { name: /^Create/ })).toBeVisible();
+    await userEvent.keyboard("{Enter}");
+    await vi.waitFor(() => expect(operationsOf(fake)).toHaveLength(1));
+    const [added] = operationsOf(fake) as { option: { id: string; color: string } }[];
+    expect(added!.option.color).not.toBe("default");
+    await vi.waitFor(() => expect(lastWrite(fake)).toEqual({ tags: [added!.option.id] }));
+  });
+
+  it("reorders an option from its handle with Alt+ArrowDown", async () => {
+    const { fake, screen, cell } = await mount({ editable: true });
+    await using _screen = screen;
+    await userEvent.click(locate(cell("row-1", "tags")));
+    page.getByRole("button", { name: "Reorder Bug" }).element().focus();
+    await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
+    await vi.waitFor(() =>
+      expect(operationsOf(fake)).toContainEqual({
+        op: "moveOption",
+        propertyId: "tags",
+        optionId: "idea",
+        beforeOptionId: "bug",
+      }),
+    );
+  });
+
+  it("adds a status option to the chosen group", async () => {
+    const { fake, screen, cell } = await mount({ editable: true });
+    await using _screen = screen;
+    await userEvent.click(locate(cell("row-1", "status")));
+    await userEvent.click(page.getByRole("button", { name: "Add an option to In progress" }));
+    await userEvent.type(page.getByRole("combobox", { name: "Search Status" }), "Review");
+    await userEvent.keyboard("{Enter}");
+    await vi.waitFor(() =>
+      expect(operationsOf(fake)).toContainEqual(
+        expect.objectContaining({
+          op: "addOption",
+          option: expect.objectContaining({ name: "Review", group: "in_progress" }),
+        }),
+      ),
+    );
+  });
+
+  it("offers no management without schema permission", async () => {
+    const { screen, cell } = await mount({ permissions: { schema: false } });
+    await using _screen = screen;
+    await userEvent.click(locate(cell("row-1", "tags")));
+    await expect.element(page.getByText("Select an option", { exact: true })).toBeVisible();
+    await userEvent.fill(page.getByRole("combobox", { name: "Search Tags" }), "Perf");
+    await expect.element(page.getByText("No options")).toBeVisible();
+    expect(page.getByRole("button", { name: "Edit Bug" }).elements()).toHaveLength(0);
+    expect(page.getByRole("button", { name: "Reorder Bug" }).elements()).toHaveLength(0);
+  });
+});
+
 describe("date editor", () => {
   it("writes a day, then a range with times in the viewer zone", async () => {
     const { fake, screen, cell } = await mount();
@@ -220,7 +329,7 @@ describe("read-only types", () => {
     await userEvent.click(locate(cell("row-1", "made")));
     await userEvent.keyboard("{Enter}x");
     expect(focused()).toBe("row-1:made");
-    expect(screen.container.querySelectorAll("input")).toHaveLength(1);
+    expect(screen.container.querySelectorAll("input")).toHaveLength(0);
     expect(fake.callsOf("updateRows")).toHaveLength(0);
   });
 });

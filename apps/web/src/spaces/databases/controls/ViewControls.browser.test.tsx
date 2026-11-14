@@ -111,10 +111,15 @@ describe("filter popover", () => {
   it("disables the controls with a hint without edit permission", async () => {
     const { screen } = await mount({ permissions: { views: false } });
     await using _screen = screen;
-    for (const name of ["Filter", "Sort", "Group", "Properties"])
+    for (const name of ["Filter", "Sort"])
       await expect.element(page.getByRole("button", { name })).toBeDisabled();
   });
 });
+
+const openSetting = async (row: RegExp) => {
+  await userEvent.click(page.getByRole("button", { name: "View settings" }));
+  await userEvent.click(page.getByRole("button", { name: row }));
+};
 
 describe("sort popover", () => {
   it("adds, reorders from the keyboard, changes direction, and removes sorts", async () => {
@@ -142,7 +147,7 @@ describe("group popover", () => {
   it("groups by a property, hides a group, and removes the grouping", async () => {
     const { fake, screen } = await mount();
     await using _screen = screen;
-    await userEvent.click(page.getByRole("button", { name: "Group" }));
+    await openSetting(/^Group/);
     await choose("Group property", "Status");
     await vi.waitFor(() =>
       expect(lastView(fake)?.group).toEqual({ property: "status", by: "option" }),
@@ -170,7 +175,7 @@ describe("properties popover", () => {
         { id: SpacePropertyId.make("old"), name: "Old", type: "text", deletedAt: "t" },
       ],
     };
-    await userEvent.click(page.getByRole("button", { name: "Properties" }));
+    await openSetting(/^Property visibility/);
     await toggle("Show Notes");
     await vi.waitFor(() =>
       expect(lastView(fake)?.properties.set).toEqual({ notes: { visible: false } }),
@@ -200,9 +205,10 @@ describe("layout popover", () => {
       <DatabaseHarness host={host} initialViewIds={["view-list"]} />,
       { router: false },
     );
-    await userEvent.click(page.getByRole("button", { name: "Layout" }));
+    await openSetting(/^Layout/);
     await toggle("Show property names");
     await vi.waitFor(() => expect(lastView(fake)?.layout).toEqual({ showPropertyNames: false }));
+    await userEvent.click(page.getByRole("button", { name: "Back" }));
     await choose("Open pages in", "Full page");
     await vi.waitFor(() =>
       expect(lastView(fake)?.layout).toEqual({

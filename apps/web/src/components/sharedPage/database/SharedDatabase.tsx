@@ -23,6 +23,7 @@ export interface SharedDatabaseProps {
   readonly credential: string;
   /** A full-page database leaves the title to the page. */
   readonly layout: "inline" | "page";
+  readonly hideTitle?: boolean;
   readonly rowHref: (blockId: string, viewId: string, rowId: string) => string;
   readonly openRow: (event: MouseEvent<HTMLAnchorElement>, href: string) => void;
 }
@@ -82,7 +83,7 @@ export default function SharedDatabase(props: SharedDatabaseProps) {
       aria-label={database.title || "Database"}
       className="flex flex-col gap-2"
     >
-      {layout === "inline" ? (
+      {layout === "inline" && props.hideTitle !== true ? (
         <h2 className="flex items-center gap-2 font-semibold text-lg">
           {database.icon ? (
             <SpacePageGlyph icon={database.icon} className="size-5 text-center" />

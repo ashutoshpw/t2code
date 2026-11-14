@@ -1,5 +1,6 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
+import { useAtomValue } from "@effect/atom-react";
 import {
   findDataSourceHomes,
   knownProperty,
@@ -24,19 +25,28 @@ import { ControlPill } from "../../../components/ui/ControlPill";
 import { ListToggleRow } from "../../../components/ui/ListToggleRow";
 import { Notice } from "../../../components/ui/Notice";
 import { DATABASES_NEED_NEWER_SERVER, databaseLimitsOf } from "./capability";
+import { appAtomRegistry } from "../../../state/atom-registry";
 import { useEnvironmentQuery } from "../../../state/query";
 import { useSpacesReadAccess } from "../../../state/spaces";
 import {
   databaseAtoms,
+  databaseMutations,
   databaseWriter,
   listDatabasePage,
   viewerZone,
 } from "../../../state/spacesDatabases";
 import { CellEditSheet, type SheetEditor } from "./CellEditSheet";
 import { CellValueView } from "./CellValueView";
-import { commitCheckbox, editorFor, UNSUPPORTED_NOTE, type CellEditor } from "./cellEdit";
+import {
+  commitCheckbox,
+  editorFor,
+  newOptionOperation,
+  UNSUPPORTED_NOTE,
+  type CellEditor,
+} from "./cellEdit";
 import { cardLine, type CardLine, type LineRelation } from "./cellText";
 import { useDatabaseModel } from "./useDatabaseModel";
+import { uuidv4 } from "../../../lib/uuid";
 import { useRowCells } from "./useRowCells";
 import { WriteNotices } from "./WriteNotices";
 
@@ -115,6 +125,7 @@ function RowPropertyList(props: {
     readonly property: SpaceDatabaseProperty;
     readonly editor: SheetEditor;
   } | null>(null);
+  const canEditSchema = useAtomValue(databaseAtoms.updateSchema.permissionAtom(environmentId));
   useFlushOnLeave(environmentId);
   const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
   const dataSource = model?.dataSources.find((entry) => entry.id === props.dataSourceId);
@@ -137,6 +148,7 @@ function RowPropertyList(props: {
     );
   const context: CellTextContext = { relatedPages, optionHint: noHint, timeZone: viewerZone() };
   const canEdit = model !== null && model.canEditCells && !props.template;
+  const canSetOptions = canEdit && canEditSchema;
   const entries = Object.values(dataSource.properties)
     .sort(
       (a, b) =>
@@ -166,6 +178,35 @@ function RowPropertyList(props: {
       value,
     });
     return null;
+  };
+  // New options are added by id so the cell write that follows can name them.
+  const createOption = async (
+    property: SpaceDatabaseProperty,
+    name: string,
+  ): Promise<string | null> => {
+    const known = knownProperty(property);
+    if (known?.type !== "select" && known?.type !== "multi_select" && known?.type !== "status")
+      return null;
+    if (!access.current()) {
+      setLost(ACCESS_LOST_MESSAGE);
+      return null;
+    }
+    const { optionId, operation } = newOptionOperation(
+      { id: property.id, type: property.type, options: known.config.options },
+      name,
+      () => uuidv4().replaceAll("-", "").slice(0, 6),
+    );
+    try {
+      await databaseMutations.updateSchema(appAtomRegistry, environmentId, {
+        dataSourceId: props.dataSourceId,
+        operations: [operation],
+      });
+      refresh();
+      return optionId;
+    } catch {
+      setLost("Couldn't add that option.");
+      return null;
+    }
   };
   // A related row opens only when its database is one this space lists; otherwise its title is plain text.
   const shown = entries.map((entry) =>
@@ -220,6 +261,11 @@ function RowPropertyList(props: {
           editor={editing.editor}
           onCommit={(value) => write(editing.property, value)}
           onClose={() => setEditing(null)}
+          onCreateOption={
+            canSetOptions && editing.editor.kind === "choice"
+              ? (name) => createOption(editing.property, name)
+              : undefined
+          }
         />
       )}
     </View>
