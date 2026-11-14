@@ -4,10 +4,11 @@ import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
 import { SpaceKnownMark, type SpaceBlock, type SpaceRichText } from "@t2code/contracts/spaces";
 import * as Schema from "effect/Schema";
 import { useState } from "react";
-import { View, useColorScheme } from "react-native";
+import { ScrollView, View, useColorScheme } from "react-native";
 
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
+import type { VisibleSpaceBlock } from "./blockVisibility";
 import type { MobileSpaceReference } from "./references";
 import { tryOpenExternalUrl } from "../../lib/openExternalUrl";
 
@@ -41,6 +42,7 @@ const decodeMark = Schema.decodeUnknownOption(SpaceKnownMark, { onExcessProperty
 function RichText(props: {
   runs: SpaceRichText;
   heading?: 1 | 2 | 3;
+  large?: boolean;
   target: SpacePageNavigationTarget;
   onOpen: (target: MobileSpaceReference) => void;
 }) {
@@ -62,7 +64,9 @@ function RichText(props: {
             ? "text-xl font-bold text-foreground"
             : props.heading === 3
               ? "text-lg font-bold text-foreground"
-              : "text-base text-foreground"
+              : props.large
+                ? "text-lg text-foreground"
+                : "text-base text-foreground"
       }
     >
       {runs.map(({ run, start }) => {
@@ -124,6 +128,8 @@ export function SpaceBlockReader(props: {
   target: SpacePageNavigationTarget;
   depth: number;
   selected: boolean;
+  tabs?: VisibleSpaceBlock["tabs"];
+  onSelectPane?: (paneId: string) => void;
   onImage: (block: SpaceBlock) => void;
   onOpen: (target: MobileSpaceReference) => void;
 }) {
@@ -138,6 +144,32 @@ export function SpaceBlockReader(props: {
       setCopyStatus("Could not copy this block.");
     }
   }
+  if (block.type === "tabs" && props.tabs)
+    return (
+      <View
+        accessibilityRole="tablist"
+        className="flex-row flex-wrap gap-2 px-4 py-3"
+        style={{ marginLeft: props.depth * 16 }}
+      >
+        {props.tabs.panes.map((pane) => (
+          <ControlPill
+            key={pane.id}
+            variant={pane.id === props.tabs?.active ? "primary" : "pill"}
+            label={`${pane.icon ? `${pane.icon} ` : ""}${pane.title || "Untitled"}`}
+            onPress={() => props.onSelectPane?.(pane.id)}
+          />
+        ))}
+        {props.tabs.panes.length === 0 ? (
+          <Text className="text-foreground-muted">Tabs are still loading.</Text>
+        ) : null}
+      </View>
+    );
+  if (block.type === "synced_block")
+    return (
+      <View className="px-4 py-2" style={{ marginLeft: props.depth * 16 }}>
+        <Text className="text-sm text-foreground-muted">Synced block</Text>
+      </View>
+    );
   return (
     <View
       className={
@@ -153,10 +185,14 @@ export function SpaceBlockReader(props: {
         <View accessibilityRole="separator" className="border-t border-border" />
       ) : block.type === "code" ? (
         <>
-          <Text className="text-sm text-foreground-muted">{block.content.language || "Code"}</Text>
-          <Text selectable className="font-mono text-foreground">
-            {block.content.text}
+          <Text className="text-sm text-foreground-muted">
+            {block.content.language || "Plain text"}
           </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <Text selectable className="font-mono text-foreground">
+              {block.content.text}
+            </Text>
+          </ScrollView>
         </>
       ) : block.type === "child_page" ? (
         <ControlPill
@@ -171,9 +207,6 @@ export function SpaceBlockReader(props: {
         />
       ) : "runs" in block.content ? (
         <>
-          {block.type === "callout" ? (
-            <Text className="text-foreground">{block.content.icon}</Text>
-          ) : null}
           {block.type === "todo_item" ? (
             <Text className="text-foreground-muted">
               {block.content.checked ? "☑ Completed" : "☐ To do"}
@@ -181,24 +214,35 @@ export function SpaceBlockReader(props: {
           ) : null}
           {block.type === "bulleted_item" ||
           block.type === "numbered_item" ||
-          block.type === "toggle" ||
-          block.type === "quote" ? (
+          block.type === "toggle" ? (
             <Text className="text-foreground-muted">
-              {block.type === "quote"
-                ? "Quote"
-                : block.type === "numbered_item"
-                  ? "Numbered item"
-                  : block.type === "toggle"
-                    ? "▸ Toggle"
-                    : "•"}
+              {block.type === "numbered_item"
+                ? "Numbered item"
+                : block.type === "toggle"
+                  ? "▸ Toggle"
+                  : "•"}
             </Text>
           ) : null}
-          <RichText
-            runs={block.content.runs}
-            heading={block.type === "heading" ? block.content.level : undefined}
-            target={props.target}
-            onOpen={props.onOpen}
-          />
+          <View
+            className={
+              block.type === "quote"
+                ? "border-l-[3px] border-foreground pl-3"
+                : block.type === "callout"
+                  ? "flex-row gap-2 rounded-lg bg-subtle p-3"
+                  : undefined
+            }
+          >
+            {block.type === "callout" ? (
+              <Text className="text-foreground">{block.content.icon || "💡"}</Text>
+            ) : null}
+            <RichText
+              runs={block.content.runs}
+              heading={block.type === "heading" ? block.content.level : undefined}
+              large={block.type === "quote"}
+              target={props.target}
+              onOpen={props.onOpen}
+            />
+          </View>
         </>
       ) : "assetId" in block.content ? (
         <>

@@ -194,7 +194,7 @@ export const SpacesToolkit = Toolkit.make(
     "t2_spaces_blocks_apply",
     C.SpaceApplyBlockBatchInput,
     C.SpaceApplyBlockBatchResult,
-    "Apply insert/replace/delete batches with page revision, generation and original admission. Paragraph content uses runs:[{text,marks:[]}]; preserve opaque fields when replacing. Conflicts are returned unchanged.",
+    "Apply insert/replace/delete batches with page revision, generation and original admission. Paragraph content uses runs:[{text,marks:[]}]; preserve opaque fields when replacing. Tabs: tabs:{} holds only tab_pane:{title,icon?} children; panes hold ordinary blocks. synced_block:{} holds original content; synced_ref:{sourceBlockId} mirrors one elsewhere and has no content: edit the original's page (t2_spaces_references_resolve finds it). Conflicts are returned unchanged.",
     "applyBlockBatch",
     true,
   ),

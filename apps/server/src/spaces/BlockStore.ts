@@ -1,7 +1,15 @@
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
+import type * as SqlError from "effect/sql/SqlError";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
+
+import {
+  extensionBlock,
+  isContainer,
+  strictSyncedBlock,
+  strictSyncedRefBlock,
+} from "./BlockKinds.ts";
 
 import { byteLength, ensureDatabaseLimit, ensureLimit, canonical, limits } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
@@ -26,7 +34,6 @@ const knownBlock = Schema.is(C.SpaceKnownBlock);
 const decodeKnown = Schema.decodeUnknownSync(C.SpaceKnownBlock);
 const knownMark = Schema.is(C.SpaceKnownMark);
 const decodeKnownMark = Schema.decodeUnknownSync(C.SpaceKnownMark);
-const containers = new Set(["bulleted_item", "numbered_item", "todo_item", "toggle"]);
 const media = new Set(["image", "pdf", "video"]);
 const strictKnown = Schema.decodeUnknownOption(C.SpaceKnownBlock, { onExcessProperty: "error" });
 
@@ -45,7 +52,7 @@ const databaseBlock = (block: C.SpaceBlock) => {
 };
 
 function editable(block: C.SpaceBlock) {
-  if (databaseBlock(block)) return true;
+  if (databaseBlock(block) || extensionBlock(block)) return true;
   if (block.type === "child_page" || !knownBlock(block)) return false;
   if (media.has(block.type) && Option.isNone(strictKnown(block))) return false;
   const content = block.content as Schema.Json;
@@ -73,8 +80,7 @@ function editable(block: C.SpaceBlock) {
 }
 
 export const storedBlockFromRow = (row: BlockRow) => decodeBlock(JSON.parse(row.payload));
-export const isListContainer = (block: C.SpaceBlock) =>
-  containers.has(block.type) && knownBlock(block);
+export { isContainer };
 
 // Materialization stays inside the bounded read-window span.
 export const blockFromRow = Effect.fnUntraced(function* (row: BlockRow) {
@@ -96,6 +102,61 @@ export const blockFromRow = Effect.fnUntraced(function* (row: BlockRow) {
   return decodeBlock({ ...block, content: { ...block.content, pageId: owner.child_page_id } });
 });
 
+const ensureScoped = Effect.fnUntraced(function* <E>(
+  rootId: string,
+  pageId: string,
+  mutations: readonly C.SpaceBlockMutation[],
+  original: ReadonlyMap<string, BlockRow | undefined>,
+  current: (id: string) => Effect.Effect<C.SpaceBlock | null, E>,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  const invalid = new C.SpaceValidationError({ reason: "invalid_parent" });
+  const [rootRow] = yield* sql<BlockRow>`SELECT * FROM spaces_blocks WHERE block_id = ${rootId}`;
+  if (!rootRow || rootRow.deleted || rootRow.page_id !== pageId) return yield* invalid;
+  if (!strictSyncedBlock(storedBlockFromRow(rootRow))) return yield* invalid;
+  const rows = new Map<string, BlockRow | undefined>();
+  const stored = Effect.fnUntraced(function* (id: string) {
+    if (!rows.has(id)) {
+      const [row] = yield* sql<BlockRow>`SELECT * FROM spaces_blocks WHERE block_id = ${id}`;
+      rows.set(id, row);
+    }
+    return rows.get(id);
+  });
+  const reaches = Effect.fnUntraced(function* (
+    start: string | null,
+    parentOf: (id: string) => Effect.Effect<string | null | undefined, E | SqlError.SqlError>,
+  ) {
+    const seen = new Set<string>();
+    let at = start;
+    while (at !== null) {
+      if (at === rootId) return true;
+      if (seen.has(at)) return false;
+      seen.add(at);
+      yield* ensureLimit("maxDepth", seen.size + 1);
+      const next = yield* parentOf(at);
+      if (next === undefined) return false;
+      at = next;
+    }
+    return false;
+  });
+  for (const mutation of mutations) {
+    const id = mutation.kind === "delete" ? mutation.blockId : mutation.block.id;
+    const before = original.get(id);
+    if (before && !before.deleted) {
+      const ok = yield* reaches(before.parent_id, (parent) =>
+        Effect.map(stored(parent), (row) => (row && !row.deleted ? row.parent_id : undefined)),
+      );
+      if (!ok) return yield* invalid;
+    }
+    if (mutation.kind !== "delete") {
+      const ok = yield* reaches(mutation.block.parentId, (parent) =>
+        Effect.map(current(parent), (block) => (block ? block.parentId : undefined)),
+      );
+      if (!ok) return yield* invalid;
+    }
+  }
+});
+
 // All traversal and validation share the enclosing service span and its transaction.
 export const apply = Effect.fnUntraced(function* (
   pageId: C.SpacePageId,
@@ -103,9 +164,12 @@ export const apply = Effect.fnUntraced(function* (
   count: number,
   bytes: number,
   requestBytes: number,
+  /** Confines every change to the descendants of this synced_block, so a copy cannot edit its host. */
+  scope?: { readonly rootId: string },
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const original = new Map<string, BlockRow | undefined>();
+  const newRefSources = new Set<string>();
   const final = new Map<string, C.SpaceBlock | null>();
   const merges = new Map<string, string | null>();
   const affected = new Set<string>();
@@ -128,6 +192,8 @@ export const apply = Effect.fnUntraced(function* (
   for (const mutation of mutations) {
     const id = mutation.kind === "delete" ? mutation.blockId : mutation.block.id;
     yield* touch(id);
+    if (id === scope?.rootId)
+      return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
     yield* ensureLimit("maxIdBytes", byteLength(id));
     if (mutation.kind === "delete" && mutation.mergedInto !== undefined)
       yield* ensureLimit("maxIdBytes", byteLength(mutation.mergedInto));
@@ -156,11 +222,19 @@ export const apply = Effect.fnUntraced(function* (
       const database = databaseBlock(block);
       if (database)
         yield* ensureDatabaseLimit("maxViewsPerDatabase", database.content.viewIds.length);
+      const extension = extensionBlock(block);
       if (previous && (databaseBlock(previous) === undefined) !== (database === undefined))
         return yield* new C.SpaceValidationError({ reason: "unsupported_block" });
+      if (previous && previous.type !== block.type && (extensionBlock(previous) || extension))
+        return yield* new C.SpaceValidationError({ reason: "unsupported_block" });
+      const ref = strictSyncedRefBlock(block);
+      if (ref && previous) {
+        if (strictSyncedRefBlock(previous)?.content.sourceBlockId !== ref.content.sourceBlockId)
+          return yield* new C.SpaceValidationError({ reason: "unsupported_block" });
+      } else if (ref) newRefSources.add(ref.content.sourceBlockId);
       // Unknown envelope/content fields must survive replacement, including on known block types.
-      // A database block decodes strictly, so it has none to preserve.
-      if (previous && !database) {
+      // Database and extension blocks decode strictly, so they have none to preserve.
+      if (previous && !database && !extension) {
         const decoded = decodeKnown(previous);
         const projected = { ...decoded, content: { ...decoded.content } };
         const runs =
@@ -213,6 +287,17 @@ export const apply = Effect.fnUntraced(function* (
       final.set(id, block);
     }
   }
+  for (const sourceId of newRefSources) {
+    const inBatch = final.get(sourceId);
+    const [row] =
+      inBatch === undefined
+        ? yield* sql<BlockRow>`SELECT * FROM spaces_blocks WHERE block_id = ${sourceId} AND deleted = 0`
+        : [];
+    const source = inBatch === undefined ? (row ? storedBlockFromRow(row) : null) : inBatch;
+    if (!source || !strictSyncedBlock(source))
+      return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
+  }
+  if (scope) yield* ensureScoped(scope.rootId, pageId, mutations, original, get);
   // Include original descendants: reparenting/deleting a container cannot hide unloaded children.
   const queue = [...affected];
   for (let i = 0; i < queue.length; i++) {
@@ -233,16 +318,20 @@ export const apply = Effect.fnUntraced(function* (
     const chain = new Set([id]);
     let node = block;
     let depth = 1;
+    const ancestors: string[] = [];
     while (node.parentId !== null) {
       if (chain.has(node.parentId)) return yield* new C.SpaceValidationError({ reason: "cycle" });
       chain.add(node.parentId);
       yield* touch(node.parentId);
       const parent = yield* get(node.parentId);
-      if (!parent || !containers.has(parent.type) || !knownBlock(parent))
+      if (!parent || !isContainer(parent))
         return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
+      ancestors.push(parent.type);
       node = parent;
       yield* ensureLimit("maxDepth", ++depth);
     }
+    if (!C.spaceNestingAllowed(block.type, ancestors))
+      return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
   }
   let workBytes = requestBytes;
   const reserve = Effect.fnUntraced(function* (value: unknown) {

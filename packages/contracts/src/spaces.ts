@@ -1,5 +1,4 @@
 import * as Schema from "effect/Schema";
-import * as Struct from "effect/Struct";
 
 import { EnvironmentId, IsoDateTime, NonNegativeInt, PositiveInt } from "./baseSchemas.ts";
 import {
@@ -8,21 +7,25 @@ import {
   SpaceCursor,
   SpaceId,
   SpaceMutationAdmission,
-  SpaceMutationId,
   SpacePageIcon,
   SpacePageId,
-  SpaceReceiptEpoch,
   SpaceRichText,
   StableId,
   mutationAck,
   mutationInput,
   spaceBlockBase as blockBase,
 } from "./spacesCore.ts";
+import { SpaceListInput } from "./spacesCapability.ts";
+import {
+  SPACE_SYNCED_REFS_LISTED,
+  SpaceSyncedRefSummary,
+  SpaceUnsyncInput,
+  SpaceUnsyncResult,
+} from "./spacesSynced.ts";
 
 import {
   SpaceDatabaseCreateInput,
   SpaceDatabaseCreateResult,
-  SpaceDatabaseError,
   SpaceDatabaseUpdateInput,
   SpaceDatabaseUpdateResult,
   SpaceDataSourceCreateInput,
@@ -46,7 +49,7 @@ import {
   SpaceViewUpdateInput,
   SpaceViewUpdateResult,
 } from "./spacesDatabaseMutations.ts";
-import { SpaceDatabaseLimits, SpaceDataSourceId } from "./spacesDatabases.ts";
+import { SpaceDataSourceId } from "./spacesDatabases.ts";
 
 export * from "./spacesCore.ts";
 export * from "./spacesDatabases.ts";
@@ -55,6 +58,8 @@ export * from "./spacesDatabaseViews.ts";
 export * from "./spacesDatabaseQuery.ts";
 export * from "./spacesDatabaseMutations.ts";
 export * from "./spacesDatabaseChanges.ts";
+export * from "./spacesBlockKinds.ts";
+export * from "./spacesSynced.ts";
 
 const textContent = { runs: SpaceRichText };
 export const SpaceKnownBlock = Schema.Union([
@@ -180,12 +185,6 @@ export const SpaceMutationConflict = Schema.Struct({
 });
 export type SpaceMutationConflict = typeof SpaceMutationConflict.Type;
 
-export const SpaceListInput = Schema.Struct({
-  environmentId: EnvironmentId,
-  cursor: Schema.optionalKey(SpaceCursor),
-  limit: Schema.optionalKey(PositiveInt),
-});
-export type SpaceListInput = typeof SpaceListInput.Type;
 export const SpaceListResult = Schema.Struct({
   items: Schema.Array(SpaceSummary),
   defaultSpaceId: SpaceId,
@@ -255,6 +254,23 @@ export const SpaceReadBlocksResult = Schema.Struct({
   nextCursor: Schema.NullOr(SpaceCursor),
 });
 export type SpaceReadBlocksResult = typeof SpaceReadBlocksResult.Type;
+
+export const SpaceReadSubtreeResult = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("found"),
+    page: SpacePageSummary,
+    mutationAdmission: SpaceMutationAdmission,
+    revision: NonNegativeInt,
+    /** The synced_block first, then its descendants in tree order. */
+    blocks: Schema.Array(SpaceBlock),
+    complete: Schema.Boolean,
+    refs: Schema.Array(SpaceSyncedRefSummary).check(Schema.isMaxLength(SPACE_SYNCED_REFS_LISTED)),
+    refCount: NonNegativeInt,
+  }),
+  Schema.Struct({ status: Schema.Literal("deleted") }),
+  Schema.Struct({ status: Schema.Literal("unavailable") }),
+]);
+export type SpaceReadSubtreeResult = typeof SpaceReadSubtreeResult.Type;
 
 export const SpaceCreateInput = Schema.Struct({ ...mutationInput, title: Schema.String });
 export type SpaceCreateInput = typeof SpaceCreateInput.Type;
@@ -329,6 +345,8 @@ export const SpaceApplyBlockBatchInput = Schema.Struct({
   baseRevision: NonNegativeInt,
   generation: NonNegativeInt,
   mutations: Schema.Array(SpaceBlockMutation),
+  /** Confines the batch to the descendants of this synced_block on the page. */
+  subtreeRootId: Schema.optionalKey(SpaceBlockId),
 });
 export type SpaceApplyBlockBatchInput = typeof SpaceApplyBlockBatchInput.Type;
 const blockAck = { generation: NonNegativeInt, revision: NonNegativeInt };
@@ -552,6 +570,7 @@ export const SpaceMutationRequest = Schema.Union([
   Schema.Struct({ operation: Schema.Literal("createPage"), input: SpacePageCreateInput }),
   Schema.Struct({ operation: Schema.Literal("updatePage"), input: SpacePageUpdateInput }),
   Schema.Struct({ operation: Schema.Literal("applyBlockBatch"), input: SpaceApplyBlockBatchInput }),
+  Schema.Struct({ operation: Schema.Literal("unsyncBlocks"), input: SpaceUnsyncInput }),
   Schema.Struct({ operation: Schema.Literal("createDatabase"), input: SpaceDatabaseCreateInput }),
   Schema.Struct({ operation: Schema.Literal("updateDatabase"), input: SpaceDatabaseUpdateInput }),
   Schema.Struct({
@@ -597,6 +616,7 @@ export const SpaceMutationReceipt = Schema.Union([
     operation: Schema.Literal("applyBlockBatch"),
     result: SpaceApplyBlockBatchResult,
   }),
+  Schema.Struct({ operation: Schema.Literal("unsyncBlocks"), result: SpaceUnsyncResult }),
   Schema.Struct({ operation: Schema.Literal("createDatabase"), result: SpaceDatabaseCreateResult }),
   Schema.Struct({ operation: Schema.Literal("updateDatabase"), result: SpaceDatabaseUpdateResult }),
   Schema.Struct({
@@ -629,353 +649,6 @@ export const SpaceReceiptLookupResult = Schema.Union([
 ]);
 export type SpaceReceiptLookupResult = typeof SpaceReceiptLookupResult.Type;
 
-export const SpaceHistoryLimits = Schema.Struct({
-  maxRevisionsPerPage: PositiveInt,
-  retentionMs: PositiveInt,
-  maxDeltaBytes: PositiveInt,
-  maxPageBytes: PositiveInt,
-  maxEnvironmentBytes: PositiveInt,
-  cleanupBatchRows: PositiveInt,
-  cleanupBatchBytes: PositiveInt,
-});
-export type SpaceHistoryLimits = typeof SpaceHistoryLimits.Type;
-
-export const SpaceSearchLimits = Schema.Struct({
-  maxQueryBytes: PositiveInt,
-  maxTerms: PositiveInt,
-  maxRows: PositiveInt,
-  maxResponseBytes: PositiveInt,
-  maxCandidates: PositiveInt,
-  maxCandidateBytes: PositiveInt,
-  maxSnippetBytes: PositiveInt,
-  backfillRows: PositiveInt,
-  backfillBytes: PositiveInt,
-});
-export type SpaceSearchLimits = typeof SpaceSearchLimits.Type;
-
-// These describe advertised service policy; replay decoding must not freeze today's maxima.
-export const SpaceAssetLimits = Schema.Struct({
-  maxImageBytes: PositiveInt,
-  maxPdfBytes: PositiveInt,
-  maxVideoBytes: PositiveInt,
-  maxImagePixels: PositiveInt,
-  maxHeaderBytes: PositiveInt,
-  maxEnvironmentBytes: PositiveInt,
-  maxPendingPerCaller: PositiveInt,
-  maxPendingUploads: PositiveInt,
-  maxActiveUploads: PositiveInt,
-  uploadTtlMs: PositiveInt,
-  recoveryBatchRows: PositiveInt,
-  recoveryBatchBytes: PositiveInt,
-});
-export type SpaceAssetLimits = typeof SpaceAssetLimits.Type;
-export const SpaceAssetUploadId = StableId.pipe(Schema.brand("SpaceAssetUploadId"));
-export type SpaceAssetUploadId = typeof SpaceAssetUploadId.Type;
-export const SpaceAssetMimeType = Schema.Literals([
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "video/mp4",
-  "video/webm",
-]);
-export const SpaceAssetUploadCreateInput = Schema.Struct({
-  environmentId: EnvironmentId,
-  requestId: StableId,
-  expectedBytes: PositiveInt,
-  mimeType: SpaceAssetMimeType,
-  mediaKind: Schema.Literals(["image", "pdf", "video"]),
-  name: Schema.String,
-});
-export type SpaceAssetUploadCreateInput = typeof SpaceAssetUploadCreateInput.Type;
-export const SpaceAssetUploadInput = Schema.Struct({
-  environmentId: EnvironmentId,
-  uploadId: SpaceAssetUploadId,
-});
-export type SpaceAssetUploadInput = typeof SpaceAssetUploadInput.Type;
-export const SpaceAssetGetInput = Schema.Struct({
-  environmentId: EnvironmentId,
-  assetId: SpaceAssetId,
-});
-export type SpaceAssetGetInput = typeof SpaceAssetGetInput.Type;
-export const SpaceAssetMetadata = Schema.Struct({
-  assetId: SpaceAssetId,
-  digest: Schema.String,
-  byteSize: PositiveInt,
-  mimeType: SpaceAssetMimeType,
-  name: Schema.String,
-  imageDimensions: Schema.optionalKey(Schema.Struct({ width: PositiveInt, height: PositiveInt })),
-});
-export type SpaceAssetMetadata = typeof SpaceAssetMetadata.Type;
-export const SpaceAssetListInput = Schema.Struct({
-  ...SpaceListInput.fields,
-  mediaType: Schema.optionalKey(Schema.Literals(["image", "pdf", "video"])),
-});
-export type SpaceAssetListInput = typeof SpaceAssetListInput.Type;
-export const SpaceAssetListResult = Schema.Struct({
-  items: Schema.Array(
-    Schema.Struct({
-      assetId: SpaceAssetId,
-      name: Schema.String,
-      mimeType: SpaceAssetMimeType,
-      byteSize: PositiveInt,
-      createdAt: IsoDateTime,
-      pageId: SpacePageId,
-      spaceId: SpaceId,
-    }),
-  ),
-  catalogRevision: NonNegativeInt,
-  nextCursor: Schema.NullOr(SpaceCursor),
-});
-export type SpaceAssetListResult = typeof SpaceAssetListResult.Type;
-export const SpaceAssetUploadCreateResult = Schema.Struct({
-  uploadId: SpaceAssetUploadId,
-  assetId: SpaceAssetId,
-  expiresAt: NonNegativeInt,
-  relativeUrl: Schema.String,
-});
-export type SpaceAssetUploadCreateResult = typeof SpaceAssetUploadCreateResult.Type;
-export const SpaceAssetUploadStatus = Schema.Struct({
-  uploadId: SpaceAssetUploadId,
-  assetId: SpaceAssetId,
-  expiresAt: NonNegativeInt,
-  state: Schema.Literals(["reserved", "receiving", "verified", "ready", "expired"]),
-  recoveryPending: Schema.Boolean,
-});
-export type SpaceAssetUploadStatus = typeof SpaceAssetUploadStatus.Type;
-
-export const SpaceLimits = Schema.Struct({
-  assets: Schema.optionalKey(SpaceAssetLimits),
-  history: Schema.optionalKey(SpaceHistoryLimits),
-  search: Schema.optionalKey(SpaceSearchLimits),
-  databases: Schema.optionalKey(SpaceDatabaseLimits),
-  maxReferenceHops: Schema.optionalKey(PositiveInt),
-  maxListRows: PositiveInt,
-  maxListResponseBytes: PositiveInt,
-  maxBlockWindowBlocks: PositiveInt,
-  maxBlockWindowResponseBytes: PositiveInt,
-  maxMutationNodes: PositiveInt,
-  maxMutationBytes: PositiveInt,
-  maxBlockBytes: PositiveInt,
-  maxDepth: PositiveInt,
-  maxPageBlocks: PositiveInt,
-  maxPageBytes: PositiveInt,
-  maxIdBytes: PositiveInt,
-  maxTitleBytes: PositiveInt,
-  maxOrderBytes: PositiveInt,
-  maxCursorBytes: PositiveInt,
-  maxReceiptBytes: PositiveInt,
-  maxReceiptRows: PositiveInt,
-  maxReceiptStorageBytes: PositiveInt,
-  maxEpochRows: PositiveInt,
-  receiptRetentionMs: PositiveInt,
-  cleanupBatchRows: PositiveInt,
-});
-export type SpaceLimits = typeof SpaceLimits.Type;
-export const SpacesAssetReconciliationStatus = Schema.Struct({
-  currentPending: Schema.Boolean,
-  historyPending: Schema.Boolean,
-  catalogPending: Schema.Boolean,
-  inventoryPending: Schema.Boolean,
-  unresolved: Schema.Boolean,
-  gcEnabled: Schema.Boolean,
-  gcPending: Schema.optionalKey(Schema.Boolean),
-});
-export const SpaceCapability = Schema.Struct({
-  version: PositiveInt,
-  limits: SpaceLimits,
-  assetRecoveryPending: Schema.optionalKey(Schema.Boolean),
-  assetReconciliation: Schema.optionalKey(SpacesAssetReconciliationStatus),
-  // Flags describe implemented methods, independently of permissions and index readiness.
-  features: Schema.optionalKey(
-    Schema.Struct({
-      pins: Schema.optionalKey(Schema.Literal(true)),
-      recents: Schema.optionalKey(Schema.Literal(true)),
-      assetList: Schema.optionalKey(Schema.Literal(true)),
-      allPages: Schema.optionalKey(Schema.Literal(true)),
-      blockMoves: Schema.optionalKey(Schema.Literal(true)),
-      referenceResolution: Schema.optionalKey(Schema.Literal(true)),
-      recovery: Schema.optionalKey(Schema.Literal(true)),
-      search: Schema.optionalKey(Schema.Literal(true)),
-      contextCapture: Schema.optionalKey(Schema.Literal(true)),
-      assets: Schema.optionalKey(Schema.Literal(true)),
-      databases: Schema.optionalKey(Schema.Literal(true)),
-      databaseChanges: Schema.optionalKey(Schema.Literal(true)),
-    }),
-  ),
-});
-export type SpaceCapability = typeof SpaceCapability.Type;
-
-export class SpacesDisabledError extends Schema.TaggedError<SpacesDisabledError>()(
-  "SpacesDisabledError",
-  {},
-) {
-  override get message(): string {
-    return "Spaces is disabled.";
-  }
-}
-export class SpacesUnavailableError extends Schema.TaggedError<SpacesUnavailableError>()(
-  "SpacesUnavailableError",
-  { stage: Schema.Literals(["initializing", "storage", "settings", "capacity"]) },
-) {
-  override get message(): string {
-    return "Spaces is unavailable.";
-  }
-}
-export class SpaceEnvironmentMismatchError extends Schema.TaggedError<SpaceEnvironmentMismatchError>()(
-  "SpaceEnvironmentMismatchError",
-  { environmentId: EnvironmentId },
-) {
-  override get message(): string {
-    return "The Spaces environment does not match.";
-  }
-}
-export class SpaceNotFoundError extends Schema.TaggedError<SpaceNotFoundError>()(
-  "SpaceNotFoundError",
-  {
-    entity: Schema.Literals([
-      "space",
-      "page",
-      "block",
-      "database",
-      "data_source",
-      "view",
-      "property",
-      "option",
-    ]),
-    id: StableId,
-  },
-) {
-  override get message(): string {
-    return "The Spaces item was not found.";
-  }
-}
-export class SpaceValidationError extends Schema.TaggedError<SpaceValidationError>()(
-  "SpaceValidationError",
-  {
-    reason: Schema.Literals([
-      "invalid_cursor",
-      "invalid_order",
-      "duplicate_id",
-      "invalid_parent",
-      "cycle",
-      "unsupported_block",
-      "invalid_merge",
-      "trashed",
-      "invalid_recovery_state",
-      "invalid_input",
-      "invalid_search_query",
-    ]),
-  },
-) {
-  override get message(): string {
-    return "The Spaces request is invalid.";
-  }
-}
-export class SpaceLimitExceededError extends Schema.TaggedError<SpaceLimitExceededError>()(
-  "SpaceLimitExceededError",
-  {
-    limit: Schema.Literals([
-      ...Struct.keys(SpaceLimits.fields).filter(
-        (key) => key !== "history" && key !== "search" && key !== "assets" && key !== "databases",
-      ),
-      ...Struct.keys(SpaceSearchLimits.fields).map((key) => `search.${key}` as const),
-      ...Struct.keys(SpaceDatabaseLimits.fields).map((key) => `databases.${key}` as const),
-      "history.maxDeltaBytes",
-      "history.maxPageBytes",
-      "history.maxEnvironmentBytes",
-    ]),
-    actual: NonNegativeInt,
-    maximum: PositiveInt,
-  },
-) {
-  override get message(): string {
-    return `The Spaces request exceeds ${this.limit}.`;
-  }
-}
-export class SpaceMutationIdMismatchError extends Schema.TaggedError<SpaceMutationIdMismatchError>()(
-  "SpaceMutationIdMismatchError",
-  { mutationId: SpaceMutationId },
-) {
-  override get message(): string {
-    return "The Spaces mutation ID belongs to a different request.";
-  }
-}
-export class SpaceMutationAdmissionError extends Schema.TaggedError<SpaceMutationAdmissionError>()(
-  "SpaceMutationAdmissionError",
-  { receiptEpoch: SpaceReceiptEpoch },
-) {
-  override get message(): string {
-    return "The Spaces mutation admission has expired or is unknown.";
-  }
-}
-export class SpaceCursorStaleError extends Schema.TaggedError<SpaceCursorStaleError>()(
-  "SpaceCursorStaleError",
-  { revision: NonNegativeInt },
-) {
-  override get message(): string {
-    return "The Spaces cursor is stale.";
-  }
-}
-export class SpaceSearchUnavailableError extends Schema.TaggedError<SpaceSearchUnavailableError>()(
-  "SpaceSearchUnavailableError",
-  { reason: Schema.Literals(["building", "unsupported", "storage"]) },
-) {
-  override get message(): string {
-    return "Spaces search is unavailable.";
-  }
-}
-export class SpaceAssetError extends Schema.TaggedError<SpaceAssetError>()("SpaceAssetError", {
-  reason: Schema.Literals([
-    "invalid_input",
-    "invalid_reservation",
-    "intent_mismatch",
-    "not_found",
-    "caller_mismatch",
-    "expired",
-    "already_claimed",
-    "stale_attempt",
-    "quota",
-    "pending_limit",
-    "active_limit",
-    "blob_unavailable",
-    "staging_exists",
-    "size_mismatch",
-    "unsupported_content",
-    "media_mismatch",
-    "image_dimensions",
-    "image_pixels",
-    "source_failed",
-    "staging_changed",
-    "destination_conflict",
-    "publication_failed",
-    "io_failed",
-    "invalid_state",
-    "missing_file",
-    "corrupt_file",
-    "staging_present",
-    "not_ready",
-    "invalid_token",
-    "invalid_content_length",
-  ]),
-}) {
-  override get message(): string {
-    return "The Spaces asset request could not be completed.";
-  }
-}
-export const SpaceServiceError = Schema.Union([
-  SpaceAssetError,
-  SpaceSearchUnavailableError,
-  SpacesDisabledError,
-  SpacesUnavailableError,
-  SpaceEnvironmentMismatchError,
-  SpaceNotFoundError,
-  SpaceValidationError,
-  SpaceLimitExceededError,
-  SpaceMutationIdMismatchError,
-  SpaceMutationAdmissionError,
-  SpaceCursorStaleError,
-  SpaceDatabaseError,
-]);
-export type SpaceServiceError = typeof SpaceServiceError.Type;
+export * from "./spacesCapability.ts";
+export * from "./spacesErrors.ts";
+export * from "./spacesPageChanges.ts";

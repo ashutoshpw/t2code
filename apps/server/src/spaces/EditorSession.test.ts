@@ -106,7 +106,7 @@ it.layer(NodeServices.layer)("Production Spaces editor adapter", (it) => {
   it.effect("refuses a receipt delivered for a different operation", () =>
     fixture((service) =>
       Effect.gen(function* () {
-        const { key, ports } = yield* boot(service);
+        const { key, ports, run } = yield* boot(service);
         const adapter = createSpaceServiceSessionAdapter(key, {
           ...ports,
           lookupMutationReceipt: async (input) => {
@@ -120,7 +120,7 @@ it.layer(NodeServices.layer)("Production Spaces editor adapter", (it) => {
                   status: "saved" as const,
                   mutationId: actual.receipt.result.mutationId,
                   receiptEpoch: actual.receipt.result.receiptEpoch,
-                  space: (await ports.getPage(key)).space,
+                  space: (await run(service.getPage(key))).space,
                 },
               },
             };

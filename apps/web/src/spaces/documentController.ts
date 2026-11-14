@@ -1,7 +1,9 @@
 import {
   SpaceDocumentSession,
   SpaceIntentAdmissionError,
-  isSpaceListItem,
+  spaceBlockHoldsChildren,
+  spaceLiveAction,
+  type SpacePageLiveSignal,
   type SpaceSessionOptions,
   type SpaceSessionSnapshot,
 } from "@t2code/client-runtime/spaces";
@@ -20,16 +22,24 @@ import type { SpaceCompensation } from "@t2code/client-runtime/spaces";
 const isSpaceValidationError = Schema.is(SpaceValidationError);
 const isSpaceIntentAdmissionError = Schema.is(SpaceIntentAdmissionError);
 
+/** What a document needs to know about its page; a full page result satisfies it. */
+type SpaceDocumentMetadata = Pick<SpacePageGetResult, "page" | "mutationAdmission">;
+
 export interface SpaceDocumentPorts {
   readonly beforeRead?: () => Promise<void>;
-  readonly getPage: () => Promise<SpacePageGetResult>;
+  readonly getPage: () => Promise<SpaceDocumentMetadata>;
   readonly readBlocks: (input: SpaceReadBlocksInput) => Promise<SpaceReadBlocksResult>;
+  /** Reads the window and its metadata as one snapshot, for windows that are not a page's own blocks. */
+  readonly readWindow?: () => Promise<{
+    readonly metadata: SpaceDocumentMetadata;
+    readonly blocks: SpaceReadBlocksResult;
+  }>;
   readonly windowLimit: () => number;
   readonly mediaBlocked?: () => boolean;
 }
 interface DocumentSnapshot {
   readonly session: SpaceSessionSnapshot;
-  readonly metadata: SpacePageGetResult | null;
+  readonly metadata: SpaceDocumentMetadata | null;
   readonly nextCursor: SpaceCursor | null;
   readonly loading: boolean;
   readonly error: unknown;
@@ -44,6 +54,9 @@ export class SpaceDocumentController {
   #snapshot: DocumentSnapshot;
   #request = 0;
   #opening: Promise<void> | null = null;
+  #inflight = 0;
+  #lastSignal: SpacePageLiveSignal | null = null;
+  #deferredSignal: SpacePageLiveSignal | null = null;
   #reserved = false;
   reserveStructure(restoring: boolean) {
     if (this.#reserved) throw new Error("Page already has a placement reservation");
@@ -110,7 +123,7 @@ export class SpaceDocumentController {
       blocks: session.blocks,
       committedIds: session.memberIds,
       completeParents: complete
-        ? [null, ...session.blocks.filter(isSpaceListItem).map((block) => block.id)]
+        ? [null, ...session.blocks.filter(spaceBlockHoldsChildren).map((block) => block.id)]
         : [],
     };
   }
@@ -182,6 +195,7 @@ export class SpaceDocumentController {
     return this.#load(this.#snapshot.nextCursor);
   }
   async #read(cursor?: SpaceCursor) {
+    if (this.#ports.readWindow) return this.#ports.readWindow();
     const metadata = await this.#ports.getPage();
     const blocks = await this.#ports.readBlocks({
       ...this.session.key,
@@ -194,9 +208,11 @@ export class SpaceDocumentController {
     return { metadata, blocks };
   }
   // A silent load revalidates a hydrated document without flipping `loading`, which makes the editor read-only.
-  async #load(cursor?: SpaceCursor, structure = false, silent = false) {
+  // A quiet load is a live refresh: it neither reports its failure nor touches the error state.
+  async #load(cursor?: SpaceCursor, structure = false, silent = false, quiet = false) {
     const request = ++this.#request;
-    this.#update(silent ? { error: null } : { loading: true, error: null });
+    this.#inflight++;
+    if (!quiet) this.#update(silent ? { error: null } : { loading: true, error: null });
     try {
       await this.#ports.beforeRead?.();
       if (!structure) this.#assertUnreserved();
@@ -221,10 +237,62 @@ export class SpaceDocumentController {
         nextCursor: state.dirty || state.pending ? null : blocks.nextCursor,
       });
     } catch (error) {
-      if (request === this.#request) this.#update({ error });
+      if (request === this.#request && !quiet) this.#update({ error });
       throw error;
     } finally {
       if (request === this.#request && !silent) this.#update({ loading: false });
+      this.#inflight--;
+      this.#replayDeferredSignal();
+    }
+  }
+  #replayDeferredSignal() {
+    const deferred = this.#deferredSignal;
+    if (deferred === null || this.#inflight > 0) return;
+    this.#deferredSignal = null;
+    void this.liveRefresh(deferred);
+  }
+  /**
+   * Reacts to the server announcing that this page changed elsewhere. A document with unsaved
+   * work keeps it (the save reports the conflict); a failed read leaves the snapshot as it was.
+   */
+  async liveRefresh(signal: SpacePageLiveSignal): Promise<void> {
+    if (this.#inflight > 0) {
+      this.#deferredSignal = signal;
+      return;
+    }
+    const state = this.session.getSnapshot();
+    const metadataRevision = this.#snapshot.metadata?.page.revision ?? null;
+    const action = spaceLiveAction(this.#lastSignal, signal, {
+      hydrated: state.hydrated,
+      busy:
+        state.dirty ||
+        Boolean(state.pending) ||
+        state.status === "saving" ||
+        state.persistenceError !== null ||
+        this.#reserved ||
+        this.#ports.mediaBlocked?.() === true,
+      baseRevision: state.baseRevision,
+      metadataRevision,
+    });
+    this.#lastSignal = signal;
+    try {
+      if (action === "body") await this.#load(undefined, false, true, true);
+      else if (action === "metadata" || action === "check") {
+        this.#inflight++;
+        try {
+          const metadata = await this.#ports.getPage();
+          const current = this.#snapshot.metadata?.page.revision ?? null;
+          if (current !== null && metadata.page.revision !== current) {
+            if (action === "check") await this.#load(undefined, false, true, true);
+            else this.#update({ metadata });
+          }
+        } finally {
+          this.#inflight--;
+        }
+        this.#replayDeferredSignal();
+      }
+    } catch {
+      // The next announcement or an explicit refresh retries.
     }
   }
   async save() {

@@ -20,8 +20,10 @@ import * as Runtime from "./service/Runtime.ts";
 import * as AssetOps from "./service/Assets.ts";
 import * as ListOps from "./service/Lists.ts";
 import * as DatabaseChangeOps from "./service/DatabaseChanges.ts";
+import * as PageChangeOps from "./service/PageChanges.ts";
 import * as DatabaseReadOps from "./service/DatabaseReads.ts";
 import * as ReadOps from "./service/Reads.ts";
+import * as SyncedOps from "./service/Synced.ts";
 import * as ShareOps from "./service/Shares.ts";
 import * as SharedDatabaseOps from "./service/SharedDatabases.ts";
 import type { QueryOutcome, QueryParams } from "./sharedDatabases/Read.ts";
@@ -101,6 +103,12 @@ export class SpacesService extends Context.Service<
     readonly readBlocks: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReadBlocksResult, C.SpaceServiceError>;
+    readonly readSubtree: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceReadSubtreeResult, C.SpaceServiceError>;
+    readonly unsyncBlocks: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceUnsyncResult, C.SpaceServiceError>;
     readonly createSpace: (
       input: unknown,
     ) => Effect.Effect<C.SpaceCreateResult, C.SpaceServiceError>;
@@ -201,6 +209,10 @@ export class SpacesService extends Context.Service<
     readonly subscribeDatabaseChanges: (
       input: unknown,
     ) => Stream.Stream<C.SpaceDatabaseChangeEvent, C.SpaceServiceError>;
+    /** Ids and revisions of changed pages, starting with `resync`; refused like a read before it streams. */
+    readonly subscribePageChanges: (
+      input: unknown,
+    ) => Stream.Stream<C.SpacePageChangeEvent, C.SpaceServiceError>;
     /** Brings every queued formula and rollup value up to date; returns when the queue is empty. */
     readonly drainComputed: Effect.Effect<void, C.SpaceServiceError>;
     /**
@@ -296,11 +308,13 @@ const make = Effect.fn("SpacesService.make")(function* (
   const assets = AssetOps.make(runtime);
   const lists = ListOps.make(runtime);
   const reads = ReadOps.make(runtime);
+  const synced = SyncedOps.make(runtime);
   const shares = ShareOps.make(runtime, assets);
   const sharedDatabases = SharedDatabaseOps.make(runtime, assets);
   const mutations = MutationOps.make(runtime);
   const databaseReads = DatabaseReadOps.make(runtime);
   const databaseChanges = DatabaseChangeOps.make(runtime);
+  const pageChanges = PageChangeOps.make(runtime);
   const maintenance = MaintenanceOps.make(runtime);
   return SpacesService.of({
     reclaimExistingStorage: maintenance.reclaimExistingStorage(),
@@ -324,6 +338,8 @@ const make = Effect.fn("SpacesService.make")(function* (
     listAssets: assets.listAssets,
     getPage: reads.getPage,
     readBlocks: reads.readBlocks,
+    readSubtree: synced.readSubtree,
+    unsyncBlocks: mutations.unsyncBlocks,
     createSpace: mutations.createSpace,
     renameSpace: mutations.renameSpace,
     setDefaultSpace: mutations.setDefaultSpace,
@@ -350,6 +366,7 @@ const make = Effect.fn("SpacesService.make")(function* (
     queryDatabase: databaseReads.queryDatabase,
     getDatabaseRows: databaseReads.getDatabaseRows,
     subscribeDatabaseChanges: databaseChanges.subscribeDatabaseChanges,
+    subscribePageChanges: pageChanges.subscribePageChanges,
     createChildPage: mutations.createChildPage,
     movePage: mutations.movePage,
     inspectStructure: reads.inspectStructure,

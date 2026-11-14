@@ -1,74 +1,19 @@
 import { describe, expect, it } from "vite-plus/test";
 import { Fragment } from "@tiptap/pm/model";
-import { getSchema } from "@tiptap/core";
+import { NodeSelection, TextSelection } from "@tiptap/pm/state";
+import { SpacePageId, type SpaceBlock } from "@t2code/contracts/spaces";
+
+import type { SpaceEditorAdapter } from "./adapter";
 import {
-  EditorState,
-  NodeSelection,
-  TextSelection,
-  type Command,
-  type Transaction,
-} from "@tiptap/pm/state";
-import { EnvironmentId } from "@t2code/contracts";
-import { SpaceBlockId, SpacePageId, type SpaceBlock } from "@t2code/contracts/spaces";
-
-import { SpaceEditorAdapter, type SpaceEditorOptions } from "./adapter";
-import { spaceDocumentBlocks } from "./document";
+  caretIn,
+  id,
+  paragraph,
+  setup,
+  syncedBlocks,
+  tabsBlocks,
+  target,
+} from "./test/adapterHarness";
 import { isSpaceToggleCollapsed, spaceToggleCollapseKey } from "./toggleCollapse";
-
-const id = SpaceBlockId.make;
-const target = { environmentId: EnvironmentId.make("env"), pageId: SpacePageId.make("page") };
-function paragraph(key: string, text: string, extra: Partial<SpaceBlock> = {}): SpaceBlock {
-  return {
-    id: id(key),
-    parentId: null,
-    order: key,
-    type: "paragraph",
-    version: 1,
-    content: { runs: [{ text, marks: [] }] },
-    ...extra,
-  };
-}
-function setup(blocks: readonly SpaceBlock[], overrides: Partial<SpaceEditorOptions> = {}) {
-  let sequence = 0;
-  const adapter = new SpaceEditorAdapter({
-    target,
-    window: {
-      revision: 17,
-      blocks,
-      completeParents: [
-        null,
-        ...blocks
-          .filter((block) => block.type.endsWith("_item") || block.type === "toggle")
-          .map((block) => block.id),
-      ],
-    },
-    maxBlocks: 50,
-    maxDepth: 8,
-    maxTextLength: 10000,
-    maxClipboardBytes: 20000,
-    allocateId: () => id(`new-${++sequence}`),
-    allocateOrder: ({ before }) => `${before ?? ""}~${++sequence}`,
-    ...overrides,
-  });
-  const schema = getSchema(adapter.extensions());
-  let state = EditorState.create({
-    schema,
-    doc: schema.nodeFromJSON(adapter.document.toJSON()),
-    plugins: adapter.plugins(),
-  });
-  const dispatch = (tr: Transaction) => {
-    state = state.applyTransaction(tr).state;
-  };
-  return {
-    adapter,
-    get state() {
-      return state;
-    },
-    dispatch,
-    run: (command: Command) => command(state, dispatch),
-    blocks: () => spaceDocumentBlocks(state.doc),
-  };
-}
 
 describe("Spaces ProseMirror adapter", () => {
   it("round-trips independent canonical rich, list, media, and opaque fixtures without stripping future data", () => {
@@ -428,6 +373,47 @@ describe("Spaces ProseMirror adapter", () => {
       type: "heading",
       content: { level: 1 },
     });
+  });
+
+  it("sets heading level, callout icon and code language by block id, wherever the caret is", () => {
+    const runs = [{ text: "x", marks: [] }];
+    const blocks: SpaceBlock[] = [
+      { ...paragraph("h", "x"), type: "heading", content: { level: 1, runs } },
+      { ...paragraph("c", "x"), type: "callout", content: { icon: "💡", runs } },
+      { ...paragraph("k", "x"), type: "code", content: { text: "x", language: "" } },
+      paragraph("p", "x"),
+    ];
+    const cases = [
+      ["h", (a: SpaceEditorAdapter) => a.setHeadingLevel(id("h"), 3), { level: 3, runs }],
+      ["c", (a: SpaceEditorAdapter) => a.setCalloutIcon(id("c"), "📌"), { icon: "📌", runs }],
+      [
+        "k",
+        (a: SpaceEditorAdapter) => a.setCodeLanguage(id("k"), "typescript"),
+        { text: "x", language: "typescript" },
+      ],
+    ] as const;
+    for (const [key, command, content] of cases) {
+      const editor = setup(blocks);
+      editor.dispatch(
+        editor.state.tr.setSelection(
+          TextSelection.near(editor.state.doc.resolve(editor.state.doc.content.size - 1)),
+        ),
+      );
+      expect(editor.run(command(editor.adapter))).toBe(true);
+      expect(editor.blocks().find((block) => block.id === key)?.content).toEqual(content);
+      expect(editor.blocks().find((block) => block.id === "p")).toEqual(blocks[3]);
+    }
+    const editor = setup(blocks);
+    const refused = [
+      editor.adapter.setCodeLanguage(id("p"), "rust"),
+      editor.adapter.setCodeLanguage(id("missing"), "rust"),
+      editor.adapter.setCalloutIcon(id("h"), "📌"),
+      editor.adapter.setHeadingLevel(id("h"), 4 as 1),
+    ];
+    for (const command of refused) expect(editor.run(command)).toBe(false);
+    const readOnly = setup(blocks, { canEdit: () => false });
+    expect(readOnly.run(readOnly.adapter.setCodeLanguage(id("k"), "rust"))).toBe(false);
+    expect(readOnly.blocks()).toEqual(blocks);
   });
 
   it("reorders blocks among siblings by id or by the caret block, keeping the caret", () => {
@@ -802,5 +788,68 @@ describe("Spaces ProseMirror adapter database blocks", () => {
     expect(blocksOf(editor)).toEqual([]);
     editor.run(editor.adapter.undoLocal());
     expect(blocksOf(editor)).toEqual(["db:database"]);
+  });
+
+  it("builds tabs and panes as nested nodes, round-trips them, and keeps misplaced blocks read-only", () => {
+    const blocks = tabsBlocks();
+    const fixture = setup(blocks);
+    expect(fixture.blocks()).toEqual(blocks);
+    expect(fixture.state.doc.firstChild?.type.name).toBe("tabs");
+    expect(fixture.state.doc.firstChild?.firstChild?.type.name).toBe("tabPane");
+    const stray = [blocks[0]!, paragraph("s", "stray", { parentId: id("t") }), blocks[5]!];
+    const misplaced = setup(stray);
+    expect(misplaced.state.doc.child(1).type.name).toBe("spaceAtom");
+    expect(misplaced.blocks().map((block) => block.parentId)).toEqual([null, id("t"), null]);
+  });
+
+  it("places a code block inside the pane that holds the caret", () => {
+    const fixture = setup(tabsBlocks());
+    caretIn(fixture, "a");
+    expect(fixture.run(fixture.adapter.placeBlock("code"))).toBe(true);
+    const code = fixture.blocks().find((block) => block.type === "code");
+    expect(code?.parentId).toBe(id("p1"));
+    caretIn(fixture, "z");
+    fixture.run(fixture.adapter.placeBlock("code"));
+    expect(
+      fixture
+        .blocks()
+        .filter((block) => block.type === "code")
+        .at(-1)?.parentId,
+    ).toBeNull();
+  });
+
+  it("builds synced originals and copies as nodes and refuses what cannot sit inside an original", () => {
+    const blocks = syncedBlocks();
+    const fixture = setup(blocks);
+    expect(fixture.blocks()).toEqual(blocks);
+    expect(fixture.state.doc.firstChild?.type.name).toBe("syncedBlock");
+    expect(fixture.state.doc.lastChild?.type.name).toBe("syncedRef");
+    const tabs = paragraph("t", "", { type: "tabs", parentId: id("s"), content: {} });
+    fixture.dispatch(
+      fixture.state.tr.insert(1, fixture.state.schema.nodes.tabs!.create({ block: tabs })),
+    );
+    expect(fixture.blocks().some((block) => block.id === "t")).toBe(false);
+  });
+
+  it("holds a synced editor to exactly its original", () => {
+    const [root, inside] = syncedBlocks();
+    const fixture = setup([root!, inside!], { rootBlockId: id("s") });
+    caretIn(fixture, "sa");
+    fixture.dispatch(fixture.state.tr.insertText("!"));
+    expect(fixture.blocks().find((block) => block.id === "sa")?.content).toEqual({
+      runs: [{ text: "!inside", marks: [] }],
+    });
+    const sibling = fixture.state.schema.nodes.paragraph!.create({
+      block: paragraph("n", "", { content: { runs: [] } }),
+    });
+    const before = fixture.state.doc;
+    fixture.dispatch(fixture.state.tr.insert(fixture.state.doc.content.size, sibling));
+    expect(fixture.state.doc.childCount).toBe(1);
+    fixture.dispatch(
+      fixture.state.tr.setNodeMarkup(0, undefined, { block: { ...root!, order: "other" } }),
+    );
+    expect(fixture.blocks()[0]).toEqual(root);
+    expect(fixture.run(fixture.adapter.append())).toBe(false);
+    expect(fixture.state.doc.childCount).toBe(before.childCount);
   });
 });

@@ -14,12 +14,25 @@ Choose **Create** at the top of the sidebar to add an untitled page with its tit
 
 Click the title at the top of a page to rename it. Hover above the title and choose **Add icon** to give the page an emoji icon. Click the page body to start writing; changes save automatically a moment after you stop typing and when you leave the page. If a save fails, **Retry** appears below the page. After a conflict with another device, your edits stay on this device and you can discard them.
 
-- Type **/** for a command menu: headings, lists, to-do, toggle list, quote, callout, code, divider, **Database**, **Linked view of database** and **Page**, which creates a sub-page below the block and opens it with its title selected. Markdown shortcuts also work, such as `# `, `- `, `1. `, `[] `, `> ` and three backticks. Type `>> ` for a toggle list: Enter at the end of an open toggle's first line starts its first nested block, and the arrow collapses or expands it for you only. Toggles open as expanded and are read-only on mobile. Press Enter on an empty block to leave a list or quote.
+An open page updates when it is changed on another device or by an agent. If you have unsaved edits, they stay and the page shows the conflict when it saves.
+
+- Type **/** for a command menu: headings, lists, to-do, toggle list, quote, callout, code, divider, **Tabs**, **Synced block**, **Database**, **Linked view of database** and **Page**, which creates a sub-page below the block and opens it with its title selected. Markdown shortcuts also work, such as `# `, `- `, `1. `, `[] `, `> ` and three backticks. Type `>> ` for a toggle list: Enter at the end of an open toggle's first line starts its first nested block, and the arrow collapses or expands it for you only. Toggles open as expanded and are read-only on mobile. Press Enter on an empty block to leave a list or quote.
+- **Tabs** groups content into named tabs. Double-click a tab to rename it, drag tabs to reorder them, and use **+** to add one. The tab you have open is remembered only on your screen.
+- **Synced block** keeps the same content on several pages; see [Synced blocks](#synced-blocks).
 - Select text for a toolbar with bold, italic, strikethrough, inline code, links and **Turn into**. Press Cmd/Ctrl+Z to undo and Cmd/Ctrl+Shift+Z to redo.
-- Select a heading to choose its level, a callout to change its icon, or code to set its language label. Code is not run.
+- Change a heading's level from **Turn into**. Click a callout's icon to pick another emoji. Code blocks have a language menu, **Copy code** and a line-wrap button; code is not run.
 - Hover a block to show **+** (add a block below) and a handle. Drag the handle to reorder blocks, or click it for **Turn into**, duplicate, delete and move.
 - To mention a page or block, choose **Insert page or block mention…** from the page header's **@** button.
 - The editing **More** menu in the page header has split, join, move, delete, **Remove media block** and **Undo saved change** for the last saved edit.
+
+## Synced blocks
+
+A synced block shows the same content on more than one page. Create one with **/Synced block** and choose **Copy and sync** on it, or choose **Copy and sync** from any block's handle to wrap that block. Then paste on another page: the copy shows the original's content and a **Synced from** label. Edit any copy and the original changes everywhere; open copies refresh as it changes.
+
+- **Unsync** on a copy turns just that copy into ordinary blocks. **Unsync all**, on the original, does it for every copy.
+- If the original is deleted or moved to Trash, its copies show a notice with **Remove**.
+- Synced blocks cannot contain tabs, databases, sub-pages or other synced blocks.
+- Shared pages show synced content read-only.
 
 ## Media
 
@@ -146,6 +159,8 @@ attachment and retry limits, and [outside agents](./outside-agents.md#spaces) fo
 ## On mobile
 
 On mobile, open **Spaces** from the thread list, Settings, or the command palette, then choose an environment. Enable it from that environment’s Settings page. Use **First** and **Next** to browse windows, including an empty window that offers a continuation. Open child pages from the page or library.
+
+Tabs show as a switcher at the top of each tab group, and synced blocks show their original content. Both are read-only on mobile. Open pages update when they change elsewhere.
 
 Databases open on mobile in every view type, drawn as lists and cards suited to a phone. Calendars and timelines show as a month agenda, and **Open database** on a page's database shows the full list. Views apply as saved on desktop; change filters, sorting, layout, properties, formulas, relations and templates there. Open a row to read it and edit its title, text, number, checkbox, select, multi-select, status, date, URL, email and phone values, and use **New row** to add one. Cell changes save right away and are not kept as a draft; if one cannot be sent, retry or discard it. Dates are entered as YYYY-MM-DD; dates with a time and formatted text are edited on desktop. Long views stop at 500 rows, or 200 per group, and point you to desktop for the rest.
 

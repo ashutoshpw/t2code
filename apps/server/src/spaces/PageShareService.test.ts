@@ -734,3 +734,86 @@ it.effect("serves only assets that a live block of the requested page references
     }),
   ).pipe(Effect.provide(layerTest)),
 );
+
+it.effect(
+  "embeds the original of a synced copy, serves its assets and drops a trashed original",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { spaces, shares, rootPage, trash, credentialOf } = yield* workspace();
+        const { get, assetUrl } = yield* httpHarness();
+        const shared = yield* rootPage("Shared");
+        const outside = yield* rootPage("Outside");
+        const used = yield* uploadPdf(spaces, "synced-used");
+        const foreign = yield* uploadPdf(spaces, "synced-foreign");
+        const library = yield* spaces.listSpaces(env);
+        const place = Effect.fn("PageShareTest.place")(function* (
+          pageId: C.SpacePageId,
+          mutationId: string,
+          blocks: readonly C.SpaceBlock[],
+        ) {
+          const page = yield* spaces.getPage({ ...env, pageId });
+          yield* spaces.applyBlockBatch({
+            ...env,
+            receiptEpoch: library.mutationAdmission.epoch,
+            mutationId,
+            pageId,
+            baseRevision: page.page.revision,
+            generation: 0,
+            mutations: blocks.map((block) => ({ kind: "insert" as const, block })),
+          });
+        });
+        const at = (
+          id: string,
+          type: string,
+          content: C.SpaceBlock["content"],
+          parent: string | null,
+        ) =>
+          ({
+            id: C.SpaceBlockId.make(id),
+            parentId: parent === null ? null : C.SpaceBlockId.make(parent),
+            order: "00000000000000000000000000000001",
+            type,
+            version: 1,
+            content,
+          }) satisfies C.SpaceBlock;
+        yield* place(outside, "original", [
+          at("original", "synced_block", {}, null),
+          {
+            ...paragraph("inside", "from the original"),
+            parentId: C.SpaceBlockId.make("original"),
+          },
+          at("pdf", "pdf", { assetId: used.assetId }, "original"),
+          { ...paragraph("hidden", "not synced"), order: "00000000000000000000000000000002" },
+        ]);
+        yield* place(outside, "foreign-pdf", [
+          {
+            ...at("foreign-block", "pdf", { assetId: foreign.assetId }, null),
+            order: "00000000000000000000000000000003",
+          },
+        ]);
+        yield* place(shared, "copy", [
+          at("copy", "synced_ref", { sourceBlockId: "original" }, null),
+        ]);
+        const token = credentialOf((yield* shares.create({ pageId: shared })).url);
+
+        const page = yield* shares.page(token);
+        assert.deepEqual(
+          page.synced?.map((entry) => [
+            entry.sourceBlockId,
+            entry.blocks.map((block) => block.id),
+            entry.complete,
+          ]),
+          [["original", ["original", "inside", "pdf"], true]],
+        );
+        assert.notInclude(JSON.stringify(page), "not synced");
+        assert.equal((yield* get(assetUrl(token, used.assetId))).status, 200);
+        assert.equal((yield* get(assetUrl(token, foreign.assetId))).status, 403);
+
+        yield* trash(outside);
+        const after = yield* shares.page(token);
+        assert.isUndefined(after.synced);
+        assert.equal((yield* get(assetUrl(token, used.assetId))).status, 403);
+      }),
+    ).pipe(Effect.provide(layerTest)),
+);

@@ -10,10 +10,12 @@ import type { SpaceBlock } from "@t2code/contracts/spaces";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 // oxlint-disable-next-line eslint/no-restricted-imports -- the block editor keeps every row mounted for retained native input and maps VirtualizedList-only props
 import { FlatList, View } from "react-native";
+import { appAtomRegistry } from "../../state/atom-registry";
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
 import {
   acquireSpacesPageReader,
+  spacesEnvironment,
   createSpacesImageViewer,
   getMobileSpaceUploads,
   useSpacesReadAccess,
@@ -31,20 +33,15 @@ import { SpacesReferenceOpen } from "./SpacesReferences";
 import { MobileSpaceReferenceNavigation } from "./references";
 import * as Dialog from "../../components/ui/Dialog";
 import { Notice, AccessNotice } from "./spacesScreenSupport";
+import { SpacesSyncedRef } from "./SpacesSyncedRef";
+import {
+  isMobileReadOnlyBlock,
+  syncedRefSource,
+  visibleSpaceBlocks,
+  type VisibleSpaceBlock,
+} from "./blockVisibility";
 import { SpacesDatabaseBlock } from "./databases/SpacesDatabaseBlock";
 import { SpacesRowProperties } from "./databases/SpacesRowProperties";
-
-function blockDepth(block: SpaceBlock, blocks: readonly SpaceBlock[]) {
-  const seen = new Set([block.id]);
-  let parentId = block.parentId;
-  let depth = 0;
-  while (parentId !== null && depth < 16 && !seen.has(parentId)) {
-    seen.add(parentId);
-    depth++;
-    parentId = blocks.find((parent) => parent.id === parentId)?.parentId ?? null;
-  }
-  return depth;
-}
 
 type PageLease = Awaited<ReturnType<typeof acquireSpacesPageReader>>;
 
@@ -143,7 +140,7 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
       }),
   );
   const [actionError, setActionError] = useState<string | null>(null);
-  const list = useRef<FlatList<SpaceBlock>>(null);
+  const list = useRef<FlatList<VisibleSpaceBlock>>(null);
   const focus = editorState.focus?.owner === owner ? editorState.focus : null;
   const readable = canBrowseSpaces(access.availability) && access.current();
   const writable =
@@ -175,6 +172,18 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
   }, [reader, access]);
   const location = access.current() ? snapshot.location : null;
   const blocks = snapshot.session.hydrated ? snapshot.session.blocks : [];
+  const [activePanes, setActivePanes] = useState<ReadonlyMap<string, string>>(() => new Map());
+  const rows = visibleSpaceBlocks(blocks, activePanes);
+  const livePageId = location?.page.id ?? target.pageId;
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Synchronise the open page with the server's change stream; the reader decides whether to read again.
+  useEffect(() => {
+    if (!canBrowseSpaces(access.availability)) return;
+    return appAtomRegistry.subscribe(
+      spacesEnvironment.pageLive(target.environmentId, livePageId),
+      (signal) => void reader.liveRefresh(signal),
+      { immediate: true },
+    );
+  }, [reader, access.availability, target.environmentId, livePageId]);
   const currentCoreSource = () =>
     navigation.isFocused() &&
     access.current() &&
@@ -219,8 +228,8 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
         accessibilityElementsHidden={!readable}
         importantForAccessibility={readable ? "auto" : "no-hide-descendants"}
         renderScrollComponent={NativeScrollView}
-        data={blocks}
-        keyExtractor={(block) => block.id}
+        data={rows}
+        keyExtractor={(row) => row.block.id}
         initialNumToRender={12}
         windowSize={5}
         scrollEnabled={editorState.focus === null}
@@ -521,8 +530,42 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
             </Notice>
           ) : undefined
         }
-        renderItem={({ item }) =>
-          isSpaceDatabaseBlock(item) ? (
+        renderItem={({ item: row }) => {
+          const item = row.block;
+          const sourceBlockId = syncedRefSource(item);
+          const readOnly = isMobileReadOnlyBlock(blocks, item);
+          const openImage = (block: SpaceBlock) => {
+            const source = reader.getSnapshot().location;
+            if (source)
+              void (
+                block.type === "pdf" ? heavy.pdf : block.type === "video" ? heavy.video : media
+              ).open(
+                block,
+                () =>
+                  navigation.isFocused() &&
+                  !reader.editing.getSnapshot().focus &&
+                  reader.getSnapshot().location === source &&
+                  source.current() !== null,
+              );
+          };
+          const open = (next: Parameters<typeof references.select>[0]) => {
+            const source = reader.getSnapshot().location;
+            if (access.current() && source && !reader.editing.getSnapshot().focus)
+              references.select(
+                next,
+                () => reader.getSnapshot().location === source && source.current() !== null,
+              );
+          };
+          return sourceBlockId ? (
+            <SpacesSyncedRef
+              environmentId={target.environmentId}
+              sourceBlockId={sourceBlockId}
+              target={currentTarget}
+              depth={row.depth}
+              onImage={openImage}
+              onOpen={open}
+            />
+          ) : isSpaceDatabaseBlock(item) ? (
             location ? (
               <SpacesDatabaseBlock
                 block={item}
@@ -543,38 +586,18 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
               />
               <SpaceBlockReader
                 block={item}
-                onImage={(block) => {
-                  const source = reader.getSnapshot().location;
-                  if (source)
-                    void (
-                      block.type === "pdf"
-                        ? heavy.pdf
-                        : block.type === "video"
-                          ? heavy.video
-                          : media
-                    ).open(
-                      block,
-                      () =>
-                        navigation.isFocused() &&
-                        !reader.editing.getSnapshot().focus &&
-                        reader.getSnapshot().location === source &&
-                        source.current() !== null,
-                    );
-                }}
+                tabs={row.tabs}
+                onSelectPane={(paneId) =>
+                  setActivePanes((held) => new Map(held).set(item.id, paneId))
+                }
+                onImage={openImage}
                 target={currentTarget}
-                depth={blockDepth(item, blocks)}
+                depth={row.depth}
                 selected={item.id === currentTarget.blockId}
-                onOpen={(next) => {
-                  const source = reader.getSnapshot().location;
-                  if (access.current() && source && !reader.editing.getSnapshot().focus)
-                    references.select(
-                      next,
-                      () => reader.getSnapshot().location === source && source.current() !== null,
-                    );
-                }}
+                onOpen={open}
               />
               <View className="flex-row gap-2 px-4 pb-3">
-                {nativeDocumentForSpaceBlock(item) ? (
+                {!readOnly && nativeDocumentForSpaceBlock(item) ? (
                   <>
                     <ControlPill
                       variant="pill"
@@ -620,15 +643,17 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
                       />
                     ) : null}
                   </>
-                ) : (
+                ) : item.type === "tabs" || item.type === "synced_block" ? null : (
                   <Text className="text-sm text-foreground-muted">
-                    Edit on desktop · original content retained
+                    {readOnly
+                      ? "Read-only on mobile · edit on desktop"
+                      : "Edit on desktop · original content retained"}
                   </Text>
                 )}
               </View>
             </View>
-          )
-        }
+          );
+        }}
       />
     </View>
   );

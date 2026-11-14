@@ -25,6 +25,7 @@ import * as ServerEnvironment from "../../environment/ServerEnvironment.ts";
 import * as ServerSettings from "../../serverSettings.ts";
 import { byteLength, computedDrainRows, databaseSweepIntervalMs, limits } from "../CorePolicy.ts";
 import * as Changes from "../databases/Changes.ts";
+import * as PageChanges from "../PageChanges.ts";
 import * as DatabaseStore from "../databases/DatabaseStore.ts";
 import * as Drain from "../databases/computed/Drain.ts";
 import { isoNow } from "../databases/Types.ts";
@@ -56,6 +57,7 @@ export const make = Effect.fnUntraced(function* (
   const platform = yield* Effect.context<FileSystem.FileSystem | Path.Path>();
   const mutex = yield* Semaphore.make(1);
   const changes = Changes.makeHub();
+  const pageChanges = PageChanges.makePageHub();
   const acquiredSql = yield* Ref.make(Option.none<SpacesSql.SpacesSql["Service"]>());
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -231,15 +233,22 @@ export const make = Effect.fnUntraced(function* (
     body: Effect.Effect<A, E, R>,
   ) {
     const collector = Changes.makeCollector();
-    const [value, batch] = yield* sql.withTransaction(
+    const pageCollector = PageChanges.makePageCollector();
+    const [value, batch, pageBatch] = yield* sql.withTransaction(
       Effect.gen(function* () {
         const result = yield* body.pipe(
           Effect.provideService(Changes.CurrentChangeCollector, collector),
+          Effect.provideService(PageChanges.CurrentPageChangeCollector, pageCollector),
         );
-        return [result, yield* Changes.resolve(collector)] as const;
+        return [
+          result,
+          yield* Changes.resolve(collector),
+          yield* PageChanges.resolve(pageCollector),
+        ] as const;
       }),
     );
     yield* changes.publish(batch);
+    yield* pageChanges.publish(pageBatch);
     return value;
   });
   const run = Effect.fn("SpacesService.transaction")(function* <A>(
@@ -488,6 +497,7 @@ export const make = Effect.fnUntraced(function* (
     recover,
     acquire,
     changes,
+    pageChanges,
     drainComputed,
     sweepDatabases,
     admit,
