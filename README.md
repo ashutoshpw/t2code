@@ -56,16 +56,18 @@ It works with Claude Code, Codex, Cursor, OpenCode, Grok Build, Antigravity, Kir
 This installs the `t3` command. Run `t3` to start the server and open the web app.
 
 ```bash
-curl -fsSL https://t3.codes/install.sh | sh
+npx @t2code/cli@latest
 ```
 
 On Windows, in PowerShell:
 
 ```powershell
-irm https://t3.codes/install.ps1 | iex
+irm https://t2.codes/install.ps1 | iex
 ```
 
-To try it once without an install, run `npx t3@latest`.
+Then run `npx @t2code/cli` to start the server and open the local web app. `npx @t2code/cli service install` keeps it running in the background, `npx @t2code/cli update` moves to a newer release, and `npx @t2code/cli --help` has the full reference.
+
+To try it once without installing, run `npx @t2code/cli@latest`. It offers to install the `t2code` command for you.
 
 ### Phone
 

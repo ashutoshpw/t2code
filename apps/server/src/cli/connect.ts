@@ -202,15 +202,15 @@ function formatCloudStatus(
         : "not provisioned";
   const publishOnly = status.desired && status.linkMode === "publish_only";
   const nextStep = !status.authenticated
-    ? `Run \`${commands.link}\` to authorize and enable T3 Connect.`
+    ? `Run \`${commands.link}\` to authorize and enable T2 Connect.`
     : status.revoked
       ? `Run \`${commands.link}\` to link this environment again.`
       : !status.desired
-        ? `Run \`${commands.link}\` to enable T3 Connect.`
+        ? `Run \`${commands.link}\` to enable T2 Connect.`
         : !status.linked
           ? publishOnly
-            ? "Start T3 to provision the environment link."
-            : "Start T3 to provision the environment link and launch its managed tunnel."
+            ? "Start T2 to provision the environment link."
+            : "Start T2 to provision the environment link and launch its managed tunnel."
           : undefined;
 
   return [
@@ -226,7 +226,7 @@ function formatCloudStatus(
       : publishOnly
         ? [
             "",
-            "This link only publishes agent activity. Remote access through T3 Connect is off, so other devices need their own route to this machine, such as LAN or Tailscale.",
+            "This link only publishes agent activity. Remote access through T2 Connect is off, so other devices need their own route to this machine, such as LAN or Tailscale.",
           ]
         : status.reachability === null
           ? [
@@ -306,7 +306,7 @@ const withCloudCliSessionToken = <A, E, R>(
     environmentAuth.issueSession({
       scopes: [scope],
       subject: "cloud-cli",
-      label: "t3 connect cli",
+      label: "t2code connect cli",
     }),
     (issued) => run(issued.token),
     (issued) => environmentAuth.revokeSession(issued.sessionId).pipe(Effect.ignore({ log: true })),
@@ -496,11 +496,11 @@ const reportCloudDisconnectResults = Effect.fn("cloud.cli.report_disconnect_resu
       yield* Console.warn(
         input.clearAuthorization
           ? "Could not revoke the relay-side environment record before signing out.\nThe stored CLI authorization was still removed locally."
-          : "Could not revoke the relay-side environment record yet.\nRun `t3 connect unlink` again when the relay is reachable, or deregister it from the T3 Connect page of your T3 account.",
+          : "Could not revoke the relay-side environment record yet.\nRun `t2code connect unlink` again when the relay is reachable, or deregister it from the T2 Connect page of your T2 account.",
       );
     } else if (input.relayResult.value.status === "not-authenticated") {
       yield* Console.warn(
-        "The relay-side environment record was not revoked.\nDeregister it from the T3 Connect page of your T3 account, or run `t3 connect login` and retry.",
+        "The relay-side environment record was not revoked.\nDeregister it from the T2 Connect page of your T2 account, or run `t2code connect login` and retry.",
       );
     } else if (input.relayResult.value.status === "revoked") {
       yield* Console.log("Revoked the relay-side environment record.");
@@ -529,7 +529,7 @@ export const disconnectCloud = Effect.fn("cloud.cli.disconnect")(function* (opti
 
   if (options.clearAuthorization) {
     yield* Console.log(
-      "Signed out of T3 Connect locally.\nThe background service is managed separately with `t3 service`.",
+      "Signed out of T3 Connect locally.\nThe background service is managed separately with `t2code service`.",
     );
   }
   return liveResult;
@@ -796,7 +796,10 @@ const connectPublishCommand = Command.make("publish", {
           );
           return;
         }
-        // A desired managed link already covers publishing and must not be downgraded.
+        // A link may already be desired (e.g. `t2code connect link` before the
+        // server's first start). Never downgrade it: a desired managed link
+        // also covers publishing, so only request a publish-only link when no
+        // link is pending at all.
         if (yield* CliState.readCliDesiredCloudLink) {
           yield* Console.log(
             "A T3 Connect link is already pending. Start T3 to finish provisioning it; publishing starts once it links.",
