@@ -1,3 +1,4 @@
+import type { ThreadId } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
@@ -17,6 +18,7 @@ import {
   decodePageUpdateResult,
   decodeApplyResult,
   decodeUnsyncResult,
+  decodeCommentResult,
   decodeCreateChildResult,
   decodeMovePageResult,
   isServiceError,
@@ -105,6 +107,38 @@ export const make = (rt: Runtime) => {
   ) {
     return decodePurgeResult((yield* mutate("permanentlyDeletePage", input)).result);
   });
+  const createCommentThread = Effect.fn("SpacesService.createCommentThread")(function* (
+    input: unknown,
+  ) {
+    return decodeCommentResult((yield* mutate("createCommentThread", input)).result);
+  });
+  const replyComment = Effect.fn("SpacesService.replyComment")(function* (input: unknown) {
+    return decodeCommentResult((yield* mutate("replyComment", input)).result);
+  });
+  const editComment = Effect.fn("SpacesService.editComment")(function* (input: unknown) {
+    return decodeCommentResult((yield* mutate("editComment", input)).result);
+  });
+  const deleteComment = Effect.fn("SpacesService.deleteComment")(function* (input: unknown) {
+    return decodeCommentResult((yield* mutate("deleteComment", input)).result);
+  });
+  const resolveCommentThread = Effect.fn("SpacesService.resolveCommentThread")(function* (
+    input: unknown,
+  ) {
+    return decodeCommentResult((yield* mutate("resolveCommentThread", input)).result);
+  });
+  const reopenCommentThread = Effect.fn("SpacesService.reopenCommentThread")(function* (
+    input: unknown,
+  ) {
+    return decodeCommentResult((yield* mutate("reopenCommentThread", input)).result);
+  });
+  const agentReplyComment = Effect.fn("SpacesService.agentReplyComment")(function* (
+    input: C.SpaceCommentReplyInput,
+    agentThreadId: ThreadId,
+  ) {
+    return decodeCommentResult(
+      (yield* mutate("agentReplyComment", { ...input, agentThreadId })).result,
+    );
+  });
   const databaseMutation = <S extends Schema.Decoder<unknown>>(
     operation: C.SpaceMutationRequest["operation"],
     result: S,
@@ -169,6 +203,13 @@ export const make = (rt: Runtime) => {
     createRows: databaseMutation("createRows", C.SpaceRowsCreateResult),
     updateRows: databaseMutation("updateRows", C.SpaceRowsUpdateResult),
     moveRows: databaseMutation("moveRows", C.SpaceRowsMoveResult),
+    createCommentThread,
+    replyComment,
+    agentReplyComment,
+    editComment,
+    deleteComment,
+    resolveCommentThread,
+    reopenCommentThread,
     lookupMutationReceipt,
   };
 };

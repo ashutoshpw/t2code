@@ -87,7 +87,9 @@ export const advertiseView = withProperties((properties) => {
   };
 });
 
-const OPERATIONS = C.SpaceMutationRequest.members.map((member) => member.fields.operation.literal);
+const OPERATIONS = C.SpaceMutationRequest.members
+  .map((member) => member.fields.operation.literal)
+  .filter((operation) => !operation.endsWith("Comment") && !operation.endsWith("CommentThread"));
 
 export const advertiseReceiptLookup = (document: AdvertisedDocument): AdvertisedDocument =>
   settle(

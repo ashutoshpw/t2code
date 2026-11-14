@@ -44,6 +44,7 @@ import { spaceImages } from "./imageRuntime";
 import { SpaceMediaBlock } from "./SpaceMediaBlock";
 import { SpaceChildPageRow } from "./SpaceAtomView";
 import { SpaceEditor } from "./SpaceEditor";
+import { useSpaceComments } from "./comments/useSpaceComments";
 import { plain } from "./SpaceStructureControls";
 import { placementAfterBlock } from "./pagePlacement";
 import type { SpaceBlockMoveProof } from "@t2code/client-runtime/spaces";
@@ -163,6 +164,10 @@ function DocumentContent({
     ? new SpaceMentionController(sources, controller.session.key.environmentId)
     : null;
   const registry = useContext(RegistryContext);
+  const comments = useSpaceComments(
+    controller.session.key.environmentId,
+    controller.session.key.pageId,
+  );
   const environment = useEnvironment(controller.session.key.environmentId);
   const capability = environment?.serverConfig?.environment.capabilities.spaces;
   const mediaSupported =
@@ -390,6 +395,7 @@ function DocumentContent({
                 </MenuItem>
               ))}
               mentions={mentions}
+              comments={comments.enabled ? comments.controller : undefined}
               onOpenSource={onOpenSource}
               mediaEditable={mediaSupported}
               adapter={bridge.adapter}

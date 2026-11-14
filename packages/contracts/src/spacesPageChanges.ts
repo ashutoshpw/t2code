@@ -16,6 +16,8 @@ export const SpacePageChange = Schema.Struct({
   bodyRevision: NonNegativeInt,
   /** Title, icon, placement, trash or creation changed: page trees and lists must refresh. */
   tree: Schema.optionalKey(Schema.Literal(true)),
+  /** Comments changed; moves independently of revision and bodyRevision. */
+  commentRevision: Schema.optionalKey(NonNegativeInt),
   /** Permanently deleted; revisions are 0. */
   removed: Schema.optionalKey(Schema.Literal(true)),
 });

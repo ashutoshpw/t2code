@@ -193,6 +193,44 @@ export const layer = McpToolAccess.toLayer(SpacesToolkit, {
   t2_spaces_databases_rows_move: McpToolAccess.writesWithCapability((input) =>
     invoke(input, (service) => service.moveRows(input)),
   ),
+  t2_spaces_comments: McpToolAccess.either(
+    (input) => input.action === "reply",
+    McpToolAccess.actsAsCaller((input) =>
+      Effect.gen(function* () {
+        if (input.action !== "reply") return yield* Effect.die("comments reply expected");
+        const { thread } = yield* Invocation.McpInvocationContext;
+        if (thread === undefined) return yield* Effect.die("actsAsCaller guarantees a thread");
+        return yield* invoke(input, (service) =>
+          service.agentReplyComment(
+            {
+              environmentId: input.environmentId,
+              mutationId: input.mutationId,
+              receiptEpoch: input.receiptEpoch,
+              commentThreadId: input.commentThreadId,
+              body: [{ text: input.text.trimEnd(), marks: [] }],
+            },
+            thread.threadId,
+          ),
+        );
+      }),
+    ),
+    McpToolAccess.reads((input) =>
+      input.action === "reply"
+        ? Effect.die("comments list or thread expected")
+        : invoke(input, (service) =>
+            service.listComments(
+              input.action === "thread"
+                ? { environmentId: input.environmentId, commentThreadId: input.commentThreadId }
+                : {
+                    environmentId: input.environmentId,
+                    pageId: input.pageId,
+                    status: input.status ?? "open",
+                    ...(input.cursor === undefined ? {} : { cursor: input.cursor }),
+                  },
+            ),
+          ),
+    ),
+  ),
   t2_spaces_receipts_get: McpToolAccess.reads((input) =>
     invoke(input, (service) => service.lookupMutationReceipt(input)),
   ),

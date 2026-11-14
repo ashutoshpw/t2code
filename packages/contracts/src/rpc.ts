@@ -465,6 +465,14 @@ export const WS_METHODS = {
   spacesSharesCreate: "spaces.shares.create",
   spacesSharesStop: "spaces.shares.stop",
   spacesSharesGet: "spaces.shares.get",
+  spacesCommentsList: "spaces.comments.list",
+  spacesCommentsCreate: "spaces.comments.create",
+  spacesCommentsReply: "spaces.comments.reply",
+  spacesCommentsEdit: "spaces.comments.edit",
+  spacesCommentsDelete: "spaces.comments.delete",
+  spacesCommentsResolve: "spaces.comments.resolve",
+  spacesCommentsReopen: "spaces.comments.reopen",
+  spacesCommentsDispatch: "spaces.comments.dispatch",
   spacesDatabasesList: "spaces.databases.list",
   spacesDatabasesGet: "spaces.databases.get",
   spacesDatabasesQuery: "spaces.databases.query",
@@ -2433,6 +2441,54 @@ export const WsSpacesSharesGetRpc = Rpc.make(WS_METHODS.spacesSharesGet, {
   error: Schema.Union([SpacePageShareError, EnvironmentAuthorizationError]),
 });
 
+export const WsSpacesCommentsListRpc = Rpc.make(WS_METHODS.spacesCommentsList, {
+  payload: Spaces.SpaceCommentsListInput,
+  success: Spaces.SpaceCommentsListResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesCommentsCreateRpc = Rpc.make(WS_METHODS.spacesCommentsCreate, {
+  payload: Spaces.SpaceCommentThreadCreateInput,
+  success: Spaces.SpaceCommentMutationResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesCommentsReplyRpc = Rpc.make(WS_METHODS.spacesCommentsReply, {
+  payload: Spaces.SpaceCommentReplyInput,
+  success: Spaces.SpaceCommentMutationResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesCommentsEditRpc = Rpc.make(WS_METHODS.spacesCommentsEdit, {
+  payload: Spaces.SpaceCommentEditInput,
+  success: Spaces.SpaceCommentMutationResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesCommentsDeleteRpc = Rpc.make(WS_METHODS.spacesCommentsDelete, {
+  payload: Spaces.SpaceCommentDeleteInput,
+  success: Spaces.SpaceCommentMutationResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesCommentsResolveRpc = Rpc.make(WS_METHODS.spacesCommentsResolve, {
+  payload: Spaces.SpaceCommentThreadStatusInput,
+  success: Spaces.SpaceCommentMutationResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesCommentsReopenRpc = Rpc.make(WS_METHODS.spacesCommentsReopen, {
+  payload: Spaces.SpaceCommentThreadStatusInput,
+  success: Spaces.SpaceCommentMutationResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesCommentsDispatchRpc = Rpc.make(WS_METHODS.spacesCommentsDispatch, {
+  payload: Spaces.SpaceCommentDispatchInput,
+  success: Spaces.SpaceCommentDispatchResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
 const WsGuestShareCreateRpc = Rpc.make(WS_METHODS.guestShareCreate, {
   payload: GuestShareCreateInput,
   success: GuestShareCreateResult,
@@ -2520,6 +2576,14 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesSharesCreateRpc,
   WsSpacesSharesStopRpc,
   WsSpacesSharesGetRpc,
+  WsSpacesCommentsListRpc,
+  WsSpacesCommentsCreateRpc,
+  WsSpacesCommentsReplyRpc,
+  WsSpacesCommentsEditRpc,
+  WsSpacesCommentsDeleteRpc,
+  WsSpacesCommentsResolveRpc,
+  WsSpacesCommentsReopenRpc,
+  WsSpacesCommentsDispatchRpc,
   WsSpacesDatabasesListRpc,
   WsSpacesDatabasesGetRpc,
   WsSpacesDatabasesQueryRpc,

@@ -15,6 +15,7 @@ import * as Liveness from "../databases/Liveness.ts";
 import * as Touched from "../databases/Touched.ts";
 import { isoNow } from "../databases/Types.ts";
 import * as DatabaseMutations from "../databases/Mutations.ts";
+import * as CommentWrites from "../comments/Writes.ts";
 import { applyBatch } from "./BlockBatch.ts";
 import * as PageStore from "../PageStore.ts";
 import * as PageStructure from "../PageStructure.ts";
@@ -372,5 +373,13 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
     case "updateRows":
     case "moveRows":
       return yield* DatabaseMutations.execute(request, meta);
+    case "createCommentThread":
+    case "replyComment":
+    case "agentReplyComment":
+    case "editComment":
+    case "deleteComment":
+    case "resolveCommentThread":
+    case "reopenCommentThread":
+      return yield* CommentWrites.execute(request, meta);
   }
 });

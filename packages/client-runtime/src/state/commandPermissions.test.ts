@@ -198,6 +198,13 @@ describe("command permissions", () => {
             WS_METHODS.spacesDatabasesRowsCreate,
             WS_METHODS.spacesDatabasesRowsUpdate,
             WS_METHODS.spacesDatabasesRowsMove,
+            WS_METHODS.spacesCommentsCreate,
+            WS_METHODS.spacesCommentsReply,
+            WS_METHODS.spacesCommentsEdit,
+            WS_METHODS.spacesCommentsDelete,
+            WS_METHODS.spacesCommentsResolve,
+            WS_METHODS.spacesCommentsReopen,
+            WS_METHODS.spacesCommentsDispatch,
           ]) {
             const permission = createCommandPermissions(runtime, tag);
             expect(registry.get(permission.permissionAtom(env))).toBe(false);

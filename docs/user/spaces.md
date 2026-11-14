@@ -34,6 +34,25 @@ A synced block shows the same content on more than one page. Create one with **/
 - Synced blocks cannot contain tabs, databases, sub-pages or other synced blocks.
 - Shared pages show synced content read-only.
 
+## Comments
+
+Comment on a whole block or on selected text. Hover a block and choose the comment button, or
+select text and choose **Comment**. Press **Ctrl+Alt+M** (**Cmd+Option+M** on Mac) to comment on
+the block you are in. On wide windows comments appear beside their blocks; otherwise open them from
+the comment count in the page header or **Show comments** in the command palette.
+
+Reply, edit or delete your own comments, and **Resolve** a thread when it is done. Resolved threads
+stay under **Resolved**, where you can reopen them. If the commented text is edited away, the comment
+stays on its block.
+
+To have an agent act on a comment, choose **Send to session** in the comment box: pick an existing
+session or start a new one in a project, and choose **Ask to edit** (the agent changes the page) or
+**Just message**. The comment shows the session's status and links to it. The agent can reply in the
+comment thread; only you can resolve it. Each comment can be sent once; to send again, reply and
+send the reply.
+
+Shared page links never show comments.
+
 ## Media
 
 Choose **Media → Upload** in the page header to add an image, PDF or video to the page. To swap a file, select its block and choose **Replace selected media**. The block keeps its place and caption. Edit the caption in the page. To remove media, select its block and choose **More → Remove media block**; the file itself is not deleted. Previews open when you ask for them; if a preview link expires, refresh it.
@@ -163,6 +182,8 @@ On mobile, open **Spaces** from the thread list, Settings, or the command palett
 Tabs show as a switcher at the top of each tab group, and synced blocks show their original content. Both are read-only on mobile. Open pages update when they change elsewhere.
 
 Databases open on mobile in every view type, drawn as lists and cards suited to a phone. Calendars and timelines show as a month agenda, and **Open database** on a page's database shows the full list. Views apply as saved on desktop; change filters, sorting, layout, properties, formulas, relations and templates there. Open a row to read it and edit its title, text, number, checkbox, select, multi-select, status, date, URL, email and phone values, and use **New row** to add one. Cell changes save right away and are not kept as a draft; if one cannot be sent, retry or discard it. Dates are entered as YYYY-MM-DD; dates with a time and formatted text are edited on desktop. Long views stop at 500 rows, or 200 per group, and point you to desktop for the rest.
+
+Read comments, reply, resolve or reopen them, and send a comment to a session. Highlights for commented text are not shown on mobile; the quoted text appears in the comment.
 
 Search the selected mobile environment with **First results**, then **Next results** for another window. An empty window with a continuation is not the end. If the index is building, retry explicitly. Search titles and snippets belong to that result window; select a result, then **Open current source** to resolve its current title and location. Child-page and mention links select a current-source action too, using the destination environment’s read permission. Deleted, trashed and unavailable references stay explicit. Finish the active input before opening a source; retained page drafts are kept. A linked block outside the loaded window requires manual First/Next browsing. **Reveal loaded block** attempts to show an already loaded row; it does not search other windows.
 

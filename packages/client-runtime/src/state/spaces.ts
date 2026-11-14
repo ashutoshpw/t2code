@@ -11,6 +11,7 @@ import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { createSpacesDatabaseAtoms } from "./spacesDatabases.ts";
+import { createSpacesCommentAtoms } from "./spacesComments.ts";
 import { createSpacesPageAtoms } from "./spacesPages.ts";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
 import { readSpacePageLocation, SpaceLocationError } from "../spaces/pageLocation.ts";
@@ -77,6 +78,10 @@ export function createSpacesEnvironmentAtoms<R, E>(
     ...(options ? { capabilityAtom: options.capabilityAtom } : {}),
     changed,
   });
+  const comments = createSpacesCommentAtoms(runtime, {
+    ...(options ? { capabilityAtom: options.capabilityAtom } : {}),
+    commentLive: pages.commentLive,
+  });
   // A copy refreshes with the library and, once an answer named the original's page, with that page's live signal.
   const syncedTrigger = Atom.family((key: string) => {
     const [environmentId] = JSON.parse(key) as [EnvironmentId, SpaceBlockId];
@@ -89,6 +94,8 @@ export function createSpacesEnvironmentAtoms<R, E>(
   return {
     changed,
     pageLive: pages.pageLive,
+    commentLive: pages.commentLive,
+    comments,
     treeLive: pages.treeLive,
     libraryChanged,
     databases,

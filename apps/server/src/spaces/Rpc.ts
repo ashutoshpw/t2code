@@ -55,6 +55,13 @@ import {
   WsSpacesDatabasesRowsCreateRpc,
   WsSpacesDatabasesRowsUpdateRpc,
   WsSpacesDatabasesRowsMoveRpc,
+  WsSpacesCommentsListRpc,
+  WsSpacesCommentsCreateRpc,
+  WsSpacesCommentsReplyRpc,
+  WsSpacesCommentsEditRpc,
+  WsSpacesCommentsDeleteRpc,
+  WsSpacesCommentsResolveRpc,
+  WsSpacesCommentsReopenRpc,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
@@ -188,6 +195,34 @@ export const group = RpcGroup.make(
   WsSpacesDatabasesRowsMoveRpc.setPayload(
     strictPayload(C.SpaceRowsMoveInput, (input) => ({ operation: "moveRows", input })),
   ),
+  WsSpacesCommentsListRpc.setPayload(strictPayload(C.SpaceCommentsListInput)),
+  WsSpacesCommentsCreateRpc.setPayload(
+    strictPayload(C.SpaceCommentThreadCreateInput, (input) => ({
+      operation: "createCommentThread",
+      input,
+    })),
+  ),
+  WsSpacesCommentsReplyRpc.setPayload(
+    strictPayload(C.SpaceCommentReplyInput, (input) => ({ operation: "replyComment", input })),
+  ),
+  WsSpacesCommentsEditRpc.setPayload(
+    strictPayload(C.SpaceCommentEditInput, (input) => ({ operation: "editComment", input })),
+  ),
+  WsSpacesCommentsDeleteRpc.setPayload(
+    strictPayload(C.SpaceCommentDeleteInput, (input) => ({ operation: "deleteComment", input })),
+  ),
+  WsSpacesCommentsResolveRpc.setPayload(
+    strictPayload(C.SpaceCommentThreadStatusInput, (input) => ({
+      operation: "resolveCommentThread",
+      input,
+    })),
+  ),
+  WsSpacesCommentsReopenRpc.setPayload(
+    strictPayload(C.SpaceCommentThreadStatusInput, (input) => ({
+      operation: "reopenCommentThread",
+      input,
+    })),
+  ),
 ).middleware(RpcScopeAuthorization);
 
 export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: string) {
@@ -249,5 +284,12 @@ export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: str
     [WS_METHODS.spacesDatabasesRowsCreate]: (input) => service.createRows(input),
     [WS_METHODS.spacesDatabasesRowsUpdate]: (input) => service.updateRows(input),
     [WS_METHODS.spacesDatabasesRowsMove]: (input) => service.moveRows(input),
+    [WS_METHODS.spacesCommentsList]: (input) => service.listComments(input),
+    [WS_METHODS.spacesCommentsCreate]: (input) => service.createCommentThread(input),
+    [WS_METHODS.spacesCommentsReply]: (input) => service.replyComment(input),
+    [WS_METHODS.spacesCommentsEdit]: (input) => service.editComment(input),
+    [WS_METHODS.spacesCommentsDelete]: (input) => service.deleteComment(input),
+    [WS_METHODS.spacesCommentsResolve]: (input) => service.resolveCommentThread(input),
+    [WS_METHODS.spacesCommentsReopen]: (input) => service.reopenCommentThread(input),
   });
 });

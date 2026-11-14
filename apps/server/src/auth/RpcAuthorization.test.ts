@@ -19,6 +19,7 @@ import {
   RpcScopeAuthorization,
   WS_METHODS,
   WsRpcGroup,
+  WsSpacesCommentsDispatchRpc,
   WsSpacesSharesCreateRpc,
   WsSpacesSharesGetRpc,
   WsSpacesSharesStopRpc,
@@ -531,11 +532,18 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesDatabasesSubscribeChanges,
       WS_METHODS.spacesPagesSubscribeChanges,
       WS_METHODS.spacesDatabasesRowsGet,
+      WS_METHODS.spacesCommentsList,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
       Effect.provide(
         Layer.merge(
           group.toLayer({
+            "spaces.comments.create": deniedHandler,
+            "spaces.comments.reply": deniedHandler,
+            "spaces.comments.edit": deniedHandler,
+            "spaces.comments.delete": deniedHandler,
+            "spaces.comments.resolve": deniedHandler,
+            "spaces.comments.reopen": deniedHandler,
             "spaces.pins.add": deniedHandler,
             "spaces.pins.remove": deniedHandler,
             "spaces.recents.record": deniedHandler,
@@ -704,6 +712,35 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
         ...common,
         sourceBlockId: C.SpaceBlockId.make("block"),
       }),
+      client[WS_METHODS.spacesCommentsCreate]({
+        ...common,
+        pageId,
+        blockId: C.SpaceBlockId.make("block"),
+        anchor: { kind: "block" },
+        body: [{ text: "x", marks: [] }],
+      }),
+      client[WS_METHODS.spacesCommentsReply]({
+        ...common,
+        commentThreadId: C.SpaceCommentThreadId.make("thread"),
+        body: [{ text: "x", marks: [] }],
+      }),
+      client[WS_METHODS.spacesCommentsEdit]({
+        ...common,
+        commentId: C.SpaceCommentId.make("comment"),
+        body: [{ text: "x", marks: [] }],
+      }),
+      client[WS_METHODS.spacesCommentsDelete]({
+        ...common,
+        commentId: C.SpaceCommentId.make("comment"),
+      }),
+      client[WS_METHODS.spacesCommentsResolve]({
+        ...common,
+        commentThreadId: C.SpaceCommentThreadId.make("thread"),
+      }),
+      client[WS_METHODS.spacesCommentsReopen]({
+        ...common,
+        commentThreadId: C.SpaceCommentThreadId.make("thread"),
+      }),
     ] as ReadonlyArray<
       Effect.Effect<
         unknown,
@@ -760,11 +797,18 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
       WS_METHODS.spacesDatabasesRowsCreate,
       WS_METHODS.spacesDatabasesRowsUpdate,
       WS_METHODS.spacesDatabasesRowsMove,
+      WS_METHODS.spacesCommentsCreate,
+      WS_METHODS.spacesCommentsReply,
+      WS_METHODS.spacesCommentsEdit,
+      WS_METHODS.spacesCommentsDelete,
+      WS_METHODS.spacesCommentsResolve,
+      WS_METHODS.spacesCommentsReopen,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
       Effect.provide(
         Layer.merge(
           group.toLayer({
+            "spaces.comments.list": deniedHandler,
             "spaces.assets.get": deniedHandler,
             "spaces.assets.list": deniedHandler,
             "spaces.assets.upload.get": deniedHandler,
@@ -805,6 +849,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
         uploadId: C.SpaceAssetUploadId.make("upload"),
       }),
       client[WS_METHODS.spacesList]({ environmentId }),
+      client[WS_METHODS.spacesCommentsList]({ environmentId, pageId, status: "open" }),
       client[WS_METHODS.spacesDatabasesList]({ environmentId }),
       client[WS_METHODS.spacesDatabasesGet]({
         environmentId,
@@ -885,6 +930,7 @@ it.effect("gates page share links: managing needs operate scope and viewing need
       WsSpacesSharesCreateRpc,
       WsSpacesSharesStopRpc,
       WsSpacesSharesGetRpc,
+      WsSpacesCommentsDispatchRpc,
     ).middleware(RpcScopeAuthorization);
     const clientWith = (
       scope: typeof AuthOrchestrationReadScope | typeof AuthOrchestrationOperateScope,
@@ -896,6 +942,7 @@ it.effect("gates page share links: managing needs operate scope and viewing need
               "spaces.shares.create": handler as never,
               "spaces.shares.stop": handler as never,
               "spaces.shares.get": handler as never,
+              "spaces.comments.dispatch": handler as never,
             }),
             RpcAuthorization.layer([scope]),
           ),
@@ -906,6 +953,13 @@ it.effect("gates page share links: managing needs operate scope and viewing need
       call.pipe(Effect.match({ onFailure: (error) => error, onSuccess: () => null }));
 
     const reader = yield* clientWith(AuthOrchestrationReadScope);
+    const dispatchInput = {
+      environmentId: "env",
+      commentId: "comment",
+      mode: "message",
+      target: { kind: "thread", threadId: "thread" },
+      creationSource: "web",
+    } as never;
     for (const call of [
       reader[WS_METHODS.spacesSharesCreate](input),
       reader[WS_METHODS.spacesSharesStop](input),
@@ -915,6 +969,10 @@ it.effect("gates page share links: managing needs operate scope and viewing need
         requiredPermission: AuthOrchestrationOperateScope,
       });
     }
+    expect(yield* denied(reader[WS_METHODS.spacesCommentsDispatch](dispatchInput))).toMatchObject({
+      _tag: "EnvironmentAuthorizationError",
+      requiredPermission: AuthOrchestrationOperateScope,
+    });
     const operator = yield* clientWith(AuthOrchestrationOperateScope);
     expect(yield* denied(operator[WS_METHODS.spacesSharesGet](input))).toMatchObject({
       _tag: "EnvironmentAuthorizationError",
@@ -924,6 +982,7 @@ it.effect("gates page share links: managing needs operate scope and viewing need
     yield* reader[WS_METHODS.spacesSharesGet](input);
     yield* operator[WS_METHODS.spacesSharesCreate](input);
     yield* operator[WS_METHODS.spacesSharesStop](input);
-    expect(handled).toBe(3);
+    yield* operator[WS_METHODS.spacesCommentsDispatch](dispatchInput);
+    expect(handled).toBe(4);
   }).pipe(Effect.scoped),
 );

@@ -261,6 +261,7 @@ import { EnvironmentMachineIcon } from "./EnvironmentMachineIcon";
 import { Checkbox } from "./ui/checkbox";
 import { ProjectFilePicker } from "./files/ProjectFilePicker";
 import { openLinkPullRequestDialog } from "./pullRequest/LinkPullRequestDialog";
+import { openSpaceCommentsPanel } from "../spaces/comments/spaceCommentsPanelState";
 import { openSpacePageShareDialog } from "../spaces/spacePageShareDialogState";
 import { canShareWithGuestAtom } from "./chat/guestShareAvailability";
 import { openGuestShareDialog } from "./chat/guestShareDialogState";
@@ -1663,6 +1664,17 @@ function OpenCommandPaletteDialog(props: {
       icon: <Share2Icon className={ITEM_ICON_CLASS} />,
       run: async () => {
         openSpacePageShareDialog(openSpacePage);
+      },
+    });
+  if (spacesSupported && openSpacePage !== null && pathname.startsWith("/spaces/"))
+    actionItems.push({
+      kind: "action",
+      value: "action:show-space-comments",
+      title: "Show comments",
+      searchTerms: ["comments", "discussion", "notes", "spaces", "page"],
+      icon: <MessageSquareIcon className={ITEM_ICON_CLASS} />,
+      run: async () => {
+        openSpaceCommentsPanel(openSpacePage);
       },
     });
   if (spacesSupported)

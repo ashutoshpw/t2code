@@ -739,6 +739,7 @@ it.layer(Layer.merge(NodeServices.layer, NodePlatformCrypto.layer))(
             page.id,
           );
           yield* exerciseDatabaseTools(send, admission, renamed.space.id, page.id);
+          value(yield* send("t2_spaces_comments", { action: "list", ...env, pageId: page.id }));
           assert.sameMembers(
             [...called],
             server.tools.map((entry) => entry.tool.name),

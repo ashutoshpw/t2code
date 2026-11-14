@@ -10,6 +10,14 @@ export interface SpacePageLiveSignal {
   readonly bodyRevision?: number;
 }
 
+/** What a client knows about the newest announced comments of one page. */
+export interface SpacePageCommentSignal {
+  /** Moves once per announcement that changed the page's comments. */
+  readonly commentSeq: number;
+  /** Moves once per stream resync after the first. */
+  readonly resyncSeq: number;
+}
+
 export type SpaceLiveAction = "none" | "hold" | "metadata" | "body" | "check";
 
 /** Decides how an open document reacts to a live signal; never reads anything itself. */
@@ -50,6 +58,8 @@ export const MAX_REMOTE_PAGES = 512;
 export interface RemotePage {
   readonly revision: number;
   readonly bodyRevision: number;
+  /** 0 until a comment change is announced. */
+  readonly commentRevision: number;
   /** The event sequence number that last announced this page. */
   readonly seq: number;
 }
@@ -84,6 +94,7 @@ export function foldPageChanges(
     pages.set(change.id, {
       revision: Math.max(held?.revision ?? 0, change.revision),
       bodyRevision: Math.max(held?.bodyRevision ?? 0, change.bodyRevision),
+      commentRevision: Math.max(held?.commentRevision ?? 0, change.commentRevision ?? 0),
       seq,
     });
     if (change.tree === true || change.removed === true) tree = true;

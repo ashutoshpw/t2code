@@ -76,6 +76,9 @@ vi.mock("../../components/ui/ControlPill.tsx", async () => {
 });
 
 vi.mock("../../components/ui/ListRow.tsx", () => ({ ListRow: () => null }));
+vi.mock("../../features/spaces/comments/SpacesCommentsButton.tsx", () => ({
+  SpacesCommentsButton: () => null,
+}));
 
 vi.mock("../../components/ui/Dialog.tsx", () => ({}));
 

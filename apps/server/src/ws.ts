@@ -224,6 +224,7 @@ import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
 import * as SpacesService from "./spaces/SpacesService.ts";
 import * as SpacePageShareService from "./spaces/PageShareService.ts";
 import * as SpacesRpc from "./spaces/Rpc.ts";
+import * as CommentDispatchService from "./spaces/CommentDispatchService.ts";
 import * as DirectEndpoints from "./environment/DirectEndpoints.ts";
 import * as RemoteOpenTargets from "./environment/RemoteOpenTargets.ts";
 import * as DefectReporter from "./observability/DefectReporter.ts";
@@ -726,6 +727,13 @@ const ServerWsRpcGroup = WsRpcGroup.omit(
   WS_METHODS.spacesDatabasesRowsCreate,
   WS_METHODS.spacesDatabasesRowsUpdate,
   WS_METHODS.spacesDatabasesRowsMove,
+  WS_METHODS.spacesCommentsList,
+  WS_METHODS.spacesCommentsCreate,
+  WS_METHODS.spacesCommentsReply,
+  WS_METHODS.spacesCommentsEdit,
+  WS_METHODS.spacesCommentsDelete,
+  WS_METHODS.spacesCommentsResolve,
+  WS_METHODS.spacesCommentsReopen,
 )
   .merge(SpacesRpc.group)
   .middleware(RpcInstrumentation);
@@ -1515,6 +1523,7 @@ export const layerWsRpc = (
       const secretRequests = yield* SecretRequests.SecretRequests;
       const guestShares = yield* GuestShareService.GuestShareService;
       const pageShares = yield* SpacePageShareService.SpacePageShareService;
+      const commentDispatch = yield* CommentDispatchService.CommentDispatchService;
       const pullRequests = yield* PullRequestService.PullRequestService;
       const reviewGuides = yield* PullRequestReviewGuideService.PullRequestReviewGuideService;
       const pullRequestSync = yield* PullRequestSyncReactor.PullRequestSyncReactor;
@@ -2341,6 +2350,7 @@ export const layerWsRpc = (
         [WS_METHODS.spacesSharesCreate]: (input) => pageShares.create(input),
         [WS_METHODS.spacesSharesStop]: (input) => pageShares.stop(input).pipe(Effect.as({})),
         [WS_METHODS.spacesSharesGet]: (input) => pageShares.get(input),
+        [WS_METHODS.spacesCommentsDispatch]: (input) => commentDispatch.dispatch(input),
         [WS_METHODS.guestShareCreate]: (input) =>
           Effect.annotateCurrentSpan({ "orchestration_v2.thread_id": input.threadId }).pipe(
             Effect.andThen(guestShares.create(input)),

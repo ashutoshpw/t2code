@@ -684,6 +684,7 @@ it.layer(layer)("migrate-dev-db", (it) => {
               { migration_id: 19, name: "DatabaseOrphans" },
               { migration_id: 20, name: "DatabaseQueryIndexes" },
               { migration_id: 21, name: "SyncedRefs" },
+              { migration_id: 22, name: "Comments" },
             ],
           );
         }),

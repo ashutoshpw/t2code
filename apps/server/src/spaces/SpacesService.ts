@@ -1,5 +1,8 @@
 import {
   EnvironmentId,
+  type ProjectId,
+  type RunId,
+  type ThreadId,
   type SpacePageShare,
   type SpacePageShareId,
   type SpaceSharedDatabase,
@@ -24,6 +27,7 @@ import * as PageChangeOps from "./service/PageChanges.ts";
 import * as DatabaseReadOps from "./service/DatabaseReads.ts";
 import * as ReadOps from "./service/Reads.ts";
 import * as SyncedOps from "./service/Synced.ts";
+import * as CommentOps from "./service/Comments.ts";
 import * as ShareOps from "./service/Shares.ts";
 import * as SharedDatabaseOps from "./service/SharedDatabases.ts";
 import type { QueryOutcome, QueryParams } from "./sharedDatabases/Read.ts";
@@ -109,6 +113,70 @@ export class SpacesService extends Context.Service<
     readonly unsyncBlocks: (
       input: unknown,
     ) => Effect.Effect<C.SpaceUnsyncResult, C.SpaceServiceError>;
+    readonly listComments: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceCommentsListResult, C.SpaceServiceError>;
+    readonly createCommentThread: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceCommentMutationResult, C.SpaceServiceError>;
+    readonly replyComment: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceCommentMutationResult, C.SpaceServiceError>;
+    /** A reply authored by the agent thread that called the MCP tool. */
+    readonly agentReplyComment: (
+      input: C.SpaceCommentReplyInput,
+      agentThreadId: ThreadId,
+    ) => Effect.Effect<C.SpaceCommentMutationResult, C.SpaceServiceError>;
+    readonly editComment: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceCommentMutationResult, C.SpaceServiceError>;
+    readonly deleteComment: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceCommentMutationResult, C.SpaceServiceError>;
+    readonly resolveCommentThread: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceCommentMutationResult, C.SpaceServiceError>;
+    readonly reopenCommentThread: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceCommentMutationResult, C.SpaceServiceError>;
+    /** The comment, its thread and page, for sending it to a session; refuses agent and resolved comments. */
+    readonly prepareCommentDispatch: (input: {
+      readonly environmentId: EnvironmentId;
+      readonly commentId: C.SpaceCommentId;
+    }) => Effect.Effect<
+      {
+        readonly comment: C.SpaceComment;
+        readonly thread: C.SpaceCommentThread;
+        readonly page: {
+          readonly id: C.SpacePageId;
+          readonly spaceId: C.SpaceId;
+          readonly title: string;
+        };
+      },
+      C.SpaceServiceError
+    >;
+    /** Stores the session a comment was sent to; the same target and message replays the stored row. */
+    readonly recordCommentDispatch: (
+      input: CommentOps.RecordDispatchInput,
+    ) => Effect.Effect<
+      { readonly dispatch: C.SpaceCommentDispatch; readonly commentRevision: number },
+      C.SpaceServiceError
+    >;
+    /** Moves the dispatches of a run to a status; true when a row changed. */
+    readonly updateCommentDispatchRun: (input: {
+      readonly runId: RunId;
+      readonly status: C.SpaceCommentDispatchStatus;
+    }) => Effect.Effect<boolean, C.SpaceServiceError>;
+    readonly listActiveCommentDispatches: () => Effect.Effect<
+      ReadonlyArray<{
+        readonly commentId: C.SpaceCommentId;
+        readonly projectId: ProjectId;
+        readonly threadId: ThreadId;
+        readonly runId: RunId;
+        readonly status: C.SpaceCommentDispatchStatus;
+      }>,
+      C.SpaceServiceError
+    >;
     readonly createSpace: (
       input: unknown,
     ) => Effect.Effect<C.SpaceCreateResult, C.SpaceServiceError>;
@@ -309,6 +377,7 @@ const make = Effect.fn("SpacesService.make")(function* (
   const lists = ListOps.make(runtime);
   const reads = ReadOps.make(runtime);
   const synced = SyncedOps.make(runtime);
+  const comments = CommentOps.make(runtime);
   const shares = ShareOps.make(runtime, assets);
   const sharedDatabases = SharedDatabaseOps.make(runtime, assets);
   const mutations = MutationOps.make(runtime);
@@ -340,6 +409,18 @@ const make = Effect.fn("SpacesService.make")(function* (
     readBlocks: reads.readBlocks,
     readSubtree: synced.readSubtree,
     unsyncBlocks: mutations.unsyncBlocks,
+    listComments: comments.listComments,
+    createCommentThread: mutations.createCommentThread,
+    replyComment: mutations.replyComment,
+    agentReplyComment: mutations.agentReplyComment,
+    editComment: mutations.editComment,
+    deleteComment: mutations.deleteComment,
+    resolveCommentThread: mutations.resolveCommentThread,
+    reopenCommentThread: mutations.reopenCommentThread,
+    prepareCommentDispatch: comments.prepareCommentDispatch,
+    recordCommentDispatch: comments.recordCommentDispatch,
+    updateCommentDispatchRun: comments.updateCommentDispatchRun,
+    listActiveCommentDispatches: comments.listActiveCommentDispatches,
     createSpace: mutations.createSpace,
     renameSpace: mutations.renameSpace,
     setDefaultSpace: mutations.setDefaultSpace,

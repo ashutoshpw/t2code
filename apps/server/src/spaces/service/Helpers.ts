@@ -89,6 +89,7 @@ export const decodeDefaultResult = Schema.decodeUnknownSync(C.SpaceSetDefaultRes
 export const decodePageCreateResult = Schema.decodeUnknownSync(C.SpacePageCreateResult, strict);
 export const decodePageUpdateResult = Schema.decodeUnknownSync(C.SpacePageUpdateResult, strict);
 export const decodeApplyResult = Schema.decodeUnknownSync(C.SpaceApplyBlockBatchResult, strict);
+export const decodeCommentResult = Schema.decodeUnknownSync(C.SpaceCommentMutationResult, strict);
 export const decodeUnsyncResult = Schema.decodeUnknownSync(C.SpaceUnsyncResult, strict);
 export const decodeCreateChildResult = Schema.decodeUnknownSync(
   C.SpaceCreateChildPageResult,

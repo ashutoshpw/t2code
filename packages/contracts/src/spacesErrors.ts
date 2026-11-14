@@ -164,6 +164,46 @@ export class SpaceAssetError extends Schema.TaggedError<SpaceAssetError>()("Spac
     return "The Spaces asset request could not be completed.";
   }
 }
+const COMMENT_ERROR_MESSAGES = {
+  not_found: "That comment no longer exists.",
+  not_author: "You can only change your own comments.",
+  resolved: "This comment is resolved. Reopen it to reply.",
+  too_long: "That comment is too long.",
+  thread_full: "This comment thread has reached its reply limit.",
+  page_full: "This page has reached its comment thread limit.",
+  already_dispatched: "This comment was already sent to a session.",
+  not_dispatchable: "Only your own comments can be sent to a session.",
+  thread_archived: "That session is archived. Pick another one or start a new session.",
+  thread_not_found: "That session no longer exists.",
+  project_not_found: "That project no longer exists.",
+  no_default_model: "That project has no default model. Set one in the project settings first.",
+  dispatch_failed: "The comment could not be sent to a session.",
+} as const;
+export class SpaceCommentError extends Schema.TaggedError<SpaceCommentError>()(
+  "SpaceCommentError",
+  {
+    reason: Schema.Literals([
+      "not_found",
+      "not_author",
+      "resolved",
+      "too_long",
+      "thread_full",
+      "page_full",
+      "already_dispatched",
+      "not_dispatchable",
+      "thread_archived",
+      "thread_not_found",
+      "project_not_found",
+      "no_default_model",
+      "dispatch_failed",
+    ]),
+    id: Schema.optionalKey(StableId),
+  },
+) {
+  override get message(): string {
+    return COMMENT_ERROR_MESSAGES[this.reason];
+  }
+}
 export const SpaceServiceError = Schema.Union([
   SpaceAssetError,
   SpaceSearchUnavailableError,
@@ -177,5 +217,6 @@ export const SpaceServiceError = Schema.Union([
   SpaceMutationAdmissionError,
   SpaceCursorStaleError,
   SpaceDatabaseError,
+  SpaceCommentError,
 ]);
 export type SpaceServiceError = typeof SpaceServiceError.Type;

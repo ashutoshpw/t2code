@@ -12,7 +12,12 @@ import type { SpaceBlock, SpaceBlockId } from "@t2code/contracts/spaces";
 import { DatabaseHandleItems } from "./databases/blocks/LazyDatabaseHandleItems";
 import { DatabaseDeleteHost } from "./databases/blocks/DeleteDatabaseDialog";
 import { spaceDocumentBlocks } from "./document";
-import { SPACE_BLOCK_HANDLE_WIDTH, SpaceBlockHandle } from "./SpaceBlockHandle";
+import {
+  SPACE_BLOCK_HANDLE_COMMENT_WIDTH,
+  SPACE_BLOCK_HANDLE_WIDTH,
+  SpaceBlockHandle,
+} from "./SpaceBlockHandle";
+import type { SpaceCommentsController } from "./comments/commentsController";
 import { SpaceBlockHandleItems } from "./SpaceBlockHandleItems";
 import { BLOCK_DRAG_TYPE, blockElement, planBlockDrop, type BlockDrop } from "./blockDrag";
 import {
@@ -62,8 +67,10 @@ export function EditorSurface({
   structure,
   mediaEditable,
   onMoveBlocks,
+  comments,
   children,
 }: SpaceEditorParts & {
+  readonly comments?: SpaceCommentsController | undefined;
   readonly structure: boolean;
   readonly mediaEditable: boolean;
   readonly onMoveBlocks: ((state: EditorState) => void) | undefined;
@@ -92,9 +99,12 @@ export function EditorSurface({
     selector: ({ editor }) => {
       const caps = editorCapabilities(bridge, editable, !!onMoveBlocks);
       const doc = editor.state.doc;
-      const handle = hoverId && caps.structure ? findBlock(doc, hoverId) : null;
+      const handle =
+        hoverId && (caps.structure || comments?.enabled()) ? findBlock(doc, hoverId) : null;
       return {
         canMove: caps.canMove,
+        structure: caps.structure,
+        commentable: comments?.enabled() === true,
         handleId: handle?.id ?? null,
         handleMedia: !!handle && MEDIA_TYPES.includes(handle.type),
         handleTabs: handle?.type === "tabs",
@@ -115,7 +125,8 @@ export function EditorSurface({
     const rect = block.getBoundingClientRect();
     const box = wrapper.getBoundingClientRect();
     const top = rect.top - box.top + 2;
-    const left = Math.max(0, rect.left - box.left - SPACE_BLOCK_HANDLE_WIDTH);
+    const width = comments?.enabled() ? SPACE_BLOCK_HANDLE_COMMENT_WIDTH : SPACE_BLOCK_HANDLE_WIDTH;
+    const left = Math.max(0, rect.left - box.left - width);
     measured.current = { block, doc: editor.state.doc };
     setHover((current) =>
       current && current.id === id && current.top === top && current.left === left
@@ -209,6 +220,14 @@ export function EditorSurface({
   }
   const handleId = info.handleId;
   const handleAt = handleId && hover ? { top: hover.top, left: hover.left } : null;
+  const onComment =
+    handleId && info.commentable && comments
+      ? () => {
+          const element = blockElement(wrapper, handleId);
+          if (element instanceof HTMLElement)
+            comments.compose({ blockId: handleId, anchor: { kind: "block" }, element });
+        }
+      : null;
   const selectBlock = (id: SpaceBlockId) => {
     let at = -1;
     editor.state.doc.descendants((node, pos) => {
@@ -225,7 +244,7 @@ export function EditorSurface({
     <SpaceEditorWrapperContext.Provider value={wrapper}>
       <div
         ref={setWrapper}
-        className={structure ? "relative -ms-12 ps-12" : "relative"}
+        className={structure || info.commentable ? "relative -ms-12 ps-12" : "relative"}
         onMouseMove={trackHover}
         onMouseLeave={clearHover}
         onDragOverCapture={dragOverBlock}
@@ -251,6 +270,8 @@ export function EditorSurface({
                 ? () => run(adapter.insertAfter(handleId, "/"))
                 : null
             }
+            structure={info.structure}
+            onComment={onComment}
             onDragStart={startDrag}
             onDragEnd={clearDrag}
           >
@@ -266,6 +287,7 @@ export function EditorSurface({
             ) : (
               <>
                 <SpaceBlockHandleItems
+                  onComment={onComment}
                   editor={editor}
                   adapter={adapter}
                   editable={editable}

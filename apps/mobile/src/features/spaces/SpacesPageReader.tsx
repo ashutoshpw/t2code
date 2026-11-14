@@ -42,6 +42,7 @@ import {
 } from "./blockVisibility";
 import { SpacesDatabaseBlock } from "./databases/SpacesDatabaseBlock";
 import { SpacesRowProperties } from "./databases/SpacesRowProperties";
+import { SpacesCommentsButton } from "./comments/SpacesCommentsButton";
 
 type PageLease = Awaited<ReturnType<typeof acquireSpacesPageReader>>;
 
@@ -315,6 +316,12 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
               <Notice>{editorState.error ?? actionError!}</Notice>
             ) : null}
             <View className="flex-row flex-wrap gap-2">
+              {location ? (
+                <SpacesCommentsButton
+                  environmentId={target.environmentId}
+                  pageId={location.page.id}
+                />
+              ) : null}
               <ControlPill
                 variant="pill"
                 label={snapshot.session.pending ? "Retry exact save" : "Save"}

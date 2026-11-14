@@ -21,6 +21,7 @@ import { SendLaterDialogHost } from "../components/chat/SendLaterDialog";
 import { GuestShareDialogHost } from "../components/chat/GuestShareControls";
 import { UseInAnotherAppDialogHost } from "../components/mcp/UseInAnotherAppDialog";
 import { SpacePageShareDialogHost } from "../spaces/SpacePageShareDialog";
+import { SpaceCommentsPanelHost } from "../spaces/comments/SpaceCommentsPanel";
 import { AddProjectToMachineDialogHost } from "../components/AddProjectToMachineDialog";
 import { ConfirmDialogHost } from "../components/ConfirmDialogHost";
 import { DevReplayHost } from "../components/DevReplayHost";
@@ -195,6 +196,7 @@ function RootRouteBranch() {
       <SendLaterDialogHost />
       <GuestShareDialogHost />
       <SpacePageShareDialogHost />
+      <SpaceCommentsPanelHost />
       <ProjectCloneToastCoordinator />
       <AddProjectToMachineDialogHost />
       <UseInAnotherAppDialogHost />

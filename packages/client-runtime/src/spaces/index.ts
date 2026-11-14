@@ -20,3 +20,5 @@ export * from "./sendContext.ts";
 export * from "./databases/index.ts";
 export * from "./livePage.ts";
 export * from "./synced.ts";
+export * from "./commentAnchor.ts";
+export * from "./comments.ts";

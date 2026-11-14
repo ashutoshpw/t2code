@@ -8,6 +8,7 @@ import {
   EMPTY_REMOTE_PAGES,
   foldPageChanges,
   type RemotePageChanges,
+  type SpacePageCommentSignal,
   type SpacePageLiveSignal,
 } from "../spaces/livePage.ts";
 import { createEnvironmentRpcSubscriptionAtomFamily } from "./runtime.ts";
@@ -52,6 +53,9 @@ export function createSpacesPageAtoms<R, E>(
       return () => clearTimeout(timer);
     });
   const pageSignals = Atom.family((_key: string) => Atom.make<SpacePageLiveSignal>(NO_SIGNAL));
+  const commentSignals = Atom.family((_key: string) =>
+    Atom.make({ commentSeq: 0, commentRevision: 0 }),
+  );
   const signalKey = (environmentId: EnvironmentId, pageId: SpacePageId) =>
     JSON.stringify([environmentId, pageId]);
   const resyncCounter = Atom.family((_environmentId: EnvironmentId) => Atom.make(0));
@@ -77,12 +81,26 @@ export function createSpacesPageAtoms<R, E>(
           if (page.seq <= appliedSeq) continue;
           const atom = pageSignals(signalKey(environmentId, pageId));
           const held = registry.get(atom);
-          registry.set(atom, {
-            ...held,
-            changeSeq: held.changeSeq + 1,
-            revision: Math.max(held.revision ?? 0, page.revision),
-            bodyRevision: Math.max(held.bodyRevision ?? 0, page.bodyRevision),
-          });
+          const commentAtom = commentSignals(signalKey(environmentId, pageId));
+          const comments = registry.get(commentAtom);
+          const commentAdvanced = page.commentRevision > comments.commentRevision;
+          // A comment-only announcement never moves the document signal.
+          const commentOnly =
+            commentAdvanced &&
+            page.revision <= (held.revision ?? 0) &&
+            page.bodyRevision <= (held.bodyRevision ?? 0);
+          if (!commentOnly)
+            registry.set(atom, {
+              ...held,
+              changeSeq: held.changeSeq + 1,
+              revision: Math.max(held.revision ?? 0, page.revision),
+              bodyRevision: Math.max(held.bodyRevision ?? 0, page.bodyRevision),
+            });
+          if (commentAdvanced)
+            registry.set(commentAtom, {
+              commentSeq: comments.commentSeq + 1,
+              commentRevision: page.commentRevision,
+            });
         }
         appliedSeq = state.seq;
         const treeChanged = state.treeSeq > appliedTreeSeq;
@@ -133,6 +151,16 @@ export function createSpacesPageAtoms<R, E>(
       };
     });
   });
+  const commentAtoms = Atom.family((key: string) => {
+    const [environmentId] = JSON.parse(key) as [EnvironmentId, SpacePageId];
+    return Atom.make((get): SpacePageCommentSignal => {
+      get(subscription(environmentId));
+      return {
+        commentSeq: get(commentSignals(key)).commentSeq,
+        resyncSeq: get(resyncCounter(environmentId)),
+      };
+    });
+  });
   const treeAtoms = Atom.family((environmentId: EnvironmentId) =>
     Atom.make((get) => {
       get(subscription(environmentId));
@@ -144,7 +172,10 @@ export function createSpacesPageAtoms<R, E>(
     liveAtoms(signalKey(environmentId, pageId));
   /** Moves when the page tree changed elsewhere; mounting it keeps the change stream open. */
   const treeLive = (environmentId: EnvironmentId) => treeAtoms(environmentId);
-  return { pageLive, treeLive, remoteChanges };
+  /** What an open page's comments watch; moves without moving `pageLive`. */
+  const commentLive = (environmentId: EnvironmentId, pageId: SpacePageId) =>
+    commentAtoms(signalKey(environmentId, pageId));
+  return { pageLive, commentLive, treeLive, remoteChanges };
 }
 
 export type SpacesPageAtoms = ReturnType<typeof createSpacesPageAtoms>;

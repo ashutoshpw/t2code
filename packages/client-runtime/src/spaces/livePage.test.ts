@@ -71,11 +71,24 @@ describe("foldPageChanges", () => {
     expect(first.treeSeq).toBe(0);
     const second = foldPageChanges(first, {
       type: "changed",
-      pages: [{ id: page, spaceId: space, revision: 3, bodyRevision: 2, tree: true }],
+      pages: [
+        { id: page, spaceId: space, revision: 3, bodyRevision: 2, tree: true, commentRevision: 4 },
+      ],
       spaces: [],
     });
-    expect(second.pages.get(page)).toEqual({ revision: 3, bodyRevision: 2, seq: 2 });
+    expect(second.pages.get(page)).toEqual({
+      revision: 3,
+      bodyRevision: 2,
+      commentRevision: 4,
+      seq: 2,
+    });
     expect(second.treeSeq).toBe(2);
+    const third = foldPageChanges(second, {
+      type: "changed",
+      pages: [{ id: page, spaceId: space, revision: 3, bodyRevision: 2, commentRevision: 2 }],
+      spaces: [],
+    });
+    expect(third.pages.get(page)?.commentRevision).toBe(4);
   });
 
   it("collapses to a resync past the page limit", () => {

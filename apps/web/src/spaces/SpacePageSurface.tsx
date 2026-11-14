@@ -42,6 +42,7 @@ import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelSt
 import { RowPeekContext } from "./databases/row/rowPeekContext";
 import { SpacePinButton } from "./SpacePinButton";
 import { SpacePageShareStatus } from "./SpacePageShareStatus";
+import { SpaceCommentsButton } from "./comments/SpaceCommentsButton";
 import { openSpacePageShareDialog } from "./spacePageShareDialogState";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
@@ -160,7 +161,8 @@ function SpacePageSurfaceBody(props: SpacePageSurfaceProps) {
   return (
     <section
       aria-label={props.peek ? "Row page" : "Space page"}
-      className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto"
+      data-space-comments-wide=""
+      className="@container/space-page flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto"
     >
       <SpacePageMetadata {...props}>
         <SpaceDocumentSurface
@@ -427,6 +429,7 @@ function SpacePageMetadata({
         }
       >
         <EditedMeta updatedAt={page.updatedAt} />
+        <SpaceCommentsButton environmentId={target.environmentId} pageId={page.id} />
         <SpacePageShareStatus environmentId={target.environmentId} pageId={page.id} />
         <SpacePinButton environmentId={target.environmentId} page={page} />
         <Menu>

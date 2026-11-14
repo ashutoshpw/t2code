@@ -21,6 +21,7 @@ import {
   ListCollapseIcon,
   ListTodoIcon,
   MessageSquareIcon,
+  MessageSquarePlusIcon,
   MinusIcon,
   PanelTopIcon,
   PilcrowIcon,
@@ -65,6 +66,8 @@ import {
   fromNestedEditor,
   type SpaceEditorParts,
 } from "./spaceEditorSupport";
+import type { SpaceCommentsController } from "./comments/commentsController";
+import { spaceCommentBlockElement, spaceCommentTarget } from "./comments/commentsPlugin";
 import { insertTabs } from "./tabs/tabsCommands";
 import { insertSynced } from "./synced/syncedCommands";
 
@@ -85,8 +88,12 @@ export function BubbleLayer({
   adapter,
   bridge,
   editable,
+  comments,
   children,
-}: SpaceEditorParts & { readonly children: ReactNode }) {
+}: SpaceEditorParts & {
+  readonly comments?: SpaceCommentsController | undefined;
+  readonly children: ReactNode;
+}) {
   const wrapper = useContext(SpaceEditorWrapperContext);
   const [linkOpen, setLinkOpen] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
@@ -97,9 +104,10 @@ export function BubbleLayer({
     selector: ({ editor }) => {
       const state = editor.state;
       const caps = editorCapabilities(bridge, editable, false);
-      if (!caps.writable || state.selection instanceof NodeSelection) return null;
+      const commentable = comments?.enabled() === true;
+      if ((!caps.writable && !commentable) || state.selection instanceof NodeSelection) return null;
       const { from, to } = state.selection;
-      const link = adapter.linkSelection(state);
+      const link = caps.writable ? adapter.linkSelection(state) : null;
       if (from === to && !link?.hasLink) return null;
       const at = placeAt(editor, wrapper, from, 320);
       if (!at) return null;
@@ -107,9 +115,11 @@ export function BubbleLayer({
         from,
         to,
         at,
+        writable: caps.writable,
         structure: caps.structure,
         selectedId: selectedBlock(state)?.id ?? null,
         link,
+        commentable: commentable && spaceCommentTarget(state)?.anchor.kind === "range",
       };
     },
   });
@@ -149,96 +159,121 @@ export function BubbleLayer({
           }}
         >
           <div className="flex items-center gap-0.5">
-            {(
-              [
-                ["bold", "Bold", BoldIcon],
-                ["italic", "Italic", ItalicIcon],
-                ["underline", "Underline", UnderlineIcon],
-                ["strike", "Strikethrough", StrikethroughIcon],
-                ["code", "Inline code", CodeIcon],
-              ] as const
-            ).map(([mark, label, Icon]) => (
-              <ToolbarIconButton
-                key={mark}
-                label={label}
-                disabled={!can(adapter.mark(mark))}
-                onClick={() => run(adapter.mark(mark))}
-              >
-                <Icon />
-              </ToolbarIconButton>
-            ))}
-            <ToolbarIconButton
-              label="Link"
-              hint="Select text to add a link, or place the caret inside an existing link to edit or remove it."
-              aria-disabled={!link}
-              onClick={() => link && setLinkOpen(linkKey)}
-            >
-              <LinkIcon />
-            </ToolbarIconButton>
-            <Menu open={colorOpen} onOpenChange={setColorOpen}>
-              <MenuTrigger
-                render={<Button variant="ghost" size="icon-sm" aria-label="Text color" />}
-              >
-                <PaletteIcon />
-              </MenuTrigger>
-              <MenuPopup align="start">
+            {bubbleState.writable ? (
+              <>
                 {(
                   [
-                    ["color", "Text color"],
-                    ["highlight", "Background"],
+                    ["bold", "Bold", BoldIcon],
+                    ["italic", "Italic", ItalicIcon],
+                    ["underline", "Underline", UnderlineIcon],
+                    ["strike", "Strikethrough", StrikethroughIcon],
+                    ["code", "Inline code", CodeIcon],
                   ] as const
-                ).map(([style, heading]) => (
-                  <MenuGroup key={style}>
-                    <MenuGroupLabel>{heading}</MenuGroupLabel>
-                    {[null, ...SPACE_TEXT_COLORS].map((value) => (
+                ).map(([mark, label, Icon]) => (
+                  <ToolbarIconButton
+                    key={mark}
+                    label={label}
+                    disabled={!can(adapter.mark(mark))}
+                    onClick={() => run(adapter.mark(mark))}
+                  >
+                    <Icon />
+                  </ToolbarIconButton>
+                ))}
+                <ToolbarIconButton
+                  label="Link"
+                  hint="Select text to add a link, or place the caret inside an existing link to edit or remove it."
+                  aria-disabled={!link}
+                  onClick={() => link && setLinkOpen(linkKey)}
+                >
+                  <LinkIcon />
+                </ToolbarIconButton>
+                <Menu open={colorOpen} onOpenChange={setColorOpen}>
+                  <MenuTrigger
+                    render={<Button variant="ghost" size="icon-sm" aria-label="Text color" />}
+                  >
+                    <PaletteIcon />
+                  </MenuTrigger>
+                  <MenuPopup align="start">
+                    {(
+                      [
+                        ["color", "Text color"],
+                        ["highlight", "Background"],
+                      ] as const
+                    ).map(([style, heading]) => (
+                      <MenuGroup key={style}>
+                        <MenuGroupLabel>{heading}</MenuGroupLabel>
+                        {[null, ...SPACE_TEXT_COLORS].map((value) => (
+                          <MenuItem
+                            key={value ?? "default"}
+                            disabled={!can(adapter.textStyle(style, value))}
+                            onClick={() => run(adapter.textStyle(style, value))}
+                          >
+                            <span
+                              className="w-5 rounded-sm text-center font-semibold"
+                              {...(value
+                                ? {
+                                    [style === "color"
+                                      ? "data-space-color"
+                                      : "data-space-highlight"]: value,
+                                  }
+                                : {})}
+                            >
+                              A
+                            </span>
+                            <span className="capitalize">{value ?? "Default"}</span>
+                          </MenuItem>
+                        ))}
+                      </MenuGroup>
+                    ))}
+                  </MenuPopup>
+                </Menu>
+                <Separator orientation="vertical" className="mx-1 h-5" />
+                <Menu open={turnIntoOpen} onOpenChange={setTurnIntoOpen}>
+                  <MenuTrigger render={<Button variant="ghost" size="sm" />}>
+                    Turn into
+                    <ChevronDownIcon />
+                  </MenuTrigger>
+                  <MenuPopup align="start">
+                    {TURN_INTO.map((entry) => (
                       <MenuItem
-                        key={value ?? "default"}
-                        disabled={!can(adapter.textStyle(style, value))}
-                        onClick={() => run(adapter.textStyle(style, value))}
+                        key={entry.key}
+                        disabled={
+                          !bubbleState.structure ||
+                          !selectedId ||
+                          !can((state) => canTurnInto(adapter, state, selectedId, entry))
+                        }
+                        onClick={() =>
+                          selectedId && runTurnInto(editor, editable, adapter, selectedId, entry)
+                        }
                       >
-                        <span
-                          className="w-5 rounded-sm text-center font-semibold"
-                          {...(value
-                            ? {
-                                [style === "color" ? "data-space-color" : "data-space-highlight"]:
-                                  value,
-                              }
-                            : {})}
-                        >
-                          A
-                        </span>
-                        <span className="capitalize">{value ?? "Default"}</span>
+                        <entry.icon />
+                        {entry.label}
                       </MenuItem>
                     ))}
-                  </MenuGroup>
-                ))}
-              </MenuPopup>
-            </Menu>
-            <Separator orientation="vertical" className="mx-1 h-5" />
-            <Menu open={turnIntoOpen} onOpenChange={setTurnIntoOpen}>
-              <MenuTrigger render={<Button variant="ghost" size="sm" />}>
-                Turn into
-                <ChevronDownIcon />
-              </MenuTrigger>
-              <MenuPopup align="start">
-                {TURN_INTO.map((entry) => (
-                  <MenuItem
-                    key={entry.key}
-                    disabled={
-                      !bubbleState.structure ||
-                      !selectedId ||
-                      !can((state) => canTurnInto(adapter, state, selectedId, entry))
-                    }
-                    onClick={() =>
-                      selectedId && runTurnInto(editor, editable, adapter, selectedId, entry)
-                    }
-                  >
-                    <entry.icon />
-                    {entry.label}
-                  </MenuItem>
-                ))}
-              </MenuPopup>
-            </Menu>
+                  </MenuPopup>
+                </Menu>
+              </>
+            ) : null}
+            {bubbleState.commentable ? (
+              <>
+                {bubbleState.writable ? (
+                  <Separator orientation="vertical" className="mx-1 h-5" />
+                ) : null}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const target = spaceCommentTarget(editor.state);
+                    const element =
+                      target && spaceCommentBlockElement(editor.view.dom, target.blockId);
+                    if (target && element) comments?.compose({ ...target, element });
+                  }}
+                >
+                  <MessageSquarePlusIcon />
+                  Comment
+                </Button>
+              </>
+            ) : null}
           </div>
           {link && (linkOpen === linkKey || link.hasLink) ? (
             <LinkValue
