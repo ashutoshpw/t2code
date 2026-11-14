@@ -34,7 +34,7 @@ export class FcmAssertionSigner extends Context.Service<
   }
 >()("t2code-relay/agentActivity/FcmAssertionSigner") {}
 
-const make = Effect.gen(function* () {
+export const make = Effect.gen(function* () {
   const { subtle } = yield* WebCrypto.WebCrypto;
   return FcmAssertionSigner.of({
     sign: Effect.fn("relay.fcm.assertion")(function* (input) {

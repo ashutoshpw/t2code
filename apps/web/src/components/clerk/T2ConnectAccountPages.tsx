@@ -1,10 +1,9 @@
 import { useAuth, useClerk } from "@clerk/react";
-import { MessageSquareIcon, ServerIcon, SmartphoneIcon } from "lucide-react";
+import { ServerIcon, SmartphoneIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { MobileClientsUserProfilePage } from "./MobileClientsUserProfilePage";
-import { T3ChatUserProfilePage } from "./T3ChatUserProfilePage";
 import { T2ConnectUserProfilePage } from "./T2ConnectUserProfilePage";
 
 export const T2_CONNECT_ACCOUNT_PAGES = [
@@ -20,32 +19,27 @@ export const T2_CONNECT_ACCOUNT_PAGES = [
     icon: <ServerIcon className="size-4" />,
     content: <T2ConnectUserProfilePage />,
   },
-  {
-    label: "T3 Chat",
-    url: "t3-chat",
-    icon: <MessageSquareIcon className="size-4" />,
-    content: <T3ChatUserProfilePage />,
-  },
 ] as const;
-
-export type T2ConnectAccountPageUrl = (typeof T2_CONNECT_ACCOUNT_PAGES)[number]["url"];
 
 type PortalTargets = Readonly<Record<string, HTMLDivElement | undefined>>;
 
-/** Keep portals rendered while the modal can open; Clerk owns the custom-page DOM nodes. */
+/**
+ * Clerk mounts custom pages into DOM nodes it owns, so the caller must keep `portals` rendered for
+ * as long as the modal can be open.
+ */
 export function useT2ConnectAccountPage(): {
-  readonly open: ((page?: T2ConnectAccountPageUrl) => void) | null;
+  readonly open: (() => void) | null;
   readonly portals: ReactNode;
 } {
   const clerk = useClerk();
   const { isSignedIn } = useAuth();
   const [targets, setTargets] = useState<PortalTargets>({});
 
-  const open = (page: T2ConnectAccountPageUrl = "t2-connect") => {
+  const open = () => {
     const setTarget = (key: string, element: HTMLDivElement | undefined) =>
       setTargets((current) => ({ ...current, [key]: element }));
     clerk.openUserProfile({
-      __experimental_startPath: `/${page}`,
+      __experimental_startPath: "/t2-connect",
       customPages: T2_CONNECT_ACCOUNT_PAGES.map((page) => ({
         label: page.label,
         url: page.url,

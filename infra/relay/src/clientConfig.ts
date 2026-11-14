@@ -32,7 +32,7 @@ export class RelayUrlUnavailableError extends Schema.TaggedError<RelayUrlUnavail
   }
 }
 
-const relayClientConfigEnv = (config: RelayClientConfig & { readonly url: string }) =>
+export const relayClientConfigEnv = (config: RelayClientConfig & { readonly url: string }) =>
   ({
     T2CODE_RELAY_URL: config.url,
     T2CODE_MOBILE_OTLP_TRACES_URL: config.mobileTracingUrl,

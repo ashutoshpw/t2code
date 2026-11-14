@@ -73,6 +73,8 @@ class T2SpacesEditorView(context: Context, appContext: AppContext) : ExpoView(co
   private var editingText = false
   private var rejectedInput = false
   private var startingComposition = false
+  private var editable = true
+  private var paused = false
   private var compositionBefore: RichSnapshot? = null
   private val undo = ArrayDeque<RichSnapshot>()
   private val redo = ArrayDeque<RichSnapshot>()
@@ -266,8 +268,13 @@ class T2SpacesEditorView(context: Context, appContext: AppContext) : ExpoView(co
   private fun withinBudget(value: Spanned): Boolean =
     value.length <= 16_384 && segments(value).size <= 1_024
 
+  private fun acceptsEdits(): Boolean = editable && !paused
+
+  private fun validReplacementRange(text: Spanned, start: Int, end: Int): Boolean =
+    start >= 0 && end >= start && end <= text.length
+
   private fun canReplace(text: Spanned, start: Int, end: Int, inserted: Int): Boolean {
-    if (start < 0 || end < start || end > text.length) return false
+    if (!acceptsEdits() || !validReplacementRange(text, start, end)) return false
     val candidate = SpannableStringBuilder(text).delete(start, end)
     // Reserve arbitrary pasted attributes before Editable or the IME can mutate the destination.
     val runCount = if (inserted == 0) {
@@ -294,7 +301,7 @@ class T2SpacesEditorView(context: Context, appContext: AppContext) : ExpoView(co
   }
 
   private fun copySelection(cut: Boolean): Boolean {
-    if (composing()) return false
+    if (composing() || (cut && !acceptsEdits())) return false
     return editor.text?.let { copySelection(it, cut) } ?: false
   }
 
@@ -339,18 +346,43 @@ class T2SpacesEditorView(context: Context, appContext: AppContext) : ExpoView(co
 
   private fun emit(change: Boolean) {
     if (applying || !initialized) return
-    val payload = mapOf(
-      "version" to 1,
-      "revision" to revision,
-      "runs" to runs(),
-      "selection" to mapOf(
-        "start" to minOf(editor.selectionStart, editor.selectionEnd).coerceAtLeast(0),
-        "end" to maxOf(editor.selectionStart, editor.selectionEnd).coerceAtLeast(0),
-      ),
-      "composing" to composing(),
-      "typing" to styleJson(typing, "").filterKeys { it != "text" },
-    )
+    val payload = snapshotPayload()
     if (change) onSpacesChange(payload) else onSpacesSelection(payload)
+  }
+
+  private fun snapshotPayload(): Map<String, Any> = mapOf(
+    "version" to 1,
+    "revision" to revision,
+    "runs" to runs(),
+    "selection" to mapOf(
+      "start" to minOf(editor.selectionStart, editor.selectionEnd).coerceAtLeast(0),
+      "end" to maxOf(editor.selectionStart, editor.selectionEnd).coerceAtLeast(0),
+    ),
+    "composing" to composing(),
+    "typing" to styleJson(typing, "").filterKeys { it != "text" },
+  )
+
+  fun setEditable(value: Boolean) {
+    editable = value
+    editor.isEnabled = editable && !paused
+  }
+
+  fun freeze(): String? {
+    if (!initialized || composing()) return null
+    paused = true
+    editor.isEnabled = false
+    return JSONObject(snapshotPayload()).toString()
+  }
+
+  private fun hasEditableRevision(expected: Int): Boolean =
+    initialized && editable && expected == revision
+
+  fun resume(expected: Int): Boolean {
+    if (!hasEditableRevision(expected) || composing()) return false
+    paused = false
+    editor.isEnabled = true
+    editor.requestFocus()
+    return true
   }
 
   fun setDocument(json: String) {
@@ -449,7 +481,7 @@ class T2SpacesEditorView(context: Context, appContext: AppContext) : ExpoView(co
   }
 
   private fun travel(backwards: Boolean): Boolean =
-    if (composing() || !initialized) false else restoreHistory(backwards)
+    if (composing() || !initialized || !acceptsEdits()) false else restoreHistory(backwards)
 
   private fun restoreHistory(backwards: Boolean): Boolean {
     val source = if (backwards) undo else redo
@@ -473,7 +505,7 @@ class T2SpacesEditorView(context: Context, appContext: AppContext) : ExpoView(co
 
   fun format(json: String): Boolean {
     val command = runCatching { JSONObject(json) }.getOrNull()?.takeIf {
-      initialized && !composing() && it.optInt("revision", -1) == revision
+      initialized && editable && !paused && !composing() && it.optInt("revision", -1) == revision
     } ?: return false
     return if (command.optString("mark") in listOf("bold", "italic", "code")) {
       editor.text?.let { format(it, command) } ?: false

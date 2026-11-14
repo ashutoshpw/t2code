@@ -8,7 +8,6 @@ import * as Semaphore from "effect/Semaphore";
 
 import * as MobileSecureStorage from "./mobile-secure-storage";
 
-const CONNECTIONS_KEY = "t2code.connections";
 const AGENT_AWARENESS_DEVICE_ID_KEY = "t2code.agent-awareness.device-id";
 const AGENT_AWARENESS_REGISTRATION_KEY = "t2code.agent-awareness.registration";
 const RECENT_THREAD_SHORTCUTS_KEY = "t2code.recent-thread-shortcuts";

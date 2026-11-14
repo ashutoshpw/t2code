@@ -3,6 +3,7 @@ import { PROVIDER_SEND_TURN_MAX_INPUT_CHARS } from "@t2code/contracts";
 import { collectComposerInlineTokens } from "@t2code/shared/composerInlineTokens";
 import { composerContextEditorTokens, composerSkillLabels } from "../lib/composerContext";
 import { useComposerModelTokens } from "./useComposerModelTokens";
+import { composerContextEntry } from "../lib/composerSpaceContext";
 import { requireNativeView } from "expo";
 import {
   useCallback,
@@ -189,7 +190,7 @@ export function ComposerEditor({
         const model = token.type === "model" ? modelsBySource.get(token.source) : undefined;
         const record =
           token.type === "context"
-            ? props.context?.records.find((record) => record.contextId === token.contextId)
+            ? composerContextEntry(token.kind, token.contextId, props.context, props.contextDraft)
             : undefined;
         const presentation = contextChipPresentation(
           token.type === "context" ? token.kind : token.type,
@@ -215,9 +216,14 @@ export function ComposerEditor({
               : model
                 ? model.label
                 : token.type === "context"
-                  ? `${token.label}${props.context?.records.some((record) => record.contextId === token.contextId) ? "" : " · unavailable"}`
+                  ? `${record?.label || (record && "title" in record ? record.title : token.label)}${record ? "" : " · unavailable"}`
                   : basename(token.value),
-          detail: token.type === "context" ? composerChipSizeSuffix(record) : "",
+          detail:
+            token.type === "context"
+              ? record && "selection" in record
+                ? "at send"
+                : composerChipSizeSuffix(record)
+              : "",
           iconUri: model ? modelChipIconUri(model) : contextChipIconUri(icon),
           tintsIcon: model ? modelChipIcon(model).tintsIcon : icon.kind === "chip",
         };
@@ -227,6 +233,7 @@ export function ComposerEditor({
     props.value,
     tokens,
     props.context,
+    props.contextDraft,
     skillLabels,
     modelsBySource,
     modelTokens,
@@ -266,7 +273,7 @@ export function ComposerEditor({
     isNativeEcho,
     resetGeneration,
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- prunes native editor event snapshots once a committed payload acknowledges them
+  // oxlint-disable-next-line t2code/react-effect-budget -- Releases acknowledged native-event snapshots; the snapshot log lives outside React, in the native component.
   useEffect(() => {
     if (!acknowledgesLatestNativeEvent) return;
     nativeEventSnapshotsRef.current = pruneAcknowledgedComposerNativeEvents(
@@ -275,7 +282,7 @@ export function ComposerEditor({
     );
   }, [acknowledgesLatestNativeEvent, mostRecentEventCount, nativeEventSnapshotsRef]);
   const assumedValue = props.value;
-  // oxlint-disable-next-line t2code/react-effect-budget -- records the committed controlled payload as the native editor's assumed state
+  // oxlint-disable-next-line t2code/react-effect-budget -- Records the assumed native state after each controlled commit; the authoritative state lives in the native component.
   useEffect(() => {
     // Newer native events make this payload stale; do not record it as applied.
     if (isNativeEcho || controlledEventCount !== mostRecentEventCountRef.current) return;

@@ -1,4 +1,4 @@
-import { prepareMobileComposerContext } from "./spaces";
+import { prepareMobileComposerContext } from "./prepare-mobile-composer-context";
 import type { ComposerContextDraft } from "@t2code/contracts";
 import { appAtomRegistry } from "./atom-registry";
 import { createThreadOutboxManager } from "./thread-outbox-manager";
