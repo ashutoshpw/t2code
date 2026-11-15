@@ -64,6 +64,11 @@ const EXEMPTIONS: readonly Exemption[] = [
     reason: "the rebase skill documents the upstream fork relationship and its T3 strings",
   },
   {
+    matches: exactFiles("CONTRIBUTING.md"),
+    rules: ["t2-copy"],
+    reason: "the contributing guide credits upstream T3 Code and explains the rebase relationship",
+  },
+  {
     matches: exactFiles(
       "packages/shared/src/legacyT3Identity.ts",
       "packages/shared/src/legacyT3Identity.test.ts",

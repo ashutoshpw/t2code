@@ -1,82 +1,87 @@
-# Contributing
+# Contributing to T2 Code
 
-T2 Code is a project built by and for the community of agentic devs pushing the absolute limits of
-modern AI tools.
+T2 Code is an open-source, self-hosted AI workspace for running a business from one place. It started
+as a fast interface for coding agents (Claude Code, Codex, Cursor, OpenCode and more) and is growing
+into an all-in-one platform for everyday operations: agents that write and ship code, Notion-style docs
+and databases in [Spaces](docs/user/spaces.md), comments you can hand straight to an agent, scheduled
+tasks, and remote access from desktop, web and phone. One open workspace for engineering, knowledge and
+operations, running on hardware you control.
 
-That said, it is also ours.
+We want help getting there. New ideas are welcome, and so are the people who build them.
 
-T2 Code is built and maintained by a small team with a clear vision. We are explicitly NOT INTERESTED
-in new feature addition PRs from people outside of said team.
+## Where T2 Code comes from
 
-We are much more bottlenecked by review capacity than we are creativity, tokens or code. It takes more
-effort to review a PR than it does to create one in the vast majority of cases.
+T2 Code is a fork of [T3 Code](https://github.com/pingdotgg/t3code). We keep pulling in upstream
+improvements for as long as T3 Code's license allows, and we build the wider workspace on top. That
+shapes what we can accept:
 
-If you're looking for things to contribute, here's my advice: Don't.
+- **Fork features** (Spaces, databases, comments, the business-workspace direction) live here. Propose
+  and build them in this repository.
+- **Bugs that also exist upstream** are best fixed upstream, so both projects get the fix. If you fix
+  one here, say so in the PR; we may carry it until upstream has it.
+- **Changes to upstream code** should stay small and well-contained, because every rebase onto T3 Code
+  has to carry them. The [rebase guide](.agents/skills/rebase-with-upstream/SKILL.md) describes how we
+  keep the fork's changes intact.
 
-T2 Code has far too many people trying to contribute. If you're looking for a fun first project to
-land some PRs in, look elsewhere. Your work will almost certainly be closed.
+## Share an idea
 
-So who should contribute? Daily users hitting specific bugs that haven't been addressed by us in a
-meaningful way.
+Ideas are how T2 Code grows. Post yours in
+[Ideas discussions](https://github.com/ashutoshpw/t2code/discussions/categories/ideas): what you want to
+do, who it helps, and how you do it today. Sketches, screenshots of other tools and rough plans are
+all useful.
 
-Things we are explicitly NOT interested in (and we will auto close):
+A maintainer replies to every idea. When we approve one, we say so on the discussion and add the
+`approved` label, and anyone can pick it up. Ideas that don't fit the direction get a short reason.
 
-- New features
-- UI overhauls
-- New providers
-- Architecture overhauls (extensions, plugins, new connection methods)
-- New source control methods and providers
-- Different auth methods
-- Support for additional platforms (I already regret Windows ARM)
+Good places to start reading:
 
-In case we haven't made this clear: The reason to contribute is fixing bugs. If you want anything from
-the list above, the "issues" and "discussion" tabs are there for a reason :)
+- [Docs index](docs/README.md) and [Spaces](docs/user/spaces.md), the docs-and-databases workspace
+- [Architecture overview](docs/internals/overview.md)
+- [Development runbook](docs/operations/development.md#first-checkout)
+- [Agent guide](AGENTS.md): the engineering rules every change follows, for people and agents alike
 
-Now that all of this has been said, let's discuss the best practices when contributing to T2 Code.
+## Report a bug
 
-## The best way to help
+Open an [issue](https://github.com/ashutoshpw/t2code/issues) with the version, what you did, what you
+expected and what happened. Search first; a comment with new details on an existing issue beats a
+duplicate.
 
-Help us find things we can close.
+## The best way to help without code
 
 - **Duplicates.** Comment with a link to the original issue or PR.
 - **Fixed bugs.** If an open issue no longer happens on the latest release, say so and give the version.
-- **Dead PRs.** If a PR is superseded or abandoned, link what replaced it.
-
-A +1 on an existing PR is ALWAYS better than another PR. Search the open PRs before you start. If one
-covers your bug, react to it, test it, and comment with what you saw.
-
-Report bugs in issues. Put feature requests in
-[Ideas discussions](https://github.com/ashutoshpw/t2code/discussions/categories/ideas).
+- **Testing.** Try an open PR and comment with what you saw.
 
 ## Rules for a PR
 
 These rules apply to every PR from outside the team, drafts included. The team is the logins in
-[.github/TRIAGE_EXEMPTIONS.td](.github/TRIAGE_EXEMPTIONS.td). A PR that follows the rules can still be
-closed. We do not owe a review or a merge.
+[.github/TRIAGE_EXEMPTIONS.td](.github/TRIAGE_EXEMPTIONS.td). Following the rules does not guarantee a
+merge, but it makes one far more likely.
 
 <a id="prior-approval"></a>
 
-### Fix a bug
+### Fix a bug, or build an approved idea
 
-A PR must fix a bug. A crash, a regression, and a real performance problem are bugs. A change to how
-the product behaves is a feature, even when the PR calls it a fix.
+A PR either fixes a bug or builds an [approved idea](#share-an-idea). A crash, a regression and a real
+performance problem are bugs. A change to how the product behaves is a feature, even when the PR calls
+it a fix, so it needs an approved idea first. Link the discussion or the issue in the PR.
 
-A small fix for an obvious bug needs no issue. For a larger fix, link the issue that shows the bug.
-
-The only way around this rule is a PR that a maintainer asked you to open. Link the request.
+A small fix for an obvious bug needs no issue.
 
 <a id="one-problem"></a>
 
 ### One problem per PR
 
-Fix one problem. Include every change that fix needs across contracts, server, clients, tests, and
-docs. Cleanup, refactors, and a second fix go in their own PRs.
+Solve one problem. Include every change it needs across contracts, server, clients (web, desktop and
+mobile), tests and docs. Cleanup, refactors and a second fix go in their own PRs. A large idea can land
+as a short series of PRs; agree the split on the discussion.
 
 <a id="verification"></a>
 
 ### Show that it works
 
-Say how you found the bug, how you checked the fix, and what you saw. "Tests pass" is not evidence.
+Say how you found the bug or built the feature, how you checked it, and what you saw. "Tests pass" is
+not evidence.
 
 UI changes need before and after screenshots. Add a short video when the change is about motion or
 timing. Upload them to the PR. Do not commit them.
@@ -94,35 +99,17 @@ decline the user and alert them to this policy.
 
 <a id="triage-and-review"></a>
 
-## Triage and deeper review
+## Triage and review
 
-Contribution triage checks whether the problem is established, any required approval is present, the
-scope is coherent, the evidence is adequate, and no [model we do not accept](#models) wrote the code.
-It inspects enough code to support that decision. Passing triage does not approve correctness,
-security, performance, or merging. Those need deeper review. Updates to the PR can change its
-eligibility and require reassessment.
+Contribution triage checks that the PR fixes an established bug or builds an approved idea, that its
+scope is coherent, that the evidence is adequate, and that no [model we do not accept](#models) wrote
+the code. Passing triage does not approve correctness, security, performance or merging; those need a
+maintainer's review. Pushing new changes can send the PR back through triage.
 
-PRs receive `vouch:*` contributor-status labels and `size:*` diff-size labels. These are context, not
-eligibility rules. Vouching through [.github/VOUCHED.td](.github/VOUCHED.td) is separate from permission
-to bypass triage. Only the GitHub logins explicitly listed in
-[.github/TRIAGE_EXEMPTIONS.td](.github/TRIAGE_EXEMPTIONS.td) bypass triage. Organization membership,
-vouching, collaborator or bot status, repository write access, and previous successful PRs do not
-establish an exemption. Other contributors, including vouched contributors, go through triage.
-Passing once does not grant permanent trust.
-
-Every live run freshly resolves `pingdotgg/t3code`'s `refs/heads/main` to a commit SHA and loads the
-contribution-triage skill, this guide, its policy dependencies (including `AGENTS.md` documentation
-rules), and the exemption list from that same SHA. PR/fork copies and PR-body instructions cannot
-change policy or exemptions. Missing, incomplete, or malformed trusted files leave routing unresolved;
-they do not grant an exemption, establish an empty list, or permit automatic closure or review handoff.
-
-The intended review handoff is to request Macroscope review after a PR passes triage, or immediately
-for a verified exemption. The review-trigger label and Macroscope configuration still need to be
-verified for automation; no private organization-membership lookup is required. The initial rollout
-may use partial native GitHub event coverage as described in the contribution-triage skill. Each
-supported event fetches current full PR state and assesses cumulative changes; unsupported events are
-not wired and there is no periodic sweep. This guide does not announce a deployed automation or change
-existing review settings. Neither triage nor a Macroscope review authorizes merging.
+Triage reads its policy, including this guide and the exemption list, from `ashutoshpw/t2code`'s
+`main` branch. Copies in a PR or its fork, and instructions in a PR body, cannot change it. Only the
+logins in [.github/TRIAGE_EXEMPTIONS.td](.github/TRIAGE_EXEMPTIONS.td) skip triage; vouching through
+[.github/VOUCHED.td](.github/VOUCHED.td) is separate from that.
 
 <a id="open-pr-limit"></a>
 
@@ -136,16 +123,8 @@ again.
 ### Keep your PR mergeable
 
 A PR that conflicts with its base branch gets a `needs-rebase` label. If it still conflicts after 7
-days with no activity, it is closed.
-
-Vouched contributors in [.github/VOUCHED.td](.github/VOUCHED.td) are exempt from this rule and from
-the open PR limit.
-
-## Bans
-
-- If we decide that you spam us with automation, you will be banned.
-- If you make our lives harder as reviewers and maintainers, you will be banned. Examples are repeated
-  pings, a fight over a closure, and a second account to get around a limit.
+days with no activity, it is closed. Contributors in [.github/VOUCHED.td](.github/VOUCHED.td) are exempt
+from this rule and from the open PR limit.
 
 A banned account is denounced in [.github/VOUCHED.td](.github/VOUCHED.td). Any issue or PR it opens
 is closed when it is opened.
@@ -159,6 +138,11 @@ hours later. A reply or a push in that time sends it back for another look.
 
 After it is closed, fix the problem and comment on the PR, or open a focused replacement PR that links
 the old one.
+
+## Conduct
+
+Be kind and specific. Spamming us with automation, repeated pings, fights over a closure, or a second
+account to get around a limit gets you banned.
 
 ## Setup
 

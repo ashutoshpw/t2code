@@ -101,9 +101,9 @@ We wanted something performant, remote-ready, and truly open. If we ever go the 
 
 ## Contributing
 
-We have limited review capacity. Small, focused fixes are the most likely to be merged. Features need an approved discussion first.
+New ideas are welcome. T2 Code is growing from a coding-agent interface into an open-source workspace for running a business, and we want help building it. Features start as an approved idea; bug fixes can go straight to a pull request.
 
 - Read [CONTRIBUTING.md](./CONTRIBUTING.md) before you report a bug or open a pull request.
-- Put feature requests in [Ideas](https://github.com/ashutoshpw/t2code/discussions/categories/ideas).
+- Share ideas in [Ideas](https://github.com/ashutoshpw/t2code/discussions/categories/ideas).
 - Build from source with the [development runbook](./docs/operations/development.md#first-checkout). The [architecture overview](./docs/internals/overview.md) explains how it works.
 - Get help in [Discord](https://discord.gg/jn4EGJjrvv).
