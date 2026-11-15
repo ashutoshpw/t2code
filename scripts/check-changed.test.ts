@@ -46,6 +46,17 @@ describe("check:changed", () => {
       "apps/server/src/cloud/ConnectReachability.test.ts",
     ]);
     assert.deepStrictEqual(decide(["docs/user/install.md"], packages, false).affected, []);
+    for (const file of [
+      "apps/web/README.md",
+      ".gitignore",
+      ".github/ISSUE_TEMPLATE/bug_report.yml",
+      ".github/pr-assets/x.png",
+    ]) {
+      assert.deepStrictEqual(decide([file], packages, false).affected, [], file);
+    }
+    assert.isTrue(
+      decide([".github/triage/PLAYBOOK.md"], packages, false).outputs.test_server,
+    );
   });
 
   it.effect(
