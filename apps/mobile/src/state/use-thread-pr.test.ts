@@ -134,17 +134,21 @@ describe("knownPullRequestSummary", () => {
     const listed: PullRequestSummary = {
       provider: SourceControlProviderKind.make("github"),
       projectId,
-      repository: "t2tools/t2code",
+      repository: "ashutoshpw/t2code",
       number: 7,
       title: "Listed title",
-      url: "https://github.com/t3tools/t3code/pull/7",
+      url: "https://github.com/ashutoshpw/t2code/pull/7",
       state: "open",
       headBranch: "change-7",
       baseBranch: "main",
       updatedAt: "2026-09-09T00:00:00.000Z",
     };
     const lookup = (host: string, number: number, summaries = [listed]) =>
-      knownPullRequestSummary({ host, repository: "t2tools/t2code", number }, threads, summaries);
+      knownPullRequestSummary(
+        { host, repository: "ashutoshpw/t2code", number },
+        threads,
+        summaries,
+      );
 
     expect(lookup("github.com", 7, [])?.title).toBe("Change 7");
     expect(lookup("github.com", 7)?.title).toBe("Listed title");

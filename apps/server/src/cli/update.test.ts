@@ -295,7 +295,7 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
         yield* fs.writeFileString(launcher, edited);
         assert.isTrue(Option.isNone(yield* repoint({ PATH: path.dirname(launcher) })));
         assert.equal(yield* fs.readFileString(launcher), edited);
-      }).pipe(Effect.scoped, Effect.provideService(HostProcess.Platform, "linux")),>>>>>>> f21e14bf5 (refactor(cli)!: drop the t3 binary name and every t3 compat seam)
+      }).pipe(Effect.scoped, Effect.provideService(HostProcess.Platform, "linux")),
   );
 
   it.effect.each([
@@ -331,7 +331,7 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
       yield* repointLauncher({
         launchedAs: launcher,
         baseDir: root,
-        targetEntryPath: path.join(root, "runtime/versions/2.0.0/t3"),
+        targetEntryPath: path.join(root, "runtime/versions/2.0.0/t2"),
       }).pipe(
         Effect.provideService(FileSystem.FileSystem, {
           ...fs,
@@ -358,7 +358,7 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
       assert.deepStrictEqual(removed, ["1.0.0"]);
       assert.equal(
         yield* readPosixLauncherTarget(launcher),
-        path.join(root, "runtime/versions/2.0.0/t3"),
+        path.join(root, "runtime/versions/2.0.0/t2"),
       );
     }).pipe(Effect.provideService(HostProcess.Platform, "linux")),
   );
@@ -368,7 +368,7 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
     const path = yield* Path.Path;
     const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" });
     const oldExe = path.join(root, "runtime/versions/1.0.0/t2");
-    const newExe = path.join(root, "runtime/versions/2.0.0/t3");
+    const newExe = path.join(root, "runtime/versions/2.0.0/t2");
     const launcher = path.join(root, "t2");
     for (const file of [oldExe, newExe]) {
       yield* fs.makeDirectory(path.dirname(file), { recursive: true });

@@ -53,6 +53,7 @@ describe("buildT2ProjectFileJsonSchema", () => {
       "previewUrl",
       "runOnSettle",
       "runOnWorktreeCreate",
+      "stopOnSettle",
     ]);
   });
 
