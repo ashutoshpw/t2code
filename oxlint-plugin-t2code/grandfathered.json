@@ -268,6 +268,7 @@
     "packages/effect-acp/src/client.ts",
     "packages/effect-acp/src/protocol.ts",
     "packages/effect-codex-app-server/scripts/generate.ts",
+    "packages/provider-acp-registry/src/server/AcpRegistrySupport.test.ts",
     "packages/provider-acp-registry/src/server/AcpRegistrySupport.ts",
     "packages/provider-acp-registry/src/server/driver.ts",
     "packages/provider-acp-registry/src/server/probe.ts",

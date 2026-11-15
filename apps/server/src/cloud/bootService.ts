@@ -57,8 +57,8 @@ export {
 const BOOT_SERVICE_NAME = "t2code";
 export const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // `.service` suffix keeps the label distinct from the desktop app's bundle id
-// (com.t2tools.t2code), so launchd and TCC records never collide.
-export const BOOT_SERVICE_LAUNCHD_LABEL = "com.t2tools.t2code.service";
+// (codes.t2.desktop), so launchd and TCC records never collide.
+export const BOOT_SERVICE_LAUNCHD_LABEL = "codes.t2.desktop.service";
 export const BOOT_SERVICE_PLIST_FILE = `${BOOT_SERVICE_LAUNCHD_LABEL}.plist`;
 export const BOOT_SERVICE_LOG_FILE = "boot-service.log";
 /** `schtasks /Query /HRESULT` exits with this when the task is not registered. */

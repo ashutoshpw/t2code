@@ -1,4 +1,4 @@
-import { UNFINISHED_DRIVE_PATH } from "@t3tools/shared/markdownWindowsPaths";
+import { UNFINISHED_DRIVE_PATH } from "@t2code/shared/markdownWindowsPaths";
 
 const SKIPPED_TAGS = new Set(["BUTTON", "INPUT", "SCRIPT", "STYLE", "TEMPLATE"]);
 const SKIPPED_CLASS_NAMES = ["select-none", "sr-only"];

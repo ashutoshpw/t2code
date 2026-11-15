@@ -1,5 +1,5 @@
 import { assert, it } from "@effect/vitest";
-import { WS_METHODS } from "@t3tools/contracts";
+import { WS_METHODS } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import type * as Tracer from "effect/Tracer";

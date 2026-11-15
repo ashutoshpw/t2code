@@ -146,10 +146,10 @@ describe("resolveBoundEndpoints", () => {
       "vz-machine": virtualInterface("192.168.101.1"),
     };
     expect(
-      resolveBoundEndpoints({ platform: "linux", host: "0.0.0.0", port: 3773, interfaces }),
+      resolveBoundEndpoints({ platform: "linux", host: "0.0.0.0", port: 3772, interfaces }),
     ).toEqual([
-      { kind: "lan", httpBaseUrl: "http://192.168.1.10:3773/" },
-      { kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3773/" },
+      { kind: "lan", httpBaseUrl: "http://192.168.1.10:3772/" },
+      { kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3772/" },
     ]);
   });
 
@@ -159,11 +159,11 @@ describe("resolveBoundEndpoints", () => {
       "ve-office": virtualInterface("192.168.1.30"),
     };
     expect(
-      resolveBoundEndpoints({ platform: "win32", host: "0.0.0.0", port: 3773, interfaces }),
+      resolveBoundEndpoints({ platform: "win32", host: "0.0.0.0", port: 3772, interfaces }),
     ).toEqual([
-      { kind: "lan", httpBaseUrl: "http://192.168.1.10:3773/" },
-      { kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3773/" },
-      { kind: "lan", httpBaseUrl: "http://192.168.1.30:3773/" },
+      { kind: "lan", httpBaseUrl: "http://192.168.1.10:3772/" },
+      { kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3772/" },
+      { kind: "lan", httpBaseUrl: "http://192.168.1.30:3772/" },
     ]);
   });
 
@@ -251,10 +251,10 @@ describe("resolveBoundEndpoints", () => {
       resolveBoundEndpoints({
         platform: "linux",
         host: "fd7a:115c:a1e0::1",
-        port: 3773,
+        port: 3772,
         interfaces: INTERFACES,
       }),
-    ).toEqual([{ kind: "tailnet", httpBaseUrl: "http://[fd7a:115c:a1e0::1]:3773/" }]);
+    ).toEqual([{ kind: "tailnet", httpBaseUrl: "http://[fd7a:115c:a1e0::1]:3772/" }]);
   });
 
   it("never reports an IPv4-mapped host, which can name the client's own loopback", () => {

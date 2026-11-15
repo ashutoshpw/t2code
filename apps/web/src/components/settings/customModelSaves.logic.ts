@@ -2,7 +2,7 @@ import {
   type CustomModelDefinition,
   readCustomModelEntries,
   toCustomModelSetting,
-} from "@t3tools/shared/model";
+} from "@t2code/shared/model";
 
 export interface CustomModelSave {
   readonly models: ReadonlyArray<CustomModelDefinition>;

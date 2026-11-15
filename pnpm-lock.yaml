@@ -1758,6 +1758,9 @@ importers:
       '@cursor/sdk':
         specifier: 1.3.1
         version: 1.3.1(patch_hash=74bb82d3804752a413af72c7ffedc5fb24039216ab85e3330874a4892a0fdce9)(zod@4.6.7)
+      '@napi-rs/keyring':
+        specifier: ^1.3.0
+        version: 1.3.0
       '@t2code/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -13241,6 +13244,11 @@ snapshots:
       - '@effect/sql-pg'
       - hono
       - mysql2
+
+  '@alchemy.run/node-utils@2.0.0-beta.85':
+    dependencies:
+      chokidar: 5.0.0
+      rolldown: 1.2.13
 
   '@alchemy.run/sigil@0.1.0-alpha.1(@types/react@19.3.0)(react-devtools-core@6.1.5(bufferutil@4.1.0)(utf-8-validate@6.0.6))':
     optionalDependencies:

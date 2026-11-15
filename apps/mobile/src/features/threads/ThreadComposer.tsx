@@ -87,7 +87,7 @@ import {
   ComposerInlineControl,
   ComposerToolbarRow,
 } from "../../components/ComposerToolbar";
-import { formatTokens } from "@t3tools/shared/usageFormat";
+import { formatTokens } from "@t2code/shared/usageFormat";
 import { ComposerModelControl } from "../../components/ComposerModelControl";
 import {
   composerStripAttachments,

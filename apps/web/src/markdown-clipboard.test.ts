@@ -17,7 +17,7 @@ import remarkParse from "remark-parse";
 import {
   CHAT_MARKDOWN_REMARK_PLUGINS,
   CHAT_USER_MARKDOWN_REMARK_PLUGINS,
-} from "@t3tools/shared/markdownPipeline";
+} from "@t2code/shared/markdownPipeline";
 
 const userMarkdown = unified()
   .use(remarkParse)

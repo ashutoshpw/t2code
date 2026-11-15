@@ -107,8 +107,8 @@ const promptThenCancel = (input: {
       spawn: {
         ...mockRuntimeOptions.spawn,
         env: {
-          T3_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1",
-          T3_ACP_REQUEST_LOG_PATH: requestLogPath,
+          T2_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1",
+          T2_ACP_REQUEST_LOG_PATH: requestLogPath,
         },
       },
       cancelBehavior: input.cancelBehavior,
@@ -1427,7 +1427,7 @@ describe("AcpSessionRuntime", () => {
         let promptsStarted = 0;
         const runtime = yield* AcpSessionRuntime.make({
           ...mockRuntimeOptions,
-          spawn: { ...mockRuntimeOptions.spawn, env: { T3_ACP_REQUEST_LOG_PATH: requestLogPath } },
+          spawn: { ...mockRuntimeOptions.spawn, env: { T2_ACP_REQUEST_LOG_PATH: requestLogPath } },
           interruptPromptOnCancel: false,
           // The cancel spends a test-clock second in its outgoing record, the window in which the
           // next prompt could overtake it.

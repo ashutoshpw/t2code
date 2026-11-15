@@ -5,7 +5,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 
-import type { DesktopUpdateCheckResult, DesktopUpdateState } from "@t3tools/contracts";
+import type { DesktopUpdateCheckResult, DesktopUpdateState } from "@t2code/contracts";
 import * as Electron from "electron";
 import { vi } from "vite-plus/test";
 

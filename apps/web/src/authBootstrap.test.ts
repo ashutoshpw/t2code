@@ -178,7 +178,7 @@ describe("resolveInitialServerAuthGateState", () => {
     // What FetchHttpClient yields when nothing listens on the backend port.
     const connectionRefused = new HttpClientError.HttpClientError({
       reason: new HttpClientError.TransportError({
-        request: HttpClientRequest.get("http://localhost:3773/api/auth/session"),
+        request: HttpClientRequest.get("http://localhost:3772/api/auth/session"),
         cause: new TypeError("Failed to fetch"),
       }),
     });
@@ -197,8 +197,8 @@ describe("resolveInitialServerAuthGateState", () => {
         {
           id: "primary",
           label: "Local",
-          httpBaseUrl: "http://localhost:3773",
-          wsBaseUrl: "ws://localhost:3773",
+          httpBaseUrl: "http://localhost:3772",
+          wsBaseUrl: "ws://localhost:3772",
           bootstrapToken: "desktop-bootstrap-token",
         },
       ],

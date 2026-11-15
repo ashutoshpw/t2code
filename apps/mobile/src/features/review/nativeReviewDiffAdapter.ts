@@ -1,4 +1,4 @@
-import { cutLineNoteStart } from "@t3tools/shared/diffCutLines";
+import { cutLineNoteStart } from "@t2code/shared/diffCutLines";
 import type { NativeReviewDiffRow, NativeReviewDiffTheme } from "../diffs/nativeReviewDiffSurface";
 import type { NativeReviewDiffFile } from "../diffs/nativeReviewDiffTypes";
 import * as Arr from "effect/Array";

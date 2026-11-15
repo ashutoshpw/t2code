@@ -99,7 +99,7 @@ import { CHAT_LIST_ANCHOR_OFFSET, resolveChatListAnchoredEndSpace } from "@t2cod
 import { imageMimeType } from "@t2code/shared/image";
 import { videoMimeType } from "@t2code/shared/video";
 import { SymbolView, type AppSymbolName } from "../../components/ui/AppSymbol";
-import { textDirection } from "@t3tools/shared/textDirection";
+import { textDirection } from "@t2code/shared/textDirection";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useNativeWorkspaceColumnsSupported } from "../../native/NativeWorkspaceColumns";
 import { useDeviceType } from "../../native/native-layout-metrics";

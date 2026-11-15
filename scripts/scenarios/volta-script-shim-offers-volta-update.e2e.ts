@@ -4,7 +4,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 
-import { T3_HOME } from "../e2e.config.ts";
+import { T2_HOME } from "../e2e.config.ts";
 import { runPromise, test, WEB } from "./t3.ts";
 
 // Windows Volta 2 writes `bin/<tool>` scripts that run `volta run`, not links to `volta-shim`.
@@ -26,7 +26,7 @@ const encodeSettings = Schema.encodeEffect(SettingsJson);
 const installVoltaOpenCode = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const voltaHome = path.join(T3_HOME, "Volta");
+  const voltaHome = path.join(T2_HOME, "Volta");
   const shim = path.join(voltaHome, "bin", "opencode");
   const executable = (file: string, text: string) =>
     fs
@@ -37,9 +37,9 @@ const installVoltaOpenCode = Effect.gen(function* () {
     recursive: true,
   });
   // The scenario home's `bin` is on the server's PATH.
-  yield* executable(path.join(T3_HOME, "bin", "volta"), FAKE_VOLTA);
+  yield* executable(path.join(T2_HOME, "bin", "volta"), FAKE_VOLTA);
 
-  const settingsPath = path.join(T3_HOME, "userdata", "settings.json");
+  const settingsPath = path.join(T2_HOME, "userdata", "settings.json");
   const settings = yield* decodeSettings(yield* fs.readFileString(settingsPath));
   const opencode = { driver: "opencode", enabled: true, config: { binaryPath: shim } };
   yield* fs.writeFileString(

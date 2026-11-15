@@ -1684,7 +1684,7 @@ const make = Effect.gen(function* () {
     const targets = new Map<string, Set<string>>();
     for (const row of rows) {
       // Derive ownership from tombstones, never from absence in this database:
-      // another T3 home can own refs in the same Git repository.
+      // another T2 home can own refs in the same Git repository.
       const prefixes = [`refs/t3/checkpoints/${Base64Url.encode(row.threadId)}/turn/`];
       if (row.scopeId !== null) {
         prefixes.push(

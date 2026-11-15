@@ -1,6 +1,6 @@
-import { PrimaryConnectionTarget } from "@t3tools/client-runtime/connection";
-import { EnvironmentId, ProjectId, ServerConfig } from "@t3tools/contracts";
-import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
+import { PrimaryConnectionTarget } from "@t2code/client-runtime/connection";
+import { EnvironmentId, ProjectId, ServerConfig } from "@t2code/contracts";
+import { DEFAULT_CLIENT_SETTINGS } from "@t2code/contracts/settings";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { expect, it, vi } from "vite-plus/test";

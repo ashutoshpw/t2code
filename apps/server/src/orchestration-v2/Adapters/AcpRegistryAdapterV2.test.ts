@@ -1417,7 +1417,7 @@ describe("AcpRegistryAdapterV2", () => {
         commandArgs: ["acp"],
       };
       // Command Code is not Copilot: no deferred tool-exposure header.
-      assert.deepEqual(yield* sessionMcpServers(commandCode, { T3_ACP_MCP_HTTP: "1" }), {
+      assert.deepEqual(yield* sessionMcpServers(commandCode, { T2_ACP_MCP_HTTP: "1" }), {
         new: plainHttp("Bearer opened-token"),
         load: plainHttp("Bearer rotated-token"),
       });
@@ -1429,7 +1429,7 @@ describe("AcpRegistryAdapterV2", () => {
       assert.deepEqual(
         yield* sessionMcpServers(
           { source: "local", commandPath: "C:\\tools\\node.exe", commandArgs: ["agent.mjs"] },
-          { T3_ACP_MCP_HTTP: "1" },
+          { T2_ACP_MCP_HTTP: "1" },
         ),
         { new: stdio("Bearer opened-token"), load: stdio("Bearer rotated-token") },
       );

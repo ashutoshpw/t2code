@@ -1,11 +1,7 @@
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
-import {
-  DEFAULT_SERVER_SETTINGS,
-  ProviderDriverKind,
-  ProviderInstanceId,
-} from "@t2code/contracts";
+import { DEFAULT_SERVER_SETTINGS, ProviderDriverKind, ProviderInstanceId } from "@t2code/contracts";
 import { AcpRegistrySettings } from "../settings.ts";
 import * as HostProcess from "@t2code/shared/HostProcess";
 import { SpawnExecutableResolution } from "@t2code/shared/shell";
@@ -483,7 +479,7 @@ describe("AcpRegistrySupport", () => {
     );
   });
 
-  it.effect("installs into T3 home a package and launches its exposed command", () => {
+  it.effect("installs into T2 home a package and launches its exposed command", () => {
     const agent = makeAgent({
       npx: { package: "@example/acp@V1.2.3", args: ["--stdio"] },
     });
@@ -1415,7 +1411,6 @@ describe("AcpRegistrySupport", () => {
       ),
     );
   });
-
 
   it.effect("falls back to a valid cached registry index when refresh fails", () => {
     const agent = makeAgent({

@@ -206,7 +206,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     },
     {
       label: "a route turns off with no service to run",
-      prints: ["Run `t3 --base-dir <baseDir>` to use T3 Code here."],
+      prints: ["Run `t2code --base-dir <baseDir>` to use T2 Code here."],
       installed: false,
       env: "T2CODE_LAN=true\n",
       args: ["--no-lan"],
@@ -261,7 +261,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     {
       label: "a service for another home is refused without a restart",
       installed: true,
-      status: { current: false, otherBaseDir: "/srv/t3 home" },
+      status: { current: false, otherBaseDir: "/srv/t2 home" },
       fails: true,
       answer: "y",
       env: "T2CODE_LAN=false\n",
@@ -273,7 +273,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     {
       label: "another home's service supplies no local network default",
       installed: true,
-      status: { current: false, otherBaseDir: "/srv/t3 home" },
+      status: { current: false, otherBaseDir: "/srv/t2 home" },
       reportStatus: true,
       json: {
         service: { otherBaseDir: "/srv/t2 home" },

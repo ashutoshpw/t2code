@@ -30,7 +30,7 @@ import * as PeerMcpClient from "./PeerMcpClient.ts";
  * anything, and T2 Connect's edge drops a request idle for about 100 s, so a
  * forwarded wait goes out in pieces no longer than this.
  */
-export const FORWARDED_WAIT_CHUNK_MS = 50_000;
+const FORWARDED_WAIT_CHUNK_MS = 50_000;
 const DEFAULT_WAIT_TIMEOUT_MS = 10 * 60 * 1_000;
 const MAX_WAIT_TIMEOUT_MS = 60 * 60 * 1_000;
 

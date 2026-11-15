@@ -65,7 +65,7 @@ const runMainContentsCommand = Effect.fn("desktop.menu.runMainContentsCommand")(
 });
 
 const describeUpdate = (version: string | null) =>
-  version === null ? "A new version of T3 Code" : `T3 Code ${version}`;
+  version === null ? "A new version of T2 Code" : `T2 Code ${version}`;
 
 const checkForUpdatesFromMenu = Effect.gen(function* () {
   const updates = yield* DesktopUpdates.DesktopUpdates;
@@ -85,7 +85,7 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
       type: "info",
       title: "Update available",
       message: `${describeUpdate(updateState.availableVersion)} is available.`,
-      detail: `You're running T3 Code ${updateState.currentVersion}.`,
+      detail: `You're running T2 Code ${updateState.currentVersion}.`,
       buttons: ["Download", "Later"],
       defaultId: 0,
       cancelId: 1,
@@ -103,7 +103,7 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
       type: "info",
       title: "Update ready",
       message: `${describeUpdate(updateState.downloadedVersion ?? updateState.availableVersion)} is ready to install.`,
-      detail: "T3 Code will restart to install it. Any running tasks will be interrupted.",
+      detail: "T2 Code will restart to install it. Any running tasks will be interrupted.",
       buttons: ["Restart", "Later"],
       defaultId: 0,
       cancelId: 1,

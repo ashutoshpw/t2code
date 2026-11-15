@@ -5,7 +5,7 @@ import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 
-import { T3_HOME } from "../e2e.config.ts";
+import { T2_HOME } from "../e2e.config.ts";
 import { ScenarioError } from "./shell.ts";
 import { makeState, runPromise, test, WEB } from "./t3.ts";
 
@@ -16,7 +16,7 @@ const encodeSettings = Schema.encodeEffect(SettingsJson);
 // A token from `auth session issue` acts at most in approval-required mode, so the thread must too.
 const approvalRequiredThreads = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
-  const settingsPath = (yield* Path.Path).join(T3_HOME, "userdata/settings.json");
+  const settingsPath = (yield* Path.Path).join(T2_HOME, "userdata/settings.json");
   const original = yield* fs.readFileString(settingsPath);
   const settings = yield* decodeSettings(original);
   return {
@@ -36,7 +36,7 @@ const archiveOverMcp = Effect.fn("scenario.archiveOverMcp")(function* (
   baseUrl: string,
   threadId: string,
 ) {
-  const { cli } = makeState(T3_HOME);
+  const { cli } = makeState(T2_HOME);
   const { stdout } = yield* cli([
     "auth",
     "session",
