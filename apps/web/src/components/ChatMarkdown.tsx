@@ -1824,7 +1824,7 @@ const MarkdownSource = memo(function MarkdownSource({
         urlTransform: markdownUrlTransform,
       });
   const element = render(text);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Caching during render would make React Compiler rebuild the element when `cache` flips.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Caching during render would make React Compiler rebuild the element when `cache` flips.
   useEffect(() => {
     if (shared && cache) render.remember(text, element);
   }, [render, text, element, shared, cache]);

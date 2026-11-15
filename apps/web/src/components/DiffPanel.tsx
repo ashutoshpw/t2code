@@ -120,23 +120,6 @@ import { useOpenLink } from "../browser/useOpenLink";
 type DiffThemeType = "light" | "dark";
 const AUTOMATIC_BASE_REF = "__automatic_base_ref__";
 const DIFF_FILE_TREE_STORAGE_KEY = "t2code.diffFileTreeOpen";
-const fileEntryCache = new WeakMap<
-  FileDiffMetadata,
-  { fileDiff: FileDiffMetadata; fileKey: string; fileVersion: number }
->();
-
-function getCachedFileEntry(fileDiff: FileDiffMetadata) {
-  const cached = fileEntryCache.get(fileDiff);
-  if (cached) return cached;
-  const entry = {
-    fileDiff,
-    fileKey: buildFileDiffIdentityKey(fileDiff),
-    fileVersion: buildFileDiffContentVersion(fileDiff),
-  };
-  fileEntryCache.set(fileDiff, entry);
-  return entry;
-}
-
 const EMPTY_COLLAPSED_DIFF_FILE_KEYS: ReadonlySet<string> = new Set();
 
 function DiffFileCollapseToggle({

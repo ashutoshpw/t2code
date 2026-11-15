@@ -74,6 +74,7 @@ const makeHarness = Effect.gen(function* () {
     detach: () => undefined,
     loadFailed: () => undefined,
     setShown: () => undefined,
+    setCaptureDrawn: () => undefined,
     humanStartedDownload: () => false,
     agentLedPage: () => false,
     placeDownload: () => false,

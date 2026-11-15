@@ -323,7 +323,7 @@ export function HostedBrowserWebview(props: {
 
   // Captures copy the guest's raster, which a scaled guest only keeps at full detail on request.
   const fullDetail = backgroundActivity || pictureInPicture || recordingActive;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- tells the desktop host once the guest is drawn at full detail, so its screenshot waits for that frame
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- tells the desktop host once the guest is drawn at full detail, so its screenshot waits for that frame
   useEffect(() => {
     const bridge = window.desktopBridge?.preview;
     if (!clientSettingsHydrated || !bridge || !serverDriven || !fullDetail) return;

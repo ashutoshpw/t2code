@@ -2332,7 +2332,8 @@ describe("PiAdapterV2", () => {
         yield* replacement.emit({ type: "agent_settled" });
         const terminal = yield* takeEvent((event) => event.type === "turn.terminal");
         assert.isTrue(terminal.type === "turn.terminal" && terminal.status === "completed");
-      }    }).pipe(Effect.scoped, Effect.provide(layerTest)),
+      }
+    }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
   it.effect("rejects a resume while a turn is active", () =>

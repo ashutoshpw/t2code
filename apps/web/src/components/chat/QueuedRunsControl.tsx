@@ -50,12 +50,6 @@ export interface EditQueuedRunRequest {
   readonly attachments: ReadonlyArray<ContractChatAttachment>;
 }
 
-interface QueuedRowThumbnail {
-  readonly key: string;
-  readonly name: string;
-  readonly url: string | null;
-}
-
 const QUEUED_RUN_DRAG_TYPE = "application/x-t2code-queued-run";
 // A longer queue shows its first messages and a button that shows the rest.
 const QUEUE_VISIBLE_ROWS = 3;
