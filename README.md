@@ -108,7 +108,3 @@ We have limited review capacity. Small, focused fixes are the most likely to be 
 - Put feature requests in [Ideas](https://github.com/ashutoshpw/t2code/discussions/categories/ideas).
 - Build from source with the [development runbook](./docs/operations/development.md#first-checkout). The [architecture overview](./docs/internals/overview.md) explains how it works.
 - Get help in [Discord](https://discord.gg/jn4EGJjrvv).
-
-## License
-
-[MIT](./LICENSE)

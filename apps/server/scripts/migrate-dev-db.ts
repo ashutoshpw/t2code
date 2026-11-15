@@ -191,8 +191,11 @@ const isProcessAlive = (pid: number): boolean => {
   }
 };
 
-// The runtime PID catches idle servers; leftover -shm files can come from read-only connections.
-const ensureNotInUse = Effect.fn("ensureDevDbNotInUse")(function* (databasePath: string) {
+// The checkpoint needs the destination free of live connections, so it runs only after
+// the copy's legacy guard; the runtime PID alone is safe to check at any time.
+const ensureNoRunningServer = Effect.fn("ensureDevDbNoRunningServer")(function* (
+  databasePath: string,
+) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
 
@@ -206,7 +209,12 @@ const ensureNotInUse = Effect.fn("ensureDevDbNotInUse")(function* (databasePath:
       pid: runtimeState.value.pid,
     });
   }
+});
 
+const ensureNotInUse = Effect.fn("ensureDevDbNotInUse")(function* (databasePath: string) {
+  yield* ensureNoRunningServer(databasePath);
+
+  const fs = yield* FileSystem.FileSystem;
   if (!(yield* fs.exists(databasePath))) {
     return;
   }
@@ -701,7 +709,7 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
     .inspect(canonicalSpacesDatabasePath)
     .pipe(wrapPhase("spaces", spacesDatabasePath));
   yield* fs.makeDirectory(stateDir, { recursive: true });
-  yield* ensureNotInUse(databasePath);
+  yield* ensureNoRunningServer(databasePath);
   if (existingSpaces === null) {
     yield* spaces
       .initializeIfMissing(canonicalSpacesDatabasePath)

@@ -174,7 +174,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")(
           },
         );
         expect(code, output).not.toBe(0);
-        expect(output).toMatch(new RegExp(`t3 install: .*${archive.replaceAll(".", "\\.")}`));
+        expect(output).toMatch(new RegExp(`t2 install: .*${archive.replaceAll(".", "\\.")}`));
       } finally {
         server.closeAllConnections();
         await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -184,7 +184,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")(
   },
 );
 
-/** Runs an installer for a version that is already unpacked, so only the t3 command step runs. */
+/** Runs an installer for a version that is already unpacked, so only the t2 command step runs. */
 async function installOver(input: {
   readonly script: "install.sh" | "install.ps1";
   readonly home: string;

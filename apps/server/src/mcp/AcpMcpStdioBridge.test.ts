@@ -398,7 +398,7 @@ describe("AcpMcpStdioBridge", () => {
       const result = yield* mcpToolSession({
         endpoint: "http://127.0.0.1:1/mcp",
         authorization: "Bearer bridge-test",
-        clientName: "t3-code-acp-cli",
+        clientName: "t2-code-acp-cli",
         fetchImplementation: async (_url, init) => {
           if (init?.method === "DELETE") return new Response(null, { status: 204 });
           const message = JSON.parse(String(init?.body)) as (typeof sent)[number];

@@ -111,7 +111,10 @@ vi.mock(import("~/state/use-atom-command"), async (original) => {
 vi.mock(import("~/state/server"), async (original) => {
   const actual = await original();
   const { Atom } = await import("effect/reactivity");
-  const config = Atom.make(() => ({ availableEditors: ["cursor"] }));
+  const config = Atom.make(() => ({
+    availableEditors: ["cursor"],
+    settings: { offeredSourceControlProviders: {} },
+  }));
   return {
     ...actual,
     serverEnvironment: { ...actual.serverEnvironment, configValueAtom: (() => config) as never },

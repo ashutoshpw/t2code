@@ -676,10 +676,10 @@ type ModelRef = ReturnType<typeof Model.Ref.make>;
 // msg_ IDs cannot cross sessions; include session identity because T3 IDs repeat across environments.
 // Pre-acknowledgement IDs also establish fork/rollback boundaries.
 const turnPromptId = (sessionId: string, attemptId: string) =>
-  SessionMessage.ID.make(`msg_t3_turn_${sessionId}:${attemptId}`);
+  SessionMessage.ID.make(`msg_t2_turn_${sessionId}:${attemptId}`);
 const steerPromptId = (sessionId: string, messageId: string) =>
-  SessionMessage.ID.make(`msg_t3_steer_${sessionId}:${messageId}`);
-const isOwnPrompt = (inboxId: string) => inboxId.startsWith("msg_t3_");
+  SessionMessage.ID.make(`msg_t2_steer_${sessionId}:${messageId}`);
+const isOwnPrompt = (inboxId: string) => inboxId.startsWith("msg_t2_");
 
 const promptOf = (turn: OrchestrationV2ProviderTurn) => {
   const nativeId = turn.nativeTurnRef?.nativeId;

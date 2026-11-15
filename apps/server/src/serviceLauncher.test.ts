@@ -216,7 +216,7 @@ it.layer(NodeServices.layer)("service state persistence", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-disk-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-disk-" });
       const statePath = path.join(root, "runtime", "service-state.json");
       const databasePath = path.join(root, "userdata", "statev2.sqlite");
       let backupPath = path.join(root, "runtime", "db-backup", "disk-update");
@@ -531,10 +531,10 @@ setInterval(() => {}, 1_000);
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-launcher-xdg-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-launcher-xdg-" });
         const home = path.join(root, "home");
         const managerUnitDir = path.join(home, ".config", "systemd", "user");
-        const unitPath = path.join(managerUnitDir, "t3code.service");
+        const unitPath = path.join(managerUnitDir, "t2code.service");
         const render = (version: string) =>
           renderBootServiceUnit({ ...unitPlan(root, version), unitPath });
         yield* fs.makeDirectory(managerUnitDir, { recursive: true });
@@ -578,7 +578,7 @@ setInterval(() => {}, 1_000);
         vi.stubEnv("HOME", home);
         // environment.d changes what services inherit, not where the manager reads units.
         vi.stubEnv("XDG_CONFIG_HOME", path.join(home, "service-config"));
-        vi.stubEnv("T2_BOOT_SERVICE_UNIT", "t3code.service");
+        vi.stubEnv("T2_BOOT_SERVICE_UNIT", "t2code.service");
 
         yield* Effect.promise(() =>
           expect(runLauncher(root)).rejects.toThrow("Active child exited unexpectedly (0)."),
@@ -593,7 +593,7 @@ setInterval(() => {}, 1_000);
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-launcher-log-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-launcher-log-" });
       const home = path.join(root, "home");
       const unitPath = path.join(home, "Library", "LaunchAgents", "t3code.plist");
       const plan = unitPlan(root, "1.0.0");
@@ -667,7 +667,7 @@ process.exit(0);
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-launcher-space-" });
+      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-launcher-space-" });
       const root = path.join(parent, "T3 data ");
       const versionDir = path.join(root, "runtime", "versions", "1.0.0");
       yield* writeFakeRuntime(
@@ -972,7 +972,7 @@ process.exit(0);
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-reclaim-update-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-reclaim-update-" });
         const statePath = path.join(root, "runtime", "service-state.json");
         const ownerPath = path.join(root, "userdata", "server-owner.sqlite");
         const databasePath = path.join(root, "userdata", "state.sqlite");
@@ -1065,7 +1065,7 @@ process.exit(0);
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-stale-backup-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-stale-backup-" });
       const statePath = path.join(root, "runtime", "service-state.json");
       const ownerPath = path.join(root, "userdata", "server-owner.sqlite");
       const databasePath = path.join(root, "userdata", "state.sqlite");
@@ -1125,7 +1125,7 @@ process.exit(0);
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-owned-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-owned-" });
       const stateDir = path.join(root, "userdata");
       const recordPath = path.join(stateDir, "server-runtime.json");
       yield* fs.makeDirectory(stateDir, { recursive: true });
@@ -1800,7 +1800,7 @@ process.send({ type: "request-update", targetVersion: "1.1.0", dbPath: paths.dat
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-backup-stop-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-backup-stop-" });
       const statePath = path.join(root, "runtime", "service-state.json");
       const childSource = "setInterval(() => {}, 1000);\n";
       for (const version of ["1.0.0", "1.1.0"]) {

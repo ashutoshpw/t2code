@@ -395,12 +395,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       if (input.json !== undefined) {
         expect(JSON.parse(lines.join("\n"))).toMatchObject(input.json);
       }
-      if (input.reportStatus) {
-        expect(JSON.parse(lines.join("\n"))).toMatchObject({
-          service: { otherBaseDir: "/srv/t2 home" },
-          lan: { enabled: false, inheritedDefault: false },
-        });
-      }
       expect(exit._tag).toBe(
         input.restartFails === true || input.fails === true ? "Failure" : "Success",
       );

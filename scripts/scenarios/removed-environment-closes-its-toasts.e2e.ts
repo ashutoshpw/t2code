@@ -9,7 +9,7 @@ import * as Path from "effect/Path";
 
 import { APP_DIR, T2_HOME } from "../e2e.config.ts";
 import { prepareHome, start } from "./start-app.ts";
-import { makeState, runPromise, test, WEB } from "./t3.ts";
+import { makeState, runPromise, test, WEB } from "./t2.ts";
 
 const SECOND_HOME = `${T2_HOME}-second-environment`;
 
@@ -57,9 +57,9 @@ const runSecondServer = Effect.fn("scenario.secondServer")(function* (
 test(
   "Removing an environment closes the in-app notifications it raised",
   WEB,
-  async ({ t3, app, screen, browser }) => {
-    const project = await t3.project("demo");
-    const primaryThread = await t3.thread({
+  async ({ t2, app, screen, browser }) => {
+    const project = await t2.project("demo");
+    const primaryThread = await t2.thread({
       project,
       title: "Finished here",
       messages: ["first"],
@@ -83,7 +83,7 @@ test(
         messages: ["first"],
       });
 
-      await t3.open("/settings/general");
+      await t2.open("/settings/general");
       await screen.getByRole("switch", "In-app notifications").check();
       await app.open("/settings/connections");
       await screen.getByRole("button", "Add environment").tap();

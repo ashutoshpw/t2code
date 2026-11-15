@@ -2763,7 +2763,7 @@ const makeNativeOperations = Effect.fn("PreviewManager.makeOperations")(function
               });
             const world = (yield* send("Page.createIsolatedWorld", {
               frameId,
-              worldName: "t3-preview-still-image",
+              worldName: "t2-preview-still-image",
             })) as { executionContextId?: number } | undefined;
             if (typeof world?.executionContextId !== "number")
               return yield* new PreviewOperationError({

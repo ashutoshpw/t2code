@@ -49,7 +49,6 @@ import {
   resolveProjectSettings,
 } from "@t2code/shared/projectSettings";
 import {
-  LEGACY_WORKTREE_BRANCH_PREFIXES,
   mergeGitStatusParts,
   resolveAutoFeatureBranchName,
   sanitizeBranchFragment,
@@ -276,8 +275,7 @@ function resolveHeadRepositoryNameWithOwner(pullRequest: PullRequestHeadRemoteIn
 
 // Both names `resolvePullRequestWorktreeLocalBranchName` gives a fork pull request's branch.
 function isPullRequestWorktreeLocalBranchName(branch: string): boolean {
-  const prefixes = [WORKTREE_BRANCH_PREFIX, ...LEGACY_WORKTREE_BRANCH_PREFIXES].join("|");
-  return new RegExp(`^(?:${prefixes})[/-]pr-\\d+[/-]`, "u").test(branch);
+  return new RegExp(`^${WORKTREE_BRANCH_PREFIX}[/-]pr-\\d+[/-]`, "u").test(branch);
 }
 
 function resolvePullRequestWorktreeLocalBranchName(

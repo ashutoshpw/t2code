@@ -1089,7 +1089,7 @@ describe("mobile composer drafts", () => {
       name: "clip.mov",
       mimeType: "video/quicktime",
       sizeBytes: 42,
-      fileUri: `file:///documents/t3-composer-attachments/${id}.mov`,
+      fileUri: `file:///documents/t2-composer-attachments/${id}.mov`,
     });
     const draftKey = "new-task:environment-1:project-duplicates";
     appAtomRegistry.set(composerDraftsAtom, {

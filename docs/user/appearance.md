@@ -67,7 +67,7 @@ to another site.
 Class names in the app change between releases. For rules that keep working, target `data-slot`
 and other `data-` attributes, such as `[data-chat-header]` or `[data-slot="button"]`.
 
-If a rule hides something you need, run `t3 theme set t3-chat` on the server to switch to a
+If a rule hides something you need, run `t2 theme set t2-chat` on the server to switch to a
 built-in theme, or press **Cmd+Option+A** on macOS or **Ctrl+Alt+A** on Windows/Linux to pick
 another theme.
 

@@ -10,7 +10,7 @@ const semver = NodeModule.createRequire(
   NodeModule.createRequire(import.meta.url).resolve("electron-updater"),
 )("semver") as { parse: (version: string) => ProviderArgs[1]["currentVersion"] };
 
-const REPO = "/pingdotgg/t3code";
+const REPO = "/ashutoshpw/t2code";
 const nightly = (build: number) => `v0.1.10-nightly.20261112.${build}`;
 
 const atomFeed = (tags: ReadonlyArray<string>) =>
@@ -38,7 +38,7 @@ const offeredRelease = async (
       return JSON.stringify({ tag_name: pointerTag, name: pointerTag, body: "pointer notes" });
     }
     const manifest = /\/releases\/download\/v([^/]+)\/nightly\.yml$/.exec(path ?? "");
-    if (manifest) return `version: ${manifest[1]}\npath: T3-Code.exe\nsha512: abc\n`;
+    if (manifest) return `version: ${manifest[1]}\npath: T2-Code.exe\nsha512: abc\n`;
     apiScans += 1;
     if (listedTag instanceof Error) throw listedTag;
     return JSON.stringify(listedTag ? [{ tag_name: listedTag, body: "API notes" }] : []);

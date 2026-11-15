@@ -121,7 +121,7 @@ it.effect("drops planner statistics a database already has", () => {
 });
 
 it.effect("upgrades an existing database on a read-write worker connection", () => {
-  const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-sqlite-upgrade-"));
+  const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-sqlite-upgrade-"));
   const dbPath = NodePath.join(tempDir, "state.sqlite");
 
   return Effect.gen(function* () {
@@ -159,7 +159,7 @@ it.effect("upgrades an existing database on a read-write worker connection", () 
 });
 
 it.effect("names a database file that is not SQLite", () => {
-  const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-sqlite-notadb-"));
+  const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-sqlite-notadb-"));
   const dbPath = NodePath.join(tempDir, "state.sqlite");
   NodeFS.writeFileSync(dbPath, "not a db\n");
 

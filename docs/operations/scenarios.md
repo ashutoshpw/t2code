@@ -14,18 +14,18 @@ runner; its docs ship in `scripts/node_modules/e2e/docs` and `e2e guide` prints 
 ```ts
 import { expect } from "e2e";
 
-import { test, WEB } from "./t3.ts";
+import { test, WEB } from "./t2.ts";
 
 test(
   "Tab moves from the add-project Git URL field to its submit button",
   WEB,
-  async ({ t3, app, screen, browser }) => {
-    await t3.project("demo");
-    await t3.open();
+  async ({ t2, app, screen, browser }) => {
+    await t2.project("demo");
+    await t2.open();
 
     await screen.getByRole("button", "Add project").tap();
     await screen.getByText("Git URL").tap();
-    await screen.getByRole("combobox").fill("https://github.com/pingdotgg/t3code.git");
+    await screen.getByRole("combobox").fill("https://github.com/ashutoshpw/t2code.git");
     const submit = screen.getByRole("button", "Continue (Enter)");
     await expect(submit).toBeEnabled();
 
@@ -39,11 +39,11 @@ test(
 `screen`, `browser`, `app`, and `expect` are e2e's own. [`t2.ts`](../../scripts/scenarios/t2.ts)
 adds one fixture for what e2e cannot know about T2 Code:
 
-- `t3.project(title, files)` creates a git repository and adds it as a project.
-- `t3.thread({ project, title, messages })` starts a thread and plays one replayed turn per
+- `t2.project(title, files)` creates a git repository and adds it as a project.
+- `t2.thread({ project, title, messages })` starts a thread and plays one replayed turn per
   message before returning, so the thread has real history. `model` picks the recording. It
-  returns the thread, which `t3.open` takes.
-- `t3.open(path)` opens the app, already signed in, at a path. `t3.open(thread)` opens it on a
+  returns the thread, which `t2.open` takes.
+- `t2.open(path)` opens the app, already signed in, at a path. `t2.open(thread)` opens it on a
   thread.
 
 State is created through the app's own CLI, so it is real events and works on a base commit
@@ -68,15 +68,15 @@ configured.
 Most scenarios that could not run stopped on the way to the screen the bug is on, not on the
 bug. Three rules avoid that:
 
-- **Open by link, not by sidebar.** `await t3.open(thread)` lands on the thread
+- **Open by link, not by sidebar.** `await t2.open(thread)` lands on the thread
   ([`thread-opens-by-link.e2e.ts`](../../scripts/scenarios/thread-opens-by-link.e2e.ts)), and
-  `await t3.open("/settings/general")` on a settings page. A sidebar row is a button that covers
+  `await t2.open("/settings/general")` on a settings page. A sidebar row is a button that covers
   its own title, so a tap on `getByText("Earlier work")` is intercepted. When the sidebar is what
   the scenario is about, target the row's button: `screen.getByRole("button", "Earlier work")`.
-- **Let `t3.open` do the navigating.** It waits until the pairing page has signed in before it
+- **Let `t2.open` do the navigating.** It waits until the pairing page has signed in before it
   goes anywhere. A second `app.open` straight after the pairing link cancels the sign-in and
   shows the pairing page again.
-- **Seed before opening.** Create projects and threads first, then call `t3.open`. With no
+- **Seed before opening.** Create projects and threads first, then call `t2.open`. With no
   project the app opens its first-run page instead of the one the scenario expects.
 
 The app starts with only `PATH`, `HOME` and the temp directory in its environment, whatever the
@@ -143,7 +143,7 @@ which:
 Each side's result is also written as it ends, to `scripts/.e2e/prove/base.json` and
 `head.json`, so a run that is cut short keeps the side it finished.
 
-It runs the scenario on one target: iOS when the file imports `t3-mobile.ts`, web otherwise.
+It runs the scenario on one target: iOS when the file imports `t2-mobile.ts`, web otherwise.
 `--target web` or `--target ios` overrides that.
 
 The scenario and e2e always come from your checkout. Only the app comes from the commit under
@@ -165,10 +165,10 @@ import { IOS, test } from "./t2-mobile.ts";
 test(
   "The iOS app lists a seeded thread and opens its history",
   IOS,
-  async ({ t3, app, screen }) => {
-    const project = await t3.project("demo");
-    await t3.thread({ project, title: "Earlier work", messages: ["first", "second"] });
-    await t3.open();
+  async ({ t2, app, screen }) => {
+    const project = await t2.project("demo");
+    await t2.thread({ project, title: "Earlier work", messages: ["first", "second"] });
+    await t2.open();
 
     const thread = screen.getByText("Earlier work", { exact: false }).first();
     await expect(thread).toBeVisible({ timeout: 120_000 });
@@ -178,8 +178,8 @@ test(
 );
 ```
 
-`t3.project` and `t3.thread` are the same. The run fetches or builds the dev client for the
-checkout's native fingerprint before it leases a device; `t3.open()` installs it, loads it from
+`t2.project` and `t2.thread` are the same. The run fetches or builds the dev client for the
+checkout's native fingerprint before it leases a device; `t2.open()` installs it, loads it from
 Metro, and pairs it with the scenario's server. `device` is
 e2e's [device fixture](https://e2e.com/docs/mobile#the-device-fixture) for system actions.
 

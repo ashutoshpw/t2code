@@ -314,15 +314,15 @@ describe("buildProjectGroups", () => {
   // regression: #15049 a rename to the repository name snapped back to the display path
   it("labels a renamed group by its title even when it matches the repository name", () => {
     const folderTitles = [
-      makeProject("t3code", "/work/t3code", { title: "t3code" }),
-      makeProject("t3code-2", "/work/t3code-2", { title: "t3code" }),
+      makeProject("t2code", "/work/t2code", { title: "t2code" }),
+      makeProject("t2code-2", "/work/t2code-2", { title: "t2code" }),
     ];
     const renamed = folderTitles.map((project) => ({ ...project, hasCustomTitle: true }));
 
     const label = (projects: ReadonlyArray<EnvironmentProject>) =>
       buildProjectGroups({ projects, settings: settings("repository") })[0]?.label;
     expect(label(folderTitles)).toBe("T2 Code");
-    expect(label(renamed)).toBe("t3code");
+    expect(label(renamed)).toBe("t2code");
   });
 
   it("labels a group by its repository when clones disagree on its casing", () => {
@@ -332,7 +332,7 @@ describe("buildProjectGroups", () => {
     const root = makeProject("NewCo", "/work/NewCo");
     const lowercasedClone = makeProject("NewCo", "/remote/NewCo", {
       environmentId: EnvironmentId.make("remote"),
-      repositoryIdentity: { ...repositoryIdentity, name: "T3CODE", displayName: "t3 code" },
+      repositoryIdentity: { ...repositoryIdentity, name: "T2CODE", displayName: "t2 code" },
     });
 
     const groups = buildProjectGroups({
@@ -344,29 +344,29 @@ describe("buildProjectGroups", () => {
     expect(groups[0]?.label).toBe("T2 Code");
 
     // A subfolder group in repository_path mode keeps its own title.
-    const localIdentity = { ...repositoryIdentity, rootPath: "/work/t3code" };
+    const localIdentity = { ...repositoryIdentity, rootPath: "/work/t2code" };
     const pathGroups = buildProjectGroups({
       projects: [
-        makeProject("design", "/work/t3code/design", {
+        makeProject("design", "/work/t2code/design", {
           title: "Design docs",
           hasCustomTitle: true,
           repositoryIdentity: localIdentity,
         }),
-        makeProject("design", "/remote/t3code/design", {
+        makeProject("design", "/remote/t2code/design", {
           environmentId: EnvironmentId.make("remote"),
           repositoryIdentity: {
             ...repositoryIdentity,
-            rootPath: "/remote/t3code",
-            name: "T3CODE",
-            displayName: "t3 code",
+            rootPath: "/remote/t2code",
+            name: "T2CODE",
+            displayName: "t2 code",
           },
         }),
-        makeProject("t3code", "/work/t3code", { repositoryIdentity: localIdentity }),
+        makeProject("t2code", "/work/t2code", { repositoryIdentity: localIdentity }),
       ],
       settings: settings("repository_path"),
       preferredEnvironmentId: environmentId,
     });
-    expect(pathGroups.map((group) => group.label)).toEqual(["Design docs", "t3code"]);
+    expect(pathGroups.map((group) => group.label)).toEqual(["Design docs", "t2code"]);
   });
 
   it("applies a physical-project override without dropping its siblings", () => {
@@ -485,8 +485,8 @@ describe("project pins and archives", () => {
     buildProjectGroups({ projects, settings: settings("repository") })[0]!;
 
   it("keeps a project visible while its machines disagree", () => {
-    const local = makeProject("local", "/work/t3code");
-    const other = makeProject("remote", "/work/t3code", { environmentId: remote });
+    const local = makeProject("local", "/work/t2code");
+    const other = makeProject("remote", "/work/t2code", { environmentId: remote });
     const partial = group({ ...local, pinnedAt: at, archivedAt: at }, other);
     expect(partial).toMatchObject({ pinned: true, archived: false });
     expect(group({ ...local, archivedAt: at }, { ...other, archivedAt: at }).archived).toBe(true);

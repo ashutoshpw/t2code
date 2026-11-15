@@ -50,13 +50,13 @@ approval. Review the devices that are already approved, described below.
 A new device waits and shows a code such as `K7QM-2XFD`. Approve it from a
 device that is already connected, using the prompt or **Settings → Sharing &
 access**. Check that the code matches the one on the waiting device. On a
-headless host, run `t3 auth connect-device list` and then
-`t3 auth connect-device approve K7QM-2XFD`. A request expires after 10 minutes,
+headless host, run `t2 auth connect-device list` and then
+`t2 auth connect-device approve K7QM-2XFD`. A request expires after 10 minutes,
 and the device asks again when it retries. Deny keeps that device out until its
 request expires.
 
 Each device is approved once. Revoke it from **T2 Connect devices** in the same
-settings page, or with `t3 auth connect-device revoke <code>`. With approval on,
+settings page, or with `t2 auth connect-device revoke <code>`. With approval on,
 it has to ask again. With approval off, it can connect again on its own, so
 revoking in the app offers to turn approval on first. Devices that connected through T2 Connect while approval was off stay
 approved and appear in that list for you to review. A device that has not

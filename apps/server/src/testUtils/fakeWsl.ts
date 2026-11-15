@@ -7,8 +7,8 @@ import * as Path from "effect/Path";
 export const makeFakeWslHost = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const mountRoot = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-wsl-mnt-" });
-  const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-wsl-bin-" });
+  const mountRoot = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-wsl-mnt-" });
+  const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-wsl-bin-" });
   const wslpath = path.join(binDir, "wslpath");
   yield* fileSystem
     .writeFileString(

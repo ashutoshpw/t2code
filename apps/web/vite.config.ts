@@ -257,7 +257,7 @@ function chunkCycleGuardPlugin(): Plugin {
 // a copy of every changed chunk from every rebuild. Fixed names overwrite the previous copy.
 function bundledDevStableNamesPlugin(): Plugin {
   return {
-    name: "t3code:bundled-dev-stable-names",
+    name: "t2code:bundled-dev-stable-names",
     apply: "serve",
     outputOptions: (options) => ({
       ...options,

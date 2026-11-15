@@ -2494,7 +2494,7 @@ describe("PreviewManager", () => {
               id: 1,
               method: "Runtime.evaluate",
               params: { expression: "document.querySelector('a').click()" },
-              sessionId: "t3-preview-page",
+              sessionId: "t2-preview-page",
             }),
           }),
         );

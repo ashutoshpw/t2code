@@ -584,7 +584,7 @@ describe("queued task whose launch reply is lost", () => {
     state.checkout.mockResolvedValueOnce(
       AsyncResult.success({
         branch: "pr-123",
-        worktreePath: "/repo/.t3/worktrees/pr-123",
+        worktreePath: "/repo/.t2/worktrees/pr-123",
         isOnPullRequestHead: true,
       }),
     );
@@ -599,7 +599,7 @@ describe("queued task whose launch reply is lost", () => {
 
     expect(state.checkout).toHaveBeenCalledOnce();
     const [first, resent] = state.start.mock.calls.map(([call]) => call.input);
-    expect(resent.bootstrap.createThread.worktreePath).toBe("/repo/.t3/worktrees/pr-123");
+    expect(resent.bootstrap.createThread.worktreePath).toBe("/repo/.t2/worktrees/pr-123");
     expect(resent.bootstrap).toEqual(first.bootstrap);
     expect(remaining()).toEqual([]);
   });

@@ -6035,7 +6035,7 @@ describe("PiAdapterV2", () => {
               yield* fake.takeRequest("get_state");
             }
             yield* fake.emit({
-              type: "t3.settle_probe",
+              type: "t2.settle_probe",
               providerTurnId,
               settleProbeGeneration: 2,
               data: { isStreaming: false, isCompacting: false, pendingMessageCount: 0 },

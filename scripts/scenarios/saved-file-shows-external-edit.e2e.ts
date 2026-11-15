@@ -4,7 +4,7 @@ import { expect } from "e2e";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 
-import { runPromise, test, WEB } from "./t3.ts";
+import { runPromise, test, WEB } from "./t2.ts";
 
 const chmod = (path: string, mode: number) =>
   runPromise(Effect.flatMap(FileSystem.FileSystem, (fs) => fs.chmod(path, mode)));
@@ -12,7 +12,7 @@ const chmod = (path: string, mode: number) =>
 test(
   "A saved file shows a later external edit after its post-save read failed",
   WEB,
-  async ({ t3, app, browser, screen }) => {
+  async ({ t2, app, browser, screen }) => {
     // Logs each file RPC's outcome in order, so the test can wait for the read after the save.
     await browser.addInitScript(() => {
       const log: Array<string> = [];
@@ -69,10 +69,10 @@ test(
         return null;
       });
 
-    const project = await t3.project("demo", { "notes.txt": "before save" });
+    const project = await t2.project("demo", { "notes.txt": "before save" });
     const notes = `${project}/notes.txt`;
-    const thread = await t3.thread({ project, title: "Notes", messages: ["first"] });
-    await t3.open(thread);
+    const thread = await t2.thread({ project, title: "Notes", messages: ["first"] });
+    await t2.open(thread);
     await expect(screen.getByText("first fixture turn complete", { exact: false })).toBeVisible();
     await screen.getByRole("button", "Toggle right panel").tap();
     await screen.getByText("Files").tap();

@@ -225,7 +225,7 @@ it.effect.each([
           Effect.fail(
             new WorktreeRecreateError({
               worktreePath: "/worktrees/gone",
-              branch: "t3/gone",
+              branch: "t2/gone",
               cause: new Error("branch_checked_out_in_worktree"),
             }),
           ),
@@ -247,7 +247,7 @@ it.effect.each([
               deletedAt: null,
               archivedAt: null,
               worktreePath: "/worktrees/gone",
-              branch: "t3/gone",
+              branch: "t2/gone",
               modelSelection: { instanceId: ProviderInstanceId.make("codex"), model: "test" },
             },
             runs: running

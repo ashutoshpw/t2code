@@ -118,7 +118,7 @@ describe("MCP app tool output", () => {
   it("shows the tool result, not the app wrapper", () => {
     const text = "Notice\nview\tcount\n/home\t42";
     const item = toolItem({
-      t3McpApp: {
+      t2McpApp: {
         attachmentId: "app-html",
         server: "repro",
         tool: "aggregate_rum_events",
@@ -131,7 +131,7 @@ describe("MCP app tool output", () => {
 
   it("reads a result with metadata and marks images it cannot preview", () => {
     const item = toolItem({
-      t3McpApp: {
+      t2McpApp: {
         attachmentId: "app-html",
         server: "repro",
         tool: "chart",
@@ -148,7 +148,7 @@ describe("MCP app tool output", () => {
     expect(turnItemOutputText(item)).toBe("chart\n[image]");
 
     const bounded = toolItem({
-      t3McpApp: {
+      t2McpApp: {
         attachmentId: "app-html",
         server: "repro",
         tool: "chart",

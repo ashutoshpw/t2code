@@ -603,7 +603,7 @@ const upload = Effect.fn("nativeClient.upload")(function* (
   const uploadUrl = `${remote.url}/${key}/uploads/${encodeURIComponent(created.uploadId)}`;
   yield* Console.error(`Uploading native client ${key} to the shared cache...`);
   yield* Effect.gen(function* () {
-    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-native-upload-" });
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-native-upload-" });
     const file =
       platform === "ios"
         ? path.join(directory, "client.tgz")
@@ -735,7 +735,7 @@ const build = Effect.fn("nativeClient.build")(function* (
     if (onEas) {
       yield* buildIosOnEas(staging);
     } else if (platform === "ios") {
-      const output = yield* fs.makeTempDirectoryScoped({ prefix: "t3-native-client-" });
+      const output = yield* fs.makeTempDirectoryScoped({ prefix: "t2-native-client-" });
       yield* command("pod", ["install"], true, path.join(mobile, "ios"));
       // One device-independent arm64 simulator build installs on every iPhone and iPad simulator.
       yield* command(

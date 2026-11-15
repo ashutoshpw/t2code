@@ -10,6 +10,7 @@ import * as Digest from "effect/crypto/Digest";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
+import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as Secrets from "../../../auth/ServerSecretStore.ts";
 import * as AssetSigner from "../../../assets/AssetSigner.ts";
 import * as Config from "../../../config.ts";
@@ -40,6 +41,7 @@ const dependencies = [
   Digest.Digest,
   FileSystem.FileSystem,
   Path.Path,
+  ChildProcessSpawner.ChildProcessSpawner,
   Config.ServerConfig,
   WorkspacePaths.WorkspacePaths,
   Favicon.ProjectFaviconResolver,

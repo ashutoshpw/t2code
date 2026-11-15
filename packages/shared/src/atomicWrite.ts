@@ -36,7 +36,7 @@ export const writeFileStringAtomically = (input: {
       const tempDirectory = yield* Effect.acquireRelease(
         fs.makeTempDirectory({
           directory: targetDirectory,
-          prefix: "t3-write-",
+          prefix: "t2-write-",
         }),
         (directory) => fs.remove(directory, { recursive: true }).pipe(Effect.ignore({ log: true })),
       );

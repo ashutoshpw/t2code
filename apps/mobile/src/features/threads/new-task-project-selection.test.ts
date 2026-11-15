@@ -61,8 +61,8 @@ function makeScope(projects: ReadonlyArray<EnvironmentProject>): HomeProjectScop
 
 describe("getProjectScopeSelectionTarget", () => {
   it("prefers a connected copy of a project that spans environments", () => {
-    const mac = makeProject("t3code", "mac");
-    const server = makeProject("t3code", "server");
+    const mac = makeProject("t2code", "mac");
+    const server = makeProject("t2code", "server");
     const target = (connected: ReadonlyArray<string>, preferred: string | null = null) =>
       getProjectScopeSelectionTarget(
         makeScope([mac, server]),
@@ -81,31 +81,31 @@ describe("getProjectScopeSelectionTarget", () => {
 
 describe("newTaskFilteredProject", () => {
   it("never starts in an archived copy of the filtered project", () => {
-    const mac = { ...makeProject("t3code", "mac"), archivedAt: "2026-01-01T00:00:00.000Z" };
-    const server = makeProject("t3code", "server");
+    const mac = { ...makeProject("t2code", "mac"), archivedAt: "2026-01-01T00:00:00.000Z" };
+    const server = makeProject("t2code", "server");
     expect(
       newTaskFilteredProject(
         makeScope([mac, server]),
         null,
         new Set([mac.environmentId, server.environmentId]),
-        { environmentId: "mac", projectId: "t3code" },
+        { environmentId: "mac", projectId: "t2code" },
       ),
-    ).toEqual({ environmentId: "server", projectId: "t3code" });
+    ).toEqual({ environmentId: "server", projectId: "t2code" });
   });
 
   it("prefers the remembered copy of the filtered project", () => {
-    const mac = makeProject("t3code", "mac");
-    const server = makeProject("t3code", "server");
+    const mac = makeProject("t2code", "mac");
+    const server = makeProject("t2code", "server");
     const connected = new Set([mac.environmentId, server.environmentId]);
     const filtered = (last?: { readonly environmentId: string; readonly projectId: string }) =>
       newTaskFilteredProject(makeScope([mac, server]), null, connected, last);
-    expect(filtered({ environmentId: "server", projectId: "t3code" })).toEqual({
+    expect(filtered({ environmentId: "server", projectId: "t2code" })).toEqual({
       environmentId: "server",
-      projectId: "t3code",
+      projectId: "t2code",
     });
     expect(filtered({ environmentId: "server", projectId: "other" })).toEqual({
       environmentId: "mac",
-      projectId: "t3code",
+      projectId: "t2code",
     });
   });
 });

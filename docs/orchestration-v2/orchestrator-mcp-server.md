@@ -2,7 +2,7 @@
 
 ## Purpose
 
-T3 exposes V2 orchestration through its app-owned MCP endpoint. A provider
+T2 exposes V2 orchestration through its app-owned MCP endpoint. A provider
 agent can use this endpoint to:
 
 - create an app-owned sub-agent on any supported provider instance;
@@ -15,8 +15,8 @@ agent can use this endpoint to:
 - wait for or interrupt ordinary thread runs; and
 - schedule recurring work that runs without an active turn.
 
-These are T3 orchestration operations, not provider-native sub-agent APIs.
-Delegated tasks always create a T3 child thread and run. The child receives
+These are T2 orchestration operations, not provider-native sub-agent APIs.
+Delegated tasks always create a T2 child thread and run. The child receives
 only the supplied task prompt, plus an optional role instruction supplied in
 the same tool call. Parent conversation history is not copied into the child.
 
@@ -63,13 +63,13 @@ Codex gets T2's MCP server in each thread's `thread/start`, `thread/resume`,
 and `thread/fork` config, with the provider-session token in an
 `Authorization` header. The same server is registered twice:
 
-- `t3-code`: every tool except `t3_thread_wait`.
-- `t3-code-direct`: only `t3_thread_wait`, with `omit_tools_from = ["code_mode", "deferred"]`.
+- `t2-code`: every tool except `t2_thread_wait`.
+- `t2-code-direct`: only `t2_thread_wait`, with `omit_tools_from = ["code_mode", "deferred"]`.
 
 Code Mode runs a nested call as part of a script, so the model keeps working
 while a blocking wait runs. The second entry makes the wait a direct tool call,
 like Codex's own wait tools. Codex reports calls as `<server>.<tool>`, so
-`packages/shared/src/t3McpToolPresentation.ts` must resolve both server names.
+`packages/shared/src/t2McpToolPresentation.ts` must resolve both server names.
 Tool display and pending-work detection depend on it.
 
 ### Claude Agent SDK V2
@@ -89,7 +89,7 @@ Claude receives an HTTP MCP server in its query options:
   },
   allowedTools: [
     // existing allowed tools
-    "mcp__t3-code__*",
+    "mcp__t2-code__*",
   ],
 }
 ```
@@ -150,12 +150,12 @@ provider-specific extensions; those remain in flavors such as Grok.
 
 ### Pi V2
 
-T3 keeps a provider-session HTTP bridge even when Pi supports native MCP.
+T2 keeps a provider-session HTTP bridge even when Pi supports native MCP.
 `mcp.json` entries override native registrations, and native MCP's default
-60-second request timeout can interrupt long-running T3 tools. The bridge owns
+60-second request timeout can interrupt long-running T2 tools. The bridge owns
 the injected endpoint and credential and forwards Pi's cancellation signal.
 
-When a provider session credential exists, the adapter writes a T3-owned
+When a provider session credential exists, the adapter writes a T2-owned
 extension into the server cache and spawns
 `pi --mode rpc --extension <cache>/pi-t2-mcp-extension.ts` with:
 
@@ -227,7 +227,7 @@ any catalog model.
 
 ### `delegate_task`
 
-Creates a T3-owned child thread and immediately dispatches the supplied task
+Creates a T2-owned child thread and immediately dispatches the supplied task
 prompt.
 
 ```ts

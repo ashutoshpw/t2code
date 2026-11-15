@@ -118,7 +118,7 @@ describe.runIf(HostProcess.Platform.defaultValue() === "linux")("ProviderProcess
       Effect.scoped,
       Effect.provideService(HostProcess.Platform, "linux"),
       Effect.provide(
-        ServerConfig.layerTest(process.cwd(), { prefix: "t3-restart-ownership-" }).pipe(
+        ServerConfig.layerTest(process.cwd(), { prefix: "t2-restart-ownership-" }).pipe(
           Layer.provideMerge(NodeServices.layer),
         ),
       ),

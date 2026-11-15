@@ -5,17 +5,17 @@ import {
   holdImageCompression,
   pasteWideScreenshot,
 } from "./image-compression-hold.ts";
-import { test, WEB } from "./t3.ts";
+import { test, WEB } from "./t2.ts";
 
 test(
   "A thread draft discarded while its pasted image compresses stays discarded and can be restored",
   WEB,
-  async ({ t3, app, browser, screen }) => {
+  async ({ t2, app, browser, screen }) => {
     await holdImageCompression(browser);
-    const project = await t3.project("demo");
-    const source = await t3.thread({ project, title: "Screenshot work", messages: ["first"] });
-    await t3.thread({ project, title: "Other work", messages: ["first"] });
-    await t3.open(source);
+    const project = await t2.project("demo");
+    const source = await t2.thread({ project, title: "Screenshot work", messages: ["first"] });
+    await t2.thread({ project, title: "Other work", messages: ["first"] });
+    await t2.open(source);
     await expect(screen.getByText("first fixture turn complete", { exact: false })).toBeVisible();
 
     const composer = screen.getByRole("textbox");

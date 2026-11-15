@@ -3,13 +3,13 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 
 import { run } from "./shell.ts";
-import { runPromise, test, WEB } from "./t3.ts";
+import { runPromise, test, WEB } from "./t2.ts";
 
 test(
   "The commit dialog before the first commit counts a file staged then edited once",
   WEB,
-  async ({ t3, app, screen }) => {
-    const project = await t3.project("demo");
+  async ({ t2, app, screen }) => {
+    const project = await t2.project("demo");
     const git = (...args: ReadonlyArray<string>) => runPromise(run("git", args, { cwd: project }));
     const write = (text: string) =>
       runPromise(
@@ -23,9 +23,9 @@ test(
     await write("staged");
     await git("add", "new.txt");
     await write("actual");
-    const thread = await t3.thread({ project, title: "First commit", messages: ["first"] });
+    const thread = await t2.thread({ project, title: "First commit", messages: ["first"] });
 
-    await t3.open(thread);
+    await t2.open(thread);
     await screen.getByRole("button", "Git action options").tap();
     await screen.getByRole("menuitem", "Commit").tap();
     const row = screen.getByRole("button", "Open new.txt in editor");
