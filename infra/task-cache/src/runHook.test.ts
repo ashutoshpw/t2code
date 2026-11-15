@@ -6,6 +6,11 @@ import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 import { expect, it } from "vite-plus/test";
 
+// A grandchild spawned by the runner can outlive its parent and write while rm walks
+// the tree, which surfaces as ENOTEMPTY. Node retries exactly that on rm.
+const removeTempRoot = (directory: string) =>
+  NodeFSP.rm(directory, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
+
 it("uses one machine hook across fresh worktrees without modifying Vite+", async () => {
   const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "task-cache-hook-"));
   const unrelated = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "unrelated-project-"));
@@ -182,8 +187,8 @@ it("uses one machine hook across fresh worktrees without modifying Vite+", async
     await new Promise<void>((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
     );
-    await NodeFSP.rm(root, { recursive: true, force: true });
-    await NodeFSP.rm(unrelated, { recursive: true, force: true });
+    await removeTempRoot(root);
+    await removeTempRoot(unrelated);
   }
 });
 
@@ -228,7 +233,7 @@ it("rejects invalid setup credentials before installing anything and never print
     await new Promise<void>((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
     );
-    await NodeFSP.rm(home, { recursive: true, force: true });
+    await removeTempRoot(home);
   }
 });
 
@@ -269,7 +274,7 @@ it("does not start telemetry or create local state without cache credentials", a
     expect(output).toBe("");
     expect(await NodeFSP.readdir(root)).toEqual([".task-cache.json"]);
   } finally {
-    await NodeFSP.rm(root, { recursive: true, force: true });
+    await removeTempRoot(root);
   }
 });
 
@@ -379,7 +384,7 @@ it("installs without masking .profile and configures CI through bash", async () 
     await new Promise<void>((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
     );
-    await NodeFSP.rm(home, { recursive: true, force: true });
+    await removeTempRoot(home);
   }
 });
 
@@ -465,7 +470,7 @@ it("does not send an old endpoint's token after changing the URL interactively",
     await new Promise<void>((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
     );
-    await NodeFSP.rm(root, { recursive: true, force: true });
+    await removeTempRoot(root);
   }
 });
 
@@ -492,6 +497,6 @@ it("rejects non-loopback HTTP before transmitting a setup credential", async () 
     expect(output).toContain("Use an HTTPS cache endpoint");
     expect(await NodeFSP.readdir(home)).toEqual([]);
   } finally {
-    await NodeFSP.rm(home, { recursive: true, force: true });
+    await removeTempRoot(home);
   }
 });
