@@ -181,6 +181,8 @@ import { PendingApprovalCard } from "./PendingApprovalCard";
 import { ComposerErrorNotice } from "./ComposerErrorNotice";
 import { ManagedRuntimeModeNotice } from "./ManagedRuntimeModeNotice";
 import { FreshSessionNotice } from "./FreshSessionNotice";
+import { Notice } from "../../components/ui/Notice";
+import { formatTokens } from "@t2code/shared/usageFormat";
 import { ComposerFeedback } from "./ComposerFeedback";
 import { ComposerUsageLimits } from "./ComposerUsageLimits";
 import { PendingUserInputCard } from "./PendingUserInputCard";
@@ -1700,6 +1702,25 @@ function ThreadDetailBody(
                     ))}
                     {freshSessionAvailable ? (
                       <FreshSessionNotice threadKey={selectedThreadKey} />
+                    ) : null}
+                    {props.compactBeforeSend ? (
+                      <View className="px-4 pb-3">
+                        <Notice
+                          message={
+                            props.compactBeforeSend.keepFullHistory
+                              ? `Your next message keeps all ${formatTokens(props.compactBeforeSend.tokens)} tokens of history.`
+                              : `Your next message compacts ${formatTokens(props.compactBeforeSend.tokens)} tokens of history first.`
+                          }
+                          icon="arrow.down.right.and.arrow.up.left"
+                          floating
+                          onDismiss={props.compactBeforeSend.toggleKeepFullHistory}
+                          dismissLabel={
+                            props.compactBeforeSend.keepFullHistory
+                              ? "Compact first"
+                              : "Keep the full history"
+                          }
+                        />
+                      </View>
                     ) : null}
                     {props.canOperateThread ? (
                       <ManagedRuntimeModeNotice
