@@ -10,7 +10,6 @@
 
 <p align="center">
   <a href="https://t2.codes/download"><strong>Download</strong></a> ·
-  <a href="https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824">iOS</a> ·
   <a href="https://play.google.com/store/apps/details?id=codes.t2.mobile">Android</a> ·
   <a href="https://app.t2.codes">Web</a> ·
   <a href="./docs/README.md">Docs</a> ·
@@ -31,7 +30,7 @@ It works with Claude Code, Codex, Cursor, OpenCode, Grok Build, Antigravity, Kir
 
 - **Your subscriptions.** T2 Code does not resell tokens. It drives the agents you are already signed in to.
 - **Every agent in one place.** Change models in the middle of a thread. Let Claude hand a task to Codex.
-- **Desktop, web, and phone.** One server, and every client shows the same threads. There are apps for iOS and Android.
+- **Desktop, web, and phone.** One server, and every client shows the same threads. There is an Android app.
 - **Remote ready.** Run agents on any machine. Connect over your local network, Tailscale, or [T2 Connect](./docs/user/remote-access.md).
 - **Git built in.** Each thread can work in its own worktree. Review the diff, then commit, push, and open a pull request with one button.
 - **Fast.** Performance is a feature here. We measure it, and we treat a dropped frame as a bug.
@@ -72,7 +71,7 @@ To try it once without installing, run `npx @t2code/cli@latest`. It offers to in
 
 ### Phone
 
-Get the app from the [App Store](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Google Play](https://play.google.com/store/apps/details?id=codes.t2.mobile). Then follow [remote access](./docs/user/remote-access.md) to connect it to your computer.
+Get the app from [Google Play](https://play.google.com/store/apps/details?id=codes.t2.mobile). Then follow [remote access](./docs/user/remote-access.md) to connect it to your computer.
 
 ### Sign in to an agent
 

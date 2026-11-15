@@ -72,7 +72,12 @@ const EXEMPTIONS: readonly Exemption[] = [
     reason: "the single module that migrates the legacy ~/.t3 home and T3CODE_* env names",
   },
   {
-    matches: exactFiles("scripts/check-rebase-safety.ts", "scripts/check-rebase-safety.test.ts"),
+    matches: exactFiles(
+      "scripts/check-rebase-safety.ts",
+      "scripts/check-rebase-safety.test.ts",
+      "scripts/rebase-safety-git.ts",
+      "scripts/rebase-safety-parsers.ts",
+    ),
     rules: "all",
     reason: "the rebase check maps upstream spellings to the fork's to compare the two trees",
   },
