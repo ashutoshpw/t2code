@@ -1916,14 +1916,14 @@ it.effect("restores and deletes checkpoints inside populated submodules", () =>
       yield* git(cwd, ["commit", "-m", "initial"]);
       return cwd;
     });
-    const nested = yield* makeRepository("t3-submodule-nested-");
-    const library = yield* makeRepository("t3-submodule-library-");
+    const nested = yield* makeRepository("t2-submodule-nested-");
+    const library = yield* makeRepository("t2-submodule-library-");
     const addSubmodule = (cwd: string, url: string, name: string) =>
       git(cwd, ["-c", "protocol.file.allow=always", "submodule", "add", url, name]).pipe(
         Effect.andThen(git(cwd, ["commit", "-m", `add ${name}`])),
       );
     yield* addSubmodule(library, nested, "nested");
-    const root = yield* makeRepository("t3-submodule-root-");
+    const root = yield* makeRepository("t2-submodule-root-");
     yield* addSubmodule(root, library, "library");
     yield* git(root, [
       "-c",

@@ -2516,7 +2516,7 @@ it.layer(
     "updates Windows Volta installs from $name only when Volta has the package",
     ({ script, owned }) =>
       Effect.gen(function* () {
-        const voltaHome = NodePath.join(yield* makeTempDir("t3-volta-windows"), "Volta");
+        const voltaHome = NodePath.join(yield* makeTempDir("t2-volta-windows"), "Volta");
         const shim = NodePath.join(voltaHome, "bin", "package-tool.CMD");
         NodeFS.mkdirSync(NodePath.dirname(shim), { recursive: true });
         NodeFS.writeFileSync(shim, script);

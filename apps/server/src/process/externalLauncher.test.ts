@@ -110,7 +110,7 @@ it.effect.skipIf(windowsHost)("opens home-relative targets using the server home
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const bin = yield* fs.makeTempDirectoryScoped({ prefix: "t3-app-open-" });
+    const bin = yield* fs.makeTempDirectoryScoped({ prefix: "t2-app-open-" });
     for (const name of ["open", "code", "idea"]) {
       yield* fs.writeFileString(path.join(bin, name), "#!/bin/sh\n");
       yield* fs.chmod(path.join(bin, name), 0o755);
@@ -202,7 +202,7 @@ it.effect.skipIf(windowsHost)(
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
+      const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-editors-" });
       const project = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-project-" });
       const codePath = path.join(binDir, "code");
       yield* fileSystem.writeFileString(codePath, "#!/bin/sh\n");

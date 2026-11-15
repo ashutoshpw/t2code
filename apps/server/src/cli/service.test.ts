@@ -249,7 +249,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("service commands
   ])("status of $label names its next step with --base-dir", (input) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-cli-test-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-cli-test-" });
       vi.spyOn(BootService, "layer").mockReturnValue(
         Layer.succeed(BootService.BootService, makeTestService(input.status).service),
       );

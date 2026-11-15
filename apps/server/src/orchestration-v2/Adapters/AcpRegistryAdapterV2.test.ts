@@ -1360,7 +1360,7 @@ describe("AcpRegistryAdapterV2", () => {
       const plainHttp = (authorization: string) => [
         {
           type: "http",
-          name: "t3-code",
+          name: "t2-code",
           url: endpoint,
           headers: [{ name: "Authorization", value: authorization }],
         },
@@ -1410,7 +1410,7 @@ describe("AcpRegistryAdapterV2", () => {
         load: stdio("Bearer rotated-token"),
       });
       // Command Code cannot start the stdio bridge on Windows: it spawns MCP commands through
-      // cmd.exe, which splits the unquoted T3 executable path at the space.
+      // cmd.exe, which splits the unquoted T2 executable path at the space.
       const commandCode = {
         source: "local",
         commandPath: "C:\\tools\\cmdc.exe",

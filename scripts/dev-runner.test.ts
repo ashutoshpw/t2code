@@ -924,7 +924,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
             Effect.provideService(FileSystem.FileSystem, {
               ...fs,
               exists: (file) =>
-                NodePath.basename(file) === "t3-resource-monitor"
+                NodePath.basename(file) === "t2-resource-monitor"
                   ? Effect.succeed(
                       built !== undefined && NodePath.basename(NodePath.dirname(file)) === built,
                     )

@@ -41,7 +41,7 @@ it("paints every match when one row has more matches than a call can take as arg
       onActiveRange={onActiveRange}
     />,
   );
-  expect(CSS.highlights.get("t3-thread-find")?.size).toBe(count - 1);
-  expect(CSS.highlights.get("t3-thread-find-active")?.size).toBe(1);
+  expect(CSS.highlights.get("t2-thread-find")?.size).toBe(count - 1);
+  expect(CSS.highlights.get("t2-thread-find-active")?.size).toBe(1);
   expect(onActiveRange.mock.lastCall?.[0]?.startOffset).toBe((count - 1) * 3);
 });

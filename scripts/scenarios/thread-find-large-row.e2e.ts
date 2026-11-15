@@ -28,8 +28,8 @@ test("Find highlights a row with 200,000 matches", WEB, async ({ t3, app, screen
     await expect
       .poll(() =>
         browser.evaluate<number>(
-          `(CSS.highlights.get("t3-thread-find")?.size ?? 0) +
-         (CSS.highlights.get("t3-thread-find-active")?.size ?? 0)`,
+          `(CSS.highlights.get("t2-thread-find")?.size ?? 0) +
+         (CSS.highlights.get("t2-thread-find-active")?.size ?? 0)`,
         ),
       )
       .toBe(200_000);

@@ -591,7 +591,7 @@ it.layer(NodeServices.layer)("discoverClaudeSkills", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const workspace = yield* fs.makeTempDirectoryScoped({ prefix: "t3-claude-skills-" });
+      const workspace = yield* fs.makeTempDirectoryScoped({ prefix: "t2-claude-skills-" });
       const configDir = path.join(workspace, "config");
       const named = path.join(workspace, "named");
       const unnamed = path.join(workspace, "unnamed");

@@ -1357,7 +1357,7 @@ const forkClaudeSessionInWorker = Effect.fn("forkClaudeSessionInWorker")(functio
 
 const CLAUDE_CAN_USE_TOOL_SHADOWED_WARNING = "CLAUDE_SDK_CAN_USE_TOOL_SHADOWED";
 
-// query() warns when canUseTool meets bypassPermissions or bare allowedTools. T3 installs
+// query() warns when canUseTool meets bypassPermissions or bare allowedTools. T2 installs
 // canUseTool in every mode on purpose (AskUserQuestion, ask rules), so it is per-session noise.
 export function withoutClaudeCanUseToolShadowedWarning<A>(run: () => A): A {
   const emitWarning = process.emitWarning;
@@ -5868,8 +5868,8 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
           new Map<string, OrchestrationV2ProviderThread>(),
         );
         const goalsByNativeThread = new Map<string, OrchestrationV2ProviderGoal | null>();
-        // The title T3 last applied to each native session, so a turn renames it only when the
-        // thread title changed. A native `/rename` T3 never applied survives later turns.
+        // The title T2 last applied to each native session, so a turn renames it only when the
+        // thread title changed. A native `/rename` T2 never applied survives later turns.
         const appliedSessionTitles = new Map<string, string>();
         const goalCheckedTurns = new Set<string>();
         // Background subagents can finish after root settlement; retain their registry for wake evidence and hydration.
@@ -12521,7 +12521,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
         ) {
           const mcpSession = yield* mcpSessions.read(turnInput.threadId);
           // Claude Code defers its goal Stop hook only for its own background tasks, so a goal
-          // re-prompts in a loop while T3 work that will wake this thread is still running.
+          // re-prompts in a loop while T2 work that will wake this thread is still running.
           const onStop: HookCallback = () =>
             runPromise(
               Effect.gen(function* () {

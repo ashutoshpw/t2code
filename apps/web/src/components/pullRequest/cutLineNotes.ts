@@ -1,6 +1,6 @@
 import { cutLineNoteStart } from "@t2code/shared/diffCutLines";
 
-const HIGHLIGHT_NAME = "t3-cut-line-note";
+const HIGHLIGHT_NAME = "t2-cut-line-note";
 
 /**
  * Goes in the diff's shadow root, where the highlighted text lives. A file with cut lines cannot

@@ -343,7 +343,7 @@ describe("DesktopConnectionCatalogStore", () => {
       const path = yield* Path.Path;
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-connection-catalog-test-",
+        prefix: "t2-desktop-connection-catalog-test-",
       });
       const failDecrypt = yield* Ref.make(false);
       const store = yield* DesktopConnectionCatalogStore.DesktopConnectionCatalogStore.pipe(

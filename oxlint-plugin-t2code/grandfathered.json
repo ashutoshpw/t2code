@@ -61,6 +61,7 @@
     "apps/server/src/git/GitManager.test.ts",
     "apps/server/src/git/GitManager.ts",
     "apps/server/src/http.ts",
+    "apps/server/src/mcp/McpHttpServer.test.ts",
     "apps/server/src/mcp/McpHttpServer.ts",
     "apps/server/src/mcp/OrchestratorMcpService.test.ts",
     "apps/server/src/mcp/OrchestratorMcpService.ts",

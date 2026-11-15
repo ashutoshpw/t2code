@@ -95,7 +95,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("packaged ELF s
   it.each([62, 183])(
     "checks executable, addon and extensionless ELF requirements for machine %s",
     async (machine) => {
-      const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t3-glibc-"));
+      const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t2-glibc-"));
       try {
         const app = NodePath.join(root, "app");
         const native = NodePath.join(app, "resources/app.asar.unpacked/node_modules/addon");

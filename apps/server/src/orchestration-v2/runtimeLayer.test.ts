@@ -3440,7 +3440,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           expected: {
             workspaceRoot: "/workspace/project",
             branch: "feature/v2",
-            worktreePath: "/tmp/t3-v2-worktree",
+            worktreePath: "/tmp/t2-v2-worktree",
             linkedPullRequest: null,
             branchPullRequest: pullRequest,
           },

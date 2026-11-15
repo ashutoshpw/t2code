@@ -20,7 +20,7 @@ import {
 it.live("keeps migration warnings out of JSON thread output", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-cli-json-" });
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-cli-json-" });
     const stateDir = `${root}/userdata`;
     yield* fs.makeDirectory(stateDir);
     yield* Effect.gen(function* () {
@@ -56,7 +56,7 @@ it.live("keeps migration warnings out of JSON thread output", () =>
               ? { protocolVersion: "2025-06-18" }
               : {
                   structuredContent:
-                    message.params?.name === "t3_project_list"
+                    message.params?.name === "t2_project_list"
                       ? {
                           projects: [{ id: "project-1", title: "Test", workspaceRoot: root }],
                           nextCursor: null,

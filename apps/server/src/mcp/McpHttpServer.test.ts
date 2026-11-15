@@ -1261,7 +1261,7 @@ it.effect("admits provider and OAuth client credentials and points only clients 
         ),
         Layer.provide(ServerHttp.layerBrowserApiCors),
         Layer.provide(
-          ServerConfig.layerTest(process.cwd(), { prefix: "t3-mcp-origin-test-" }).pipe(
+          ServerConfig.layerTest(process.cwd(), { prefix: "t2-mcp-origin-test-" }).pipe(
             Layer.provide(NodeServices.layer),
           ),
         ),

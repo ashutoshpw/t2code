@@ -199,7 +199,7 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
                 ),
               );
         // An omitted startFromOrigin follows the new-worktree setting, as the composer and
-        // t3_worktree_handoff do. Otherwise a stale local branch silently becomes the base.
+        // t2_worktree_handoff do. Otherwise a stale local branch silently becomes the base.
         const strategy =
           projectSettings !== undefined &&
           input.workspaceStrategy?.type === "worktree" &&

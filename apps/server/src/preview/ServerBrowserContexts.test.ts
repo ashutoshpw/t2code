@@ -354,7 +354,7 @@ describe("ServerBrowserContexts", () => {
   });
 
   it("uploads a file over 50 MB to a desktop tab, which shares the server's filesystem", async () => {
-    const directory = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-desktop-upload-"));
+    const directory = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-desktop-upload-"));
     const userDataDir = NodePath.join(directory, "profile");
     const pool = new ServerBrowserContexts(options());
     try {

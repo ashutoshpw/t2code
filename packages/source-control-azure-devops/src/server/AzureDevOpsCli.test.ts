@@ -514,7 +514,7 @@ describe("primaryRemoteUrl", () => {
   const azure = (name: string) => [name, `https://dev.azure.com/${name}/P/_git/R`] as const;
 
   it.each([
-    // Where T3 publishes the branch and creates its pull requests.
+    // Where T2 publishes the branch and creates its pull requests.
     [remotes(azure("upstream"), azure("origin")), azure("origin")[1]],
     [
       remotes(["github", "https://github.com/acme/repo"], azure("zebra"), azure("alpha")),

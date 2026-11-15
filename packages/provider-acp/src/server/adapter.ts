@@ -487,7 +487,7 @@ export interface AcpAdapterV2Flavor {
   readonly approvalOptions?: (
     request: EffectAcpSchema.RequestPermissionRequest,
   ) => ReadonlyArray<ProviderApprovalOption>;
-  /** Options T3 may answer with; the rest (e.g. Devin's bypass-permissions plan exit) are never sent. */
+  /** Options T2 may answer with; the rest (e.g. Devin's bypass-permissions plan exit) are never sent. */
   readonly answerablePermissionOptions?: (
     request: EffectAcpSchema.RequestPermissionRequest,
   ) => ReadonlyArray<EffectAcpSchema.PermissionOption>;

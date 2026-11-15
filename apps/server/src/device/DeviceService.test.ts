@@ -771,7 +771,7 @@ it.effect.each([
       Layer.mergeAll(
         ServerSettings.layerTest(),
         layerSecretResolver,
-        ServerConfig.layerTest(process.cwd(), { prefix: "t3-device-probe-" }),
+        ServerConfig.layerTest(process.cwd(), { prefix: "t2-device-probe-" }),
         NodeCrypto.layer,
         NetService.layer,
       ).pipe(Layer.provideMerge(NodeServices.layer)),

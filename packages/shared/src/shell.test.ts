@@ -525,7 +525,7 @@ effectIt.layer(NodeServices.layer)("resolveCommandPath", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fs.makeTempDirectoryScoped({ directory: ".", prefix: "t3-path-" });
+      const cwd = yield* fs.makeTempDirectoryScoped({ directory: ".", prefix: "t2-path-" });
       const directory = `${cwd}/bin \u00a0`;
       yield* fs.makeDirectory(directory);
       const executable = `${directory}/audit-command`;

@@ -643,7 +643,7 @@ it.effect("a worktree launch that omits startFromOrigin follows the new-worktree
         ),
       );
       yield* toolkit
-        .handle("t3_thread_launch", {
+        .handle("t2_thread_launch", {
           title: "Fix",
           projectId,
           workspaceStrategy: {
@@ -965,7 +965,7 @@ it.effect("an agent cannot delete the built-in scratch project, even with force"
     );
 
     const refused = yield* toolkit
-      .handle("t3_project_delete", { projectId: harness.projectId, force: true })
+      .handle("t2_project_delete", { projectId: harness.projectId, force: true })
       .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(dependencies));
 
     expect(deleted).toEqual([]);

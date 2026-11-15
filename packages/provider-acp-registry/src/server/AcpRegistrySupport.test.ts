@@ -337,7 +337,7 @@ describe("AcpRegistrySupport", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const cacheDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-acp-command-code-",
+        prefix: "t2-acp-command-code-",
       });
       const catalog = (executable: string) =>
         AcpRegistrySupport.makeAcpRegistryCatalog({
@@ -748,7 +748,7 @@ describe("AcpRegistrySupport", () => {
     return Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const cacheDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-acp-registry-dot-name-",
+        prefix: "t2-acp-registry-dot-name-",
       });
       const resolver = yield* AcpRegistrySupport.makeAcpRegistryCatalog({
         cacheDir,

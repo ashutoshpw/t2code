@@ -221,7 +221,7 @@ export class AzureDevOpsCli extends Context.Service<
       readonly args: ReadonlyArray<string>;
       readonly timeoutMs?: number;
       readonly maxOutputBytes?: number;
-      /** The remote T3 selected; without one, the checkout's primary remote scopes the command. */
+      /** The remote T2 selected; without one, the checkout's primary remote scopes the command. */
       readonly remoteUrl?: string;
     }) => Effect.Effect<SourceControlHost.SourceControlProcessOutput, AzureDevOpsCliError>;
 
@@ -356,7 +356,7 @@ function decodeAzureDevOpsJson<S extends Schema.Top>(
   );
 }
 
-/** The remote that scopes `az` when T3 selected none, from `git remote -v` output. */
+/** The remote that scopes `az` when T2 selected none, from `git remote -v` output. */
 export function primaryRemoteUrl(output: string) {
   if (!output.endsWith("\n")) return null;
   const remotes = new Map<string, string>();

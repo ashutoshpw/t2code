@@ -401,7 +401,7 @@ const serviceProtectCommand = Command.make("protect", {
     Effect.gen(function* () {
       const unsupported = "Service protection needs Linux with systemd.";
       if ((yield* HostProcess.Platform) !== "linux") return yield* Console.log(unsupported);
-      // Before resolving config, which creates T3 directories that root would then own.
+      // Before resolving config, which creates T2 directories that root would then own.
       if ((yield* HostProcess.UserId) === 0) {
         return yield* Console.log(
           "Run `t2 service protect` as the user that runs T2 Code, without sudo. It asks for sudo when it needs root.",

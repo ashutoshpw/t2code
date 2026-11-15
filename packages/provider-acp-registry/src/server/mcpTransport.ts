@@ -10,7 +10,7 @@ const COMMAND_CODE_ENTRY_POINTS = [
 
 /**
  * Agents that take T2's MCP endpoint over ACP HTTP: Command Code cannot start the stdio
- * bridge on Windows, where it spawns MCP commands through cmd.exe and the unquoted T3
+ * bridge on Windows, where it spawns MCP commands through cmd.exe and the unquoted T2
  * executable path splits at the space.
  */
 export function prefersHttpMcpTransport(settings: AcpRegistrySettings): boolean {

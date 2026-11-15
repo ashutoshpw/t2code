@@ -838,7 +838,7 @@ describe("mobile composer drafts", () => {
     rememberComposerDraftSelection(key, "Before yaz", { start: 10, end: 10 });
     write.resolve();
     expect(await pending).toBe(0);
-    const link = "[picture.png](t3-context://v1/file/image)";
+    const link = "[picture.png](t2-context://v1/file/image)";
     expect(getComposerDraftSnapshot(key).text).toBe(`Before ${link} yaz`);
     const caret = `Before ${link} yaz`.length;
     expect(captureComposerDraftInsertion(key)).toMatchObject({ start: caret, end: caret });

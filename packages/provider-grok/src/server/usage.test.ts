@@ -235,11 +235,11 @@ describe("parseGrokLine", () => {
   });
 
   it("keeps later turns that reuse a prompt id after the session resumes in a new process", () => {
-    const first = parseGrokLine(turnCompleted({ promptId: "t3-xai-prompt-1" }))[0];
+    const first = parseGrokLine(turnCompleted({ promptId: "t2-xai-prompt-1" }))[0];
     const resumed = parseGrokLine(
-      turnCompleted({ promptId: "t3-xai-prompt-1", agentTimestampMs: 1_786_459_000_000 }),
+      turnCompleted({ promptId: "t2-xai-prompt-1", agentTimestampMs: 1_786_459_000_000 }),
     )[0];
-    const copied = parseGrokLine(turnCompleted({ promptId: "t3-xai-prompt-1" }))[0];
+    const copied = parseGrokLine(turnCompleted({ promptId: "t2-xai-prompt-1" }))[0];
 
     expect(resumed?.dedupeKey).not.toBe(first?.dedupeKey);
     expect(copied?.dedupeKey).toBe(first?.dedupeKey);

@@ -527,7 +527,7 @@ describe("probeRemoteEditors PATH scan", () => {
   const makeFakePath = Effect.fnUntraced(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-probe-path-" });
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-probe-path-" });
     const dirs = ["a", "b", "c", "d"].map((name) => path.join(root, name));
     for (const dir of dirs) yield* fs.makeDirectory(dir, { recursive: true });
     // Launchers in different PATH directories, deliberately not in REMOTE_CAPABLE_EDITOR_IDS order.

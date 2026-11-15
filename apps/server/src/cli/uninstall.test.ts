@@ -114,7 +114,7 @@ it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
         ),
         script,
       );
-      const editedScript = path.join(scriptDir, "t3-edited");
+      const editedScript = path.join(scriptDir, "t2-edited");
       yield* fs.writeFileString(editedScript, `${posixLauncherScript(exe)}# mine\n`);
 
       // On Windows, only the shim exactly as written is ours; a user's wrapper stays.

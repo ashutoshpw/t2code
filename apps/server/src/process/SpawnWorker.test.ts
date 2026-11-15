@@ -126,7 +126,7 @@ describe("SpawnWorker", () => {
     Effect.gen(function* () {
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
       const missing = yield* spawner
-        .spawn(ChildProcess.make("t3-missing-command-25245"))
+        .spawn(ChildProcess.make("t2-missing-command-25245"))
         .pipe(Effect.result);
       expect(Result.isFailure(missing)).toBe(true);
       if (Result.isFailure(missing)) expect(missing.failure.reason._tag).toBe("NotFound");
