@@ -8,13 +8,30 @@ vi.mock("react-native", () => ({
   BackHandler: { addEventListener: () => ({ remove: () => {} }) },
 }));
 // React Navigation throws this outside a navigator, as for the Arrange threads sheet.
+const navigation = vi.hoisted(() => ({ available: false }));
 vi.mock("@react-navigation/native", () => ({
   useIsFocused: () => {
-    throw new Error("Couldn't find a navigation object.");
+    if (!navigation.available) throw new Error("Couldn't find a navigation object.");
+    return true;
   },
 }));
 vi.mock("./AndroidScreenHeader.android", () => ({
-  AndroidScreenHeader: (props: { readonly title: string }) => <h1>{props.title}</h1>,
+  AndroidScreenHeader: (props: {
+    readonly title: string;
+    readonly actions?: ReadonlyArray<{
+      readonly accessibilityLabel: string;
+      readonly overflowOnly?: boolean;
+    }>;
+  }) => (
+    <h1>
+      {props.title}
+      {props.actions?.map((action) => (
+        <button key={action.accessibilityLabel} data-overflow={action.overflowOnly === true}>
+          {action.accessibilityLabel}
+        </button>
+      ))}
+    </h1>
+  ),
 }));
 vi.mock("./WorkspaceAppBar.android", () => ({
   useHasWorkspaceAppBar: () => false,
@@ -41,6 +58,7 @@ import { AppBar } from "./AppBar.android";
 const roots: Root[] = [];
 
 afterEach(() => {
+  navigation.available = false;
   for (const root of roots.splice(0)) act(() => root.unmount());
   document.body.innerHTML = "";
 });
@@ -55,4 +73,34 @@ it("renders a sheet bar without search outside a navigation container", () => {
   act(() => root.render(<AppBar sheet title="Arrange threads" />));
 
   expect(container.textContent).toBe("Arrange threads");
+});
+
+it("puts the search refresh in the toolbar when refreshInToolbar is set", () => {
+  navigation.available = true;
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  roots.push(root);
+
+  act(() =>
+    root.render(
+      <AppBar
+        title="Archived"
+        search={{
+          mode: "inline",
+          value: "",
+          onChangeText: () => {},
+          placeholder: "Search",
+          onRefresh: () => {},
+          refreshInToolbar: true,
+          refreshAccessibilityLabel: "Refresh archived threads",
+        }}
+      />,
+    ),
+  );
+
+  const button = container.querySelector("button");
+  expect(button?.textContent).toBe("Refresh archived threads");
+  expect(button?.dataset.overflow).toBe("false");
 });

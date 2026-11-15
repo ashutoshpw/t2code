@@ -364,7 +364,7 @@ export interface AcpAdapterV2Flavor {
   >;
   readonly requiresSignIn?: (cause: unknown) => boolean;
   /**
-   * Runs before attachment paths, T3 instructions and native slash-command detection,
+   * Runs before attachment paths, T2 instructions and native slash-command detection,
    * so a rewrite can turn the user's text into a native command.
    */
   readonly rewriteUserText?: (
@@ -6717,8 +6717,8 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
               Effect.fail(
                 EffectAcpErrors.AcpRequestError.internalError(
                   disposition === "ask"
-                    ? `The active T3 runtime policy requires approval for ${operation}. Request permission with session/request_permission before retrying.`
-                    : `The active T3 runtime policy does not allow ${operation}.`,
+                    ? `The active T2 runtime policy requires approval for ${operation}. Request permission with session/request_permission before retrying.`
+                    : `The active T2 runtime policy does not allow ${operation}.`,
                 ),
               ),
             ),

@@ -167,7 +167,7 @@ T2_MCP_BEARER_TOKEN=<provider-session-token>
 ```
 
 The extension preserves public names under `mcp__t2-code__` for saved loadouts
-and tool selectors. Modern Pi also receives hidden `mcp__t3_code__` aliases,
+and tool selectors. Modern Pi also receives hidden `mcp__t2_code__` aliases,
 which reserve the normalized namespace against configured MCP servers without
 adding declarations or search results. On Pi 0.99+,
 `orchestrator_capabilities`, `delegate_task`, and `task_status` remain directly
@@ -175,12 +175,12 @@ available; optional tools are discovered through Pi's builtin `tool_search`.
 On older Pi or without builtin search, all tools remain directly available.
 The bridge calls the original MCP tool name over HTTP. Follow-up requests send
 `mcp-protocol-version: 2025-06-18`; Effect's MCP transport returns 400
-without it. The first turn of a session also receives the shared T3
+without it. The first turn of a session also receives the shared T2
 orchestration instructions.
 
-Pi keeps ownership of native extension discovery. T3 does not replace Pi's
+Pi keeps ownership of native extension discovery. T2 does not replace Pi's
 `subagent` tool or reproduce Pi's package and project-trust loader. Durable
-delegation goes through the namespaced T3 MCP `delegate_task` tool and the
+delegation goes through the namespaced T2 MCP `delegate_task` tool and the
 shared orchestration child-thread lifecycle. When Pi's example `subagent`
 extension is installed, the adapter observes its documented `details.results`
 shape and projects task cards with no child thread id. Unknown result shapes
@@ -284,7 +284,7 @@ the timeout expires. A wait timeout does not cancel the child; the result sets
 do not wait on the task or poll it; continue other work, and end the turn when none is
 left. A pending blocking question also ends the wait with `hasPendingQuestion: true` and
 `waitTimedOut: false`.
-If `hasPendingQuestion`, pass `threadId=childThreadId` to `t3_pending_request` with
+If `hasPendingQuestion`, pass `threadId=childThreadId` to `t2_pending_request` with
 action `list`, `read` (with `requestId`), or `respond`, or ask the user; the task's completion still wakes this thread. A pending live approval for the
 task's own unfinished work also ends the wait. Its identity appears in `pendingApproval`;
 it grants no approval authority. Read the fresh full request in the child thread before

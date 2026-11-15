@@ -43,7 +43,7 @@ disconnect an otherwise healthy conversation.
 By default, any device signed in to your T2 Connect account can open a linked
 machine. To require approval instead, turn on **Require approval for new
 devices** with the T2 Connect settings in **Settings → Sharing & access** on the
-host, or when you first set up T2 Connect. Then someone who takes over your T3
+host, or when you first set up T2 Connect. Then someone who takes over your T2
 Connect account cannot reach the machine from a new device without your
 approval. Review the devices that are already approved, described below.
 
