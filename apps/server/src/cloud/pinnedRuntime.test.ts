@@ -203,7 +203,7 @@ it.layer(NodeServices.layer)("ensurePinnedRuntimeInstalled", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pinned-retry-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pinned-retry-" });
       const checksums = yield* validChecksums;
       const requests: string[] = [];
       const gatewayTimeoutServed = yield* Deferred.make<void>();
@@ -245,7 +245,7 @@ it.layer(NodeServices.layer)("ensurePinnedRuntimeInstalled", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pinned-retry-body-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pinned-retry-body-" });
       const checksums = yield* validChecksums;
       let archiveRequests = 0;
       const archiveRequested = yield* Deferred.make<void>();
@@ -294,7 +294,7 @@ it.layer(NodeServices.layer)("ensurePinnedRuntimeInstalled", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pinned-offline-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pinned-offline-" });
       let requests = 0;
       const error = yield* ensurePinnedRuntimeInstalled({
         baseDir,

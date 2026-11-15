@@ -164,7 +164,7 @@ describe("CursorSdk agent transport", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-cursor-cli-config-" });
+      const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-cursor-cli-config-" });
       if (file !== undefined) {
         yield* fileSystem.makeDirectory(path.dirname(path.join(root, file)), { recursive: true });
         yield* fileSystem.writeFileString(path.join(root, file), text);

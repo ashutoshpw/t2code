@@ -3,7 +3,7 @@ import * as NodeHttp from "node:http";
 
 import { expect } from "e2e";
 
-import { test, WEB } from "./t3.ts";
+import { test, WEB } from "./t2.ts";
 
 // A page that renames itself on a click, with no navigation.
 const PAGE = `<!doctype html>
@@ -15,7 +15,7 @@ const PAGE = `<!doctype html>
 test(
   "A Browser tab's label follows a title change that makes no navigation",
   WEB,
-  async ({ t3, app, browser, screen }) => {
+  async ({ t2, app, browser, screen }) => {
     const server = NodeHttp.createServer((_request, response) => {
       response.writeHead(200, { "content-type": "text/html" });
       response.end(PAGE);
@@ -24,9 +24,9 @@ test(
     try {
       const address = server.address();
       if (address === null || typeof address === "string") throw new Error("No page port.");
-      const project = await t3.project("demo");
-      const thread = await t3.thread({ project, title: "Rename check", messages: ["first"] });
-      await t3.open(thread);
+      const project = await t2.project("demo");
+      const thread = await t2.thread({ project, title: "Rename check", messages: ["first"] });
+      await t2.open(thread);
 
       await screen.getByRole("button", "Toggle right panel").tap();
       await screen.getByRole("button", "Browser B").tap();

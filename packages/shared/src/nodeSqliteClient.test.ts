@@ -820,7 +820,7 @@ it.effect("fails with a typed SqlError when the database file is not SQLite", ()
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-sqlite-notadb-" });
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-sqlite-notadb-" });
     const filename = path.join(directory, "state.sqlite");
     yield* fs.writeFileString(filename, "not a db\n");
 

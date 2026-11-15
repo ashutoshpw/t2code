@@ -229,7 +229,7 @@ describe("orchestration V2 wire projection", () => {
     });
     expect(item.output.content[0]?.source.data).toBe(data);
 
-    const t3McpApp = {
+    const t2McpApp = {
       attachmentId: "app-html",
       server: "repro",
       tool: "chart",
@@ -240,12 +240,12 @@ describe("orchestration V2 wire projection", () => {
       ...item,
       toolName: "repro.chart",
       output: {
-        t3McpApp,
+        t2McpApp,
         result: { content: [text, { type: "image", mimeType: "image/png", data }] },
       },
     };
     expect(projectTurnItemForDetail(appItem)).toMatchObject({
-      output: { t3McpApp, result: { content: [text, { type: "image", mimeType: "image/png" }] } },
+      output: { t2McpApp, result: { content: [text, { type: "image", mimeType: "image/png" }] } },
     });
     const largeOutput = projectTurnItemForDetail(appItem);
     expect(
@@ -253,7 +253,7 @@ describe("orchestration V2 wire projection", () => {
     ).not.toContain(data);
 
     const smallApp = {
-      t3McpApp,
+      t2McpApp,
       result: { content: [text, { type: "image", mimeType: "image/png", data: "iVBORw0KGgo=" }] },
     };
     expect(projectTurnItemForDetail({ ...appItem, output: smallApp })).toMatchObject({
@@ -262,7 +262,7 @@ describe("orchestration V2 wire projection", () => {
 
     const forged = projectTurnItemForDetail({
       ...appItem,
-      output: { t3McpApp: { ...t3McpApp, resourceUri: data }, result: { content: [text] } },
+      output: { t2McpApp: { ...t2McpApp, resourceUri: data }, result: { content: [text] } },
     });
     expect(
       JSON.stringify(forged.type === "dynamic_tool" ? forged.output : null).length,

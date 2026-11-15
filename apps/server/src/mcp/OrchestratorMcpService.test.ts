@@ -4839,7 +4839,7 @@ describe("OrchestratorMcpService thread stop", () => {
       queued: true,
       stop: { reason: "Make room", message: "Stopped by an agent: Make room" },
     },
-  ])("t3_thread_interrupt stop reports the run it interrupted on $name", ({ queued, stop }) =>
+  ])("t2_thread_interrupt stop reports the run it interrupted on $name", ({ queued, stop }) =>
     Effect.gen(function* () {
       const cwd = yield* checkpointWorkspace("mcp-thread-stop");
       const layerAdapters = ProviderAdapterRegistry.layerSingle(liveAdapter(cwd));

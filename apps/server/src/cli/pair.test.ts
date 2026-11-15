@@ -259,7 +259,7 @@ describe("t2 pair", () => {
               );
             });
 
-            const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-pair-ts-held-"));
+            const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-pair-ts-held-"));
             yield* persistServerRuntimeState({
               path: NodePath.join(baseDir, "userdata", "server-runtime.json"),
               state: yield* makePersistedServerRuntimeState({
@@ -629,7 +629,7 @@ describe("t2 pair", () => {
   // localhost, 127.0.0.1 and ::1, so a specific bind needs an explanation.
   it.effect("names the bind address when Tailscale refuses it as a Serve target", () =>
     Effect.gen(function* () {
-      const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-pair-remote-"));
+      const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-pair-remote-"));
       yield* persistServerRuntimeState({
         path: NodePath.join(baseDir, "userdata", "server-runtime.json"),
         state: yield* makePersistedServerRuntimeState({
@@ -676,10 +676,10 @@ describe("t2 pair", () => {
           Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
           Effect.provideService(HostProcess.Platform, "darwin"),
           Effect.provideService(FetchHttpClient.Fetch, async (input) => {
-            if (String(input) === "http://127.0.0.2:3772/.well-known/t3/environment") {
+            if (String(input) === "http://127.0.0.2:3772/.well-known/t2/environment") {
               return Response.json(testDescriptor);
             }
-            assert.equal(String(input), "https://pair-test.tail.ts.net/.well-known/t3/environment");
+            assert.equal(String(input), "https://pair-test.tail.ts.net/.well-known/t2/environment");
             return new Response(null, { status: 503 });
           }),
           Effect.flip,

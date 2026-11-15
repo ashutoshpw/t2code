@@ -44,6 +44,11 @@ const injectShortReads = Effect.fn("injectShortReads")(function* (target: string
   yield* Effect.addFinalizer(() => Effect.sync(() => open.mockImplementation(native.open)));
 });
 
+const whitespaceFilePaths =
+  HostProcess.Platform.defaultValue() === "win32"
+    ? [" report.txt"]
+    : [" report.txt", "report.txt ", "\treport.txt\t", " "];
+
 const UNKNOWN_WORKSPACE_PREFIX = "t2code-unknown-workspace-";
 const layerKnownWorkspacesTest = Layer.mock(KnownWorkspaces.KnownWorkspaces)({
   assertContains: (cwd) =>

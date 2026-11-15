@@ -3288,7 +3288,7 @@ const writeHtmlRenderRun = Effect.fn("test.writeHtmlRenderRun")(function* (input
           startedAt: now,
           completedAt: now,
           updatedAt: now,
-          toolName: "mcp__t3-code__html_render",
+          toolName: "mcp__t2-code__html_render",
           input: {},
           output: [
             {

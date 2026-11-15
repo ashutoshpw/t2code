@@ -78,7 +78,7 @@ function resolveTailscaleIpAdvertisedEndpoints(input: {
 
 // The backend may run elsewhere (WSL), so ask it for its id instead of reading the state dir.
 const probeServesThisBackend = (localHttpUrl: string) => (baseUrl: string) =>
-  HttpClient.get(new URL("/.well-known/t3/environment", localHttpUrl)).pipe(
+  HttpClient.get(new URL("/.well-known/t2/environment", localHttpUrl)).pipe(
     Effect.flatMap(HttpClientResponse.filterStatusOk),
     Effect.flatMap(HttpClientResponse.schemaBodyJson(ExecutionEnvironmentDescriptor)),
     Effect.flatMap(({ environmentId }) => probeTailscaleHttpsEndpoint({ baseUrl, environmentId })),

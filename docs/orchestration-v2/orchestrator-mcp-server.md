@@ -2,7 +2,7 @@
 
 ## Purpose
 
-T3 exposes V2 orchestration through its app-owned MCP endpoint. A provider
+T2 exposes V2 orchestration through its app-owned MCP endpoint. A provider
 agent can use this endpoint to:
 
 - create an app-owned sub-agent on any supported provider instance;
@@ -15,8 +15,8 @@ agent can use this endpoint to:
 - wait for or interrupt ordinary thread runs; and
 - schedule recurring work that runs without an active turn.
 
-These are T3 orchestration operations, not provider-native sub-agent APIs.
-Delegated tasks always create a T3 child thread and run. The child receives
+These are T2 orchestration operations, not provider-native sub-agent APIs.
+Delegated tasks always create a T2 child thread and run. The child receives
 only the supplied task prompt, plus an optional role instruction supplied in
 the same tool call. Parent conversation history is not copied into the child.
 
@@ -63,15 +63,15 @@ Codex gets T2's MCP server in each thread's `thread/start`, `thread/resume`,
 and `thread/fork` config, with the provider-session token in an
 `Authorization` header. The same server is registered twice:
 
-- `t3-code`: every tool except `t3_thread_wait` and `delegate_task`.
-- `t3-code-direct`: only `t3_thread_wait` and `delegate_task`, with
+- `t2-code`: every tool except `t2_thread_wait` and `delegate_task`.
+- `t2-code-direct`: only `t2_thread_wait` and `delegate_task`, with
   `omit_tools_from = ["code_mode", "deferred"]`.
 
 Code Mode yields a script after about 30 seconds, so the model polls a blocking
-`t3_thread_wait` or `delegate_task` with `mode: "wait"`, resending its context
+`t2_thread_wait` or `delegate_task` with `mode: "wait"`, resending its context
 on each poll. The second entry makes both direct tool calls, like Codex's own
 wait tools. Codex reports calls as `<server>.<tool>`, so
-`packages/shared/src/t3McpToolPresentation.ts` must resolve both server names.
+`packages/shared/src/t2McpToolPresentation.ts` must resolve both server names.
 Tool display and pending-work detection depend on it.
 
 ### Claude Agent SDK V2
@@ -91,7 +91,7 @@ Claude receives an HTTP MCP server in its query options:
   },
   allowedTools: [
     // existing allowed tools
-    "mcp__t3-code__*",
+    "mcp__t2-code__*",
   ],
 }
 ```
@@ -152,12 +152,12 @@ provider-specific extensions; those remain in flavors such as Grok.
 
 ### Pi V2
 
-T3 keeps a provider-session HTTP bridge even when Pi supports native MCP.
+T2 keeps a provider-session HTTP bridge even when Pi supports native MCP.
 `mcp.json` entries override native registrations, and native MCP's default
-60-second request timeout can interrupt long-running T3 tools. The bridge owns
+60-second request timeout can interrupt long-running T2 tools. The bridge owns
 the injected endpoint and credential and forwards Pi's cancellation signal.
 
-When a provider session credential exists, the adapter writes a T3-owned
+When a provider session credential exists, the adapter writes a T2-owned
 extension into the server cache and spawns
 `pi --mode rpc --extension <cache>/pi-t2-mcp-extension.ts` with:
 
@@ -166,7 +166,7 @@ T2_MCP_URL=http://127.0.0.1:<port>/mcp
 T2_MCP_BEARER_TOKEN=<provider-session-token>
 ```
 
-The extension preserves public names under `mcp__t3-code__` for saved loadouts
+The extension preserves public names under `mcp__t2-code__` for saved loadouts
 and tool selectors. Modern Pi also receives hidden `mcp__t3_code__` aliases,
 which reserve the normalized namespace against configured MCP servers without
 adding declarations or search results. On Pi 0.99+,
@@ -229,7 +229,7 @@ any catalog model.
 
 ### `delegate_task`
 
-Creates a T3-owned child thread and immediately dispatches the supplied task
+Creates a T2-owned child thread and immediately dispatches the supplied task
 prompt.
 
 The [shared contract](../../packages/contracts/src/orchestratorMcp.ts) is authoritative for
@@ -255,7 +255,7 @@ For local delegation, use `isolation: "worktree"` for a separate prepared checko
 the parent's commit; the default `"shared"` uses the parent's checkout. Uncommitted parent
 edits are not copied. A linked-environment target (`target.environmentId`) runs in the remote
 project's checkout and rejects worktree isolation. To launch an isolated thread there, use
-`t3_thread_launch` with `environmentId` and a worktree `workspaceStrategy`.
+`t2_thread_launch` with `environmentId` and a worktree `workspaceStrategy`.
 
 A provider runs a runtime mode it does not offer as `approval-required`, so a
 child would ask for approval on every command. `orchestrator_capabilities`
@@ -335,9 +335,9 @@ inherit the parent's project, branch, and worktree path, but they have no
 sub-agent lineage. Entries with a prompt immediately dispatch a run; entries
 without a prompt remain idle. `create_threads` is local-only: `target.environmentId` and
 `target.projectId` are ignored even though the shared target contract accepts them. Use
-`t3_thread_launch` with `environmentId` and `projectId` to select another environment or project.
+`t2_thread_launch` with `environmentId` and `projectId` to select another environment or project.
 
-### `t3_thread_launch`
+### `t2_thread_launch`
 
 Launches one ordinary top-level thread through the app's launch service. Use an
 explicit `workspaceStrategy` to create a new worktree (`worktree` with `baseRef`),
@@ -355,14 +355,14 @@ provider does not offer is refused, and an inherited or default one steps down
 to the broadest mode it offers. Launch has no retry key, so inspect existing threads after a failed or lost response before
 launching again. `create_threads` remains the batch option for a shared checkout.
 
-### `t3_thread_list`
+### `t2_thread_list`
 
 Lists durable thread shells in one project, newest first: `projectId` when
 given, else the calling thread's project. Callers can filter by title, run
 status, and whether app-owned sub-agent threads are included. Results are
 bounded and offset-paginated. Deleted threads are never listed.
 
-### `t3_thread_read`
+### `t2_thread_read`
 
 Reads the durable state, recent runs, and visible timeline of any thread in
 the environment by thread ID. A deleted thread returns `thread_not_found`. The
@@ -401,7 +401,7 @@ on the server's `T2CODE_HOSTED_APP_URL`, for threads in this environment. The
 hosted app offers the desktop app, the mobile app, or itself.
 
 List and read results report `snoozed` and `snoozedUntil`, and
-`t3_thread_list` filters on `snoozed`. The server's `isSnoozed` follows the
+`t2_thread_list` filters on `snoozed`. The server's `isSnoozed` follows the
 client's `effectiveSnoozed`, so agents and the sidebar agree: a snoozed thread
 wakes early only when it has a pending request or fails after snoozing. Completed
 runs, background wakes, and delegated completions keep it snoozed.
@@ -412,7 +412,7 @@ still waits on after its run completed. A subagent or `background_task` holds
 the thread. A command or monitor holds it only with `awaited: true`, since agents
 often leave a dev server running.
 
-### `t3_thread_update`
+### `t2_thread_update`
 
 Updates metadata for the calling thread or any other thread in the environment.
 The typed actions are `rename`, which requires `title`, and `regenerate_title`,
@@ -426,7 +426,7 @@ resultant title, title-regeneration marker, and linked pull request. Reusing a
 receipt. Thread list and read results expose the linked pull request, and thread
 detail also exposes an in-flight title regeneration.
 
-### `t3_thread_send`
+### `t2_thread_send`
 
 Sends a message to any ordinary or delegated thread in the environment:
 
@@ -446,14 +446,14 @@ The target runtime and interaction modes may not be broader than the caller's.
 Stable command and message IDs are derived from `clientRequestId` for
 idempotent retries.
 
-### `t3_thread_wait`
+### `t2_thread_wait`
 
 Waits for a selected run to become `completed`, `failed`, `cancelled`,
 `interrupted`, or `rolled_back`. Without `runId`, it pins the latest run at call
 time; an idle thread returns immediately. A timeout reports the latest durable
 status and does not cancel work.
 
-### `t3_thread_interrupt`
+### `t2_thread_interrupt`
 
 Interrupts a selected active run through the normal V2 `run.interrupt` command.
 Without `runId`, it selects the newest interruptible run. A terminal run is

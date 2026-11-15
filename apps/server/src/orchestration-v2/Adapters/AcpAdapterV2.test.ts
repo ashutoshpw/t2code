@@ -142,7 +142,7 @@ const bundledReplayAgentPath = Deferred.await(bundledAgents).pipe(
 const bundleAgents = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const outDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-acp-agents-" });
+  const outDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-acp-agents-" });
   const input = {
     mock: yield* path.fromFileUrl(new URL("../../../scripts/acp-mock-agent.ts", import.meta.url)),
     replay: yield* path.fromFileUrl(
@@ -2023,7 +2023,7 @@ describe("AcpAdapterV2", () => {
     return Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-registry-form-" });
+      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-registry-form-" });
       const statusPath = path.join(directory, "status.json");
       const expectedResult = typeof result === "function" ? result(directory) : result;
       let preparedAnswers: ProviderUserInputAnswers | undefined = answers;
@@ -2394,12 +2394,12 @@ describe("AcpAdapterV2", () => {
 
         const command = yield* runTurn(0, defaultPolicy, "/compact");
         assert.isTrue(command.prompt.startsWith("/compact"));
-        assert.notInclude(command.prompt, "<t3_code_instructions>");
+        assert.notInclude(command.prompt, "<t2_code_instructions>");
         assert.equal(command.textBlockCount, 1);
         const whitespaceCommand = yield* runTurn(1, defaultPolicy, "  /repro-skill");
         assert.equal(whitespaceCommand.prompt, "  /repro-skill");
         assert.equal(whitespaceCommand.textBlockCount, 1);
-        assert.notInclude(whitespaceCommand.prompt, "<t3_code_instructions>");
+        assert.notInclude(whitespaceCommand.prompt, "<t2_code_instructions>");
         const firstDefault = yield* runTurn(2, defaultPolicy, "First default request.");
         assert.equal(firstDefault.textBlockCount, 2);
         assert.include(firstDefault.prompt, "T2 Code interaction mode: Default");

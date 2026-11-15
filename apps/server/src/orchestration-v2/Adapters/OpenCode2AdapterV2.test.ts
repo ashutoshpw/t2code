@@ -3579,7 +3579,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         promptAccepted,
         out("session.instructions.entry.put", {
           sessionID: otherId,
-          key: "t3-code",
+          key: "t2-code",
           value: "<any>",
         }),
         reply("session.instructions.entry.put", null),

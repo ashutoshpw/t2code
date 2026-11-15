@@ -11,7 +11,7 @@ import { isLocalEnvironmentDisabled } from "../localEnvironment";
 import { useRelayEnvironmentDiscovery } from "../state/environments";
 import { InstallT3Commands } from "./InstallT3Commands";
 import { retryClerkLoad, useClerkLoadFailed } from "./clerk/clerkLoadFailure";
-import { useT3ConnectAuthPrompt } from "./clerk/useT3ConnectAuthPrompt";
+import { useT2ConnectAuthPrompt } from "./clerk/useT2ConnectAuthPrompt";
 import { CloudEnvironmentConnectRows } from "./cloud/CloudEnvironmentConnectList";
 import { Button } from "./ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "./ui/empty";
@@ -67,7 +67,7 @@ export function HostedEmptyState() {
 function T3ConnectSteps() {
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const loadFailed = useClerkLoadFailed();
-  const { openAuthPrompt } = useT3ConnectAuthPrompt();
+  const { openAuthPrompt } = useT2ConnectAuthPrompt();
   // Adding the first computer unmounts this screen. Wait for all health checks
   // so every compatible registration is queued before that happens.
   const [autoAddedComputers] = useState(() => new Set<EnvironmentId>());

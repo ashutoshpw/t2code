@@ -237,7 +237,7 @@ describe("native pasted image cleanup", () => {
 
   it("re-renders an over-limit paste whose dimensions already fit, like the photo picker", async () => {
     const uri =
-      "file:///private/var/mobile/Containers/Data/Application/app/tmp/t3-composer-paste/photo.png";
+      "file:///private/var/mobile/Containers/Data/Application/app/tmp/t2-composer-paste/photo.png";
     files.set(uri, { base64: oversizedPng(), deleted: false });
     manipulator.state.sourceSize = { width: 2000, height: 2000 };
 
@@ -253,9 +253,9 @@ describe("native pasted image cleanup", () => {
 
   it("keeps the readable images of a paste and still reports the one it dropped", async () => {
     const gone =
-      "file:///private/var/mobile/Containers/Data/Application/app/tmp/t3-composer-paste/gone.png";
+      "file:///private/var/mobile/Containers/Data/Application/app/tmp/t2-composer-paste/gone.png";
     const kept =
-      "file:///private/var/mobile/Containers/Data/Application/app/tmp/t3-composer-paste/kept.png";
+      "file:///private/var/mobile/Containers/Data/Application/app/tmp/t2-composer-paste/kept.png";
     files.set(kept, { base64: "aGVsbG8=", deleted: false });
 
     const result = await convertPastedImagesToAttachments({ uris: [gone, kept], existingCount: 0 });
@@ -268,7 +268,7 @@ describe("native pasted image cleanup", () => {
 
   it("reports the size limit when even the JPEG re-render is too large", async () => {
     const uri =
-      "file:///private/var/mobile/Containers/Data/Application/app/tmp/t3-composer-paste/huge.png";
+      "file:///private/var/mobile/Containers/Data/Application/app/tmp/t2-composer-paste/huge.png";
     files.set(uri, { base64: oversizedPng(), deleted: false });
     manipulator.state.sourceSize = { width: 2000, height: 2000 };
     manipulator.state.renderedBase64 = oversizedPng();

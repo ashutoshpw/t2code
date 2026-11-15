@@ -24,11 +24,11 @@ import {
 
 afterEach(() => vi.restoreAllMocks());
 
-it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("t3 uninstall command", (it) => {
+it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("t2 uninstall command", (it) => {
   it.effect("names another home's service it leaves installed", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-uninstall-cli-test-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-uninstall-cli-test-" });
       const uninstalls: Array<true> = [];
       vi.spyOn(BootService, "layer").mockReturnValue(
         Layer.succeed(
@@ -38,9 +38,9 @@ it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("t3 uninstall com
               supported: true,
               installed: true,
               current: true,
-              installedBaseDir: "/home/me/.t3",
-              unitPath: "/home/me/.config/systemd/user/t3code.service",
-              logPath: "/home/me/.t3/userdata/logs/boot-service.log",
+              installedBaseDir: "/home/me/.t2",
+              unitPath: "/home/me/.config/systemd/user/t2code.service",
+              logPath: "/home/me/.t2/userdata/logs/boot-service.log",
             }),
             withStopped: (operation) => operation,
             restart: Effect.die("unexpected restart"),
@@ -70,7 +70,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("t3 uninstall com
         ),
       );
       assert.deepStrictEqual(uninstalls, []);
-      assert.include(output, "--base-dir '/home/me/.t3'");
+      assert.include(output, "--base-dir '/home/me/.t2'");
     }),
   );
 });

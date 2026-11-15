@@ -51,6 +51,9 @@ export type T2McpToolSummaryAction =
   | "project-delete"
   | "project-clone"
   | "environment-read"
+  | "environment-links"
+  | "environment-link"
+  | "environment-unlink"
   | "environment-update"
   | "theme-read"
   | "theme-set"
@@ -86,7 +89,7 @@ function tool(
   return { displayName, labels, icon, summaryAction };
 }
 
-// Codex registers "t3-code-direct" for T3 tools kept out of Code Mode.
+// Codex registers "t2-code-direct" for T3 tools kept out of Code Mode.
 const T2_MCP_SERVER_ALIASES = new Set([
   "t2-code",
   "t2_code",
@@ -171,6 +174,10 @@ const T2_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
   t2_workflow_stop: tool(
     ["Stop", "Stopping", "Requested a stop for", "a workflow"],
     "workflow-stop",
+  ),
+  t2_background_wait: tool(
+    ["Update", "Updating", "Updated", "background waits"],
+    "background-wait",
   ),
   t2_thread_interrupt: tool(
     ["Interrupt", "Interrupting", "Requested an interrupt of", "a T2 thread"],
@@ -334,6 +341,18 @@ const T2_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
   t2_environment_read: tool(
     ["Read", "Reading", "Read", "environment preferences"],
     "environment-read",
+  ),
+  t2_environment_links: tool(
+    ["List", "Listing", "Listed", "linked environments"],
+    "environment-links",
+  ),
+  t2_environment_link: tool(
+    ["Ask to link", "Asking to link", "Asked to link", "an environment"],
+    "environment-link",
+  ),
+  t2_environment_unlink: tool(
+    ["Forget", "Forgetting", "Forgot", "a linked environment"],
+    "environment-unlink",
   ),
   t2_environment_preferences_update: tool(
     ["Update", "Updating", "Updated", "environment preferences"],

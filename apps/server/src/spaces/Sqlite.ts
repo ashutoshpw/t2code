@@ -53,7 +53,7 @@ export const layerFromPath = Effect.fn("SpacesSqlite.layerFromPath")(function* (
       NodeSqliteClient.layer({
         filename: dbPath,
         readerWorker: true,
-        checkpointWorker: true,
+        writerWorker: true,
         spanAttributes: { "db.name": path.basename(dbPath), "service.name": "t2code-server" },
       }),
     ),

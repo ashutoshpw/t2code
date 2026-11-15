@@ -1334,7 +1334,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Require approval for new devices",
     to: "/settings/access",
     targetId: "connections-environment",
-    searchTerms: ["t3 connect devices approve deny trust revoke pairing code security account"],
+    searchTerms: ["t2 connect devices approve deny trust revoke pairing code security account"],
     cloudOnly: true,
     managedTunnelOnly: true,
   },

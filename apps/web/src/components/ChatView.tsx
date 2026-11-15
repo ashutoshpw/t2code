@@ -2769,14 +2769,6 @@ export default function ChatView(props: ChatViewProps) {
     setTerminalUiLaunchContext(null);
   }
 
-  // Entering a thread with its drawer open focuses the drawer terminal; opening
-  // it from a handler requests focus there. A closed drawer leaves focus to the
-  // composer effect above.
-  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- focuses the open drawer terminal when entering a thread
-  useEffect(() => {
-    if (activeThreadRef && !embedded) return focusTerminalOnThreadEnter(activeThreadRef);
-  }, [activeThreadRef, embedded]);
-
   const getShortcutContext = (eventTarget: EventTarget | null = document.activeElement) => ({
     terminalFocus: getTerminalFocusOwner() !== null,
     terminalOpen: Boolean(terminalUiState.terminalOpen),

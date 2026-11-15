@@ -171,7 +171,7 @@ function steps(host: string, located: Located, failure: ConnectionAttemptError |
       const approve = code ? `approve the device showing ${code}` : "approve this device";
       return [
         `On a device already connected to ${host}, open Settings > Sharing & access and ${approve}.`,
-        `Or run \`t3 auth connect-device approve ${code ?? "<code>"}\` on ${host}.`,
+        `Or run \`t2 auth connect-device approve ${code ?? "<code>"}\` on ${host}.`,
       ];
     }
     case "outdated":

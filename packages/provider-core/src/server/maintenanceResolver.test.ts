@@ -440,7 +440,7 @@ it.layer(
     "does not offer a Vite+ update npm's release-age policy will not install",
     () =>
       Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-release-age");
+        const tempDir = yield* makeTempDir("t2-release-age");
         const npmBinDir = NodePath.join(tempDir, "npm-bin");
         const npmPath = NodePath.join(npmBinDir, "npm");
         writeExecutable(npmPath);
@@ -1451,7 +1451,7 @@ it.layer(
     "advertises $case for npm-global installs",
     (fixture) =>
       Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-npm-latest");
+        const tempDir = yield* makeTempDir("t2-npm-latest");
         const npmBinDir = NodePath.join(tempDir, "npm-bin");
         const npmPath = NodePath.join(npmBinDir, "npm");
         writeExecutable(npmPath);
@@ -1677,7 +1677,7 @@ it.layer(
     "updates an npm-owned launcher in a native install location with npm",
     () =>
       Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-native-npm");
+        const tempDir = yield* makeTempDir("t2-native-npm");
         const prefix = NodePath.join(tempDir, ".local");
         const packageBin = NodePath.join("node_modules", "@example", "native-package-tool", "bin");
         writeExecutable(NodePath.join(prefix, "lib", packageBin, "native-package-tool.exe"));
@@ -1753,7 +1753,7 @@ it.layer(
       `leaves ${fixture.name} owned by MacPorts to MacPorts`,
       () =>
         Effect.gen(function* () {
-          const prefix = yield* makeTempDir("t3-macports");
+          const prefix = yield* makeTempDir("t2-macports");
           writeExecutable(NodePath.join(prefix, "bin", "port"));
           const target = NodePath.join(prefix, ...fixture.target);
           writeExecutable(target);

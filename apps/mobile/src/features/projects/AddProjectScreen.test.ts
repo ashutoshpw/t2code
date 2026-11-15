@@ -535,7 +535,7 @@ describe("add project source environment", () => {
 });
 
 describe("local project navigation", () => {
-  function setup(baseDirectory = "/tmp/t3-mobile-audit-fixture") {
+  function setup(baseDirectory = "/tmp/t2-mobile-audit-fixture") {
     state.navigationState = undefined;
     state.scopes = new Set([AuthOrchestrationOperateScope]);
     state.baseDirectory = baseDirectory;
@@ -562,7 +562,7 @@ describe("local project navigation", () => {
     projected.resolve(null);
     await submission;
 
-    expect(state.projects).toEqual(["/tmp/t3-mobile-audit-fixture"]);
+    expect(state.projects).toEqual(["/tmp/t2-mobile-audit-fixture"]);
     expect(state.dispatch).not.toHaveBeenCalled();
     expect(state.alert).toHaveBeenCalledExactlyOnceWith(
       "Project added",
@@ -604,7 +604,7 @@ describe("local project navigation", () => {
     projected.resolve({ environmentId: "environment", id: "project" });
     await submission;
 
-    expect(state.projects).toEqual(["/tmp/t3-mobile-audit-fixture"]);
+    expect(state.projects).toEqual(["/tmp/t2-mobile-audit-fixture"]);
     expect(navigation.getState()).toEqual(remaining);
     expect(state.dispatch).not.toHaveBeenCalled();
   });
@@ -707,7 +707,7 @@ describe("local project navigation", () => {
       const submission = submit();
       created.resolve(AsyncResult.success(undefined));
       await created.promise;
-      expect(state.projects).toEqual(["/tmp/t3-mobile-audit-fixture"]);
+      expect(state.projects).toEqual(["/tmp/t2-mobile-audit-fixture"]);
       expect(navigation.getState()).toBe(before);
       projected.resolve({ environmentId: "environment", id: "project" });
       await submission;
@@ -717,7 +717,7 @@ describe("local project navigation", () => {
         draft: {
           environmentId: "environment",
           projectId: "project",
-          title: "t3-mobile-audit-fixture",
+          title: "t2-mobile-audit-fixture",
         },
       });
       navigation.back();

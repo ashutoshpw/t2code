@@ -533,7 +533,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: { T2CODE_PORT: "3772", T2CODE_HOST: "0.0.0.0", T2CODE_LAN: "true" },
           serverOffset: 0,
           webOffset: 0,
-          t3Home: undefined,
+          t2Home: undefined,
           browser: undefined,
           autoBootstrapProjectFromCwd: undefined,
           logWebSocketEvents: undefined,

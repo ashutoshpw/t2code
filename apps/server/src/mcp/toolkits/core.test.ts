@@ -80,7 +80,7 @@ import { htmlRenderFromToolItem } from "@t2code/shared/toolOutput";
 const decodeMcpAttachmentInput = Schema.decodeUnknownEffect(McpAttachmentInput);
 const decodeThreadReadResult = Schema.decodeUnknownEffect(OrchestratorMcpThreadReadResult);
 const decodeThreadSearchResult = Schema.decodeUnknownEffect(
-  ThreadToolkit.tools.t3_thread_search.successSchema,
+  ThreadToolkit.tools.t2_thread_search.successSchema,
 );
 
 const layerThreadToolkit = McpHttpServer.layerThreadToolkit.pipe(
@@ -238,7 +238,7 @@ it.effect("a pending question read keeps option previews", () => {
   return Effect.gen(function* () {
     const server = yield* McpServer.McpServer;
     const result = yield* server
-      .callTool({ name: "t3_pending_request", arguments: { action: "read", requestId } })
+      .callTool({ name: "t2_pending_request", arguments: { action: "read", requestId } })
       .pipe(
         Effect.provideService(McpInvocationContext.McpInvocationContext, scope),
         Effect.provideService(McpSchema.McpServerClient, client),
@@ -501,13 +501,13 @@ const historyReads = (reads: Array<string>) => {
   });
 };
 
-it.effect("t3_queue list and read load only the queued runs and their messages", () => {
+it.effect("t2_queue list and read load only the queued runs and their messages", () => {
   const reads: Array<string> = [];
   return Effect.gen(function* () {
     const server = yield* McpServer.McpServer;
     const call = (args: Record<string, unknown>) =>
       server
-        .callTool({ name: "t3_queue", arguments: args })
+        .callTool({ name: "t2_queue", arguments: args })
         .pipe(
           Effect.provideService(McpInvocationContext.McpInvocationContext, scope),
           Effect.provideService(McpSchema.McpServerClient, client),
@@ -533,7 +533,7 @@ it.effect("handoff analytics read only the caller's active run and its message",
     const server = yield* McpServer.McpServer;
     yield* server
       .callTool({
-        name: "t3_queue",
+        name: "t2_queue",
         arguments: { action: "edit", queuedRunId: "run:queued", text: "Edited" },
       })
       .pipe(
@@ -769,7 +769,7 @@ it.effect("search names the calling thread, so an agent can tell its own match a
     const server = yield* McpServer.McpServer;
     const search = (invocation: McpInvocationContext.McpInvocationScope) =>
       server
-        .callTool({ name: "t3_thread_search", arguments: { query: "release notes" } })
+        .callTool({ name: "t2_thread_search", arguments: { query: "release notes" } })
         .pipe(
           Effect.provideService(McpInvocationContext.McpInvocationContext, invocation),
           Effect.provideService(McpSchema.McpServerClient, client),

@@ -26,7 +26,7 @@ const withRepository = <A, E>(
   Effect.gen(function* () {
     const host = yield* SourceControlHost.SourceControlHost;
     const cwd = yield* Effect.acquireRelease(
-      Effect.sync(() => NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-azure-template-"))),
+      Effect.sync(() => NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-azure-template-"))),
       (directory) => Effect.sync(() => NodeFS.rmSync(directory, { recursive: true, force: true })),
     );
     const git = (...args: string[]) =>

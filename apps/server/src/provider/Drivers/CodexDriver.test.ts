@@ -484,7 +484,7 @@ it.layer(layerTest)("CodexDriver", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const tempDir = yield* fs
-          .makeTempDirectoryScoped({ prefix: "t3-codex-driver-" })
+          .makeTempDirectoryScoped({ prefix: "t2-codex-driver-" })
           .pipe(Effect.flatMap((directory) => fs.realPath(directory)));
         const home = NodePath.join(tempDir, "codex-home");
         const binaryPath = NodePath.join(home, "packages", "standalone", "current", "bin", "codex");
@@ -579,7 +579,7 @@ it.layer(layerTest)("CodexDriver", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const tempDir = yield* fs
-          .makeTempDirectoryScoped({ prefix: "t3-codex-driver-" })
+          .makeTempDirectoryScoped({ prefix: "t2-codex-driver-" })
           .pipe(Effect.flatMap((directory) => fs.realPath(directory)));
         const codexHome = NodePath.join(tempDir, "custom-codex");
         const shadowHome = NodePath.join(tempDir, "shadow");

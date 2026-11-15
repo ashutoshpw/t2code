@@ -168,7 +168,7 @@ command cannot reach the app, start or update the desktop app and try again.
 ### Drop a folder on the sidebar
 
 Drag one or more folders from Finder, Explorer, or your file manager onto the
-sidebar. Each one opens as a project on this computer, the same as `t3 app`.
+sidebar. Each one opens as a project on this computer, the same as `t2 app`.
 Files dropped on a thread still attach to that thread. Browsers do not share
 folder paths, so in the web app use **Add project** instead.
 
@@ -259,7 +259,7 @@ allow more time in the T2 server's environment. For example, give Codex and
 Claude readiness checks 60 seconds:
 
 ```bash
-T2CODE_CODEX_PROBE_TIMEOUT_MS=60000 T2CODE_CLAUDE_PROBE_TIMEOUT_MS=60000 t3 serve
+T2CODE_CODEX_PROBE_TIMEOUT_MS=60000 T2CODE_CLAUDE_PROBE_TIMEOUT_MS=60000 t2 serve
 ```
 
 For a remote environment, set these on the machine running the T2 server.

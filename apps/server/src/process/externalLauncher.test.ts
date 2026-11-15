@@ -1117,7 +1117,7 @@ it.effect.each([
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-toolbox-numbered-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-toolbox-numbered-" });
       const dir = path.join(home, scripts);
       yield* fs.makeDirectory(dir, { recursive: true });
       for (const name of ["idea10", "idea2"]) {

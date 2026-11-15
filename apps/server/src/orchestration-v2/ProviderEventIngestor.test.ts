@@ -1955,17 +1955,17 @@ layer("ProviderEventIngestorV2", (it) => {
   );
 
   it.effect.each([
-    { parentMoved: false, failure: null, temporaryBranch: "t3/abcd1234" },
-    { parentMoved: true, failure: null, temporaryBranch: "t3/abcd1234" },
-    { parentMoved: false, failure: "write", temporaryBranch: "t3/abcd1234" },
-    { parentMoved: false, failure: "git", temporaryBranch: "t3/abcd1234" },
+    { parentMoved: false, failure: null, temporaryBranch: "t2/abcd1234" },
+    { parentMoved: true, failure: null, temporaryBranch: "t2/abcd1234" },
+    { parentMoved: false, failure: "write", temporaryBranch: "t2/abcd1234" },
+    { parentMoved: false, failure: "git", temporaryBranch: "t2/abcd1234" },
     { parentMoved: false, failure: null, temporaryBranch: "my-prefix/abcd1234" },
   ])(
     "rechecks a pending native child's branch after the rename scan: %j",
     ({ parentMoved, failure, temporaryBranch }) =>
       Effect.gen(function* () {
         const { worktreePath, command } = yield* makeSharedWorktree;
-        if (temporaryBranch !== "t3/abcd1234")
+        if (temporaryBranch !== "t2/abcd1234")
           yield* command(worktreePath, ["branch", "-m", temporaryBranch]);
         const git = yield* GitVcsDriver.GitVcsDriver;
         const now = yield* DateTime.now;

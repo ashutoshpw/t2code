@@ -417,11 +417,11 @@ it.layer(layerCodexTextGenerationTest)("CodexTextGeneration", (it) => {
     withFakeCodexEnv(
       {
         output: JSON.stringify({ title: "Remove default shapes" }),
-        launchArgs: `-c 'mcp_servers.t3-code.url="http://127.0.0.1:1/mcp"' -c 'mcp_servers.t3-code.enabled=true'`,
-        mcpServers: [{ name: "t3-code", enabled: true }],
-        requireMcpServersOff: ["t3-code"],
+        launchArgs: `-c 'mcp_servers.t2-code.url="http://127.0.0.1:1/mcp"' -c 'mcp_servers.t2-code.enabled=true'`,
+        mcpServers: [{ name: "t2-code", enabled: true }],
+        requireMcpServersOff: ["t2-code"],
         requireArg:
-          "--config features.apps=false --config mcp_servers.t3-code.enabled=false --ephemeral",
+          "--config features.apps=false --config mcp_servers.t2-code.enabled=false --ephemeral",
       },
       (textGeneration) =>
         Effect.gen(function* () {

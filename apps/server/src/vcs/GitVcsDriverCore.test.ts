@@ -6232,7 +6232,7 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
             cwd,
             path: worktreePath,
             refName: initialBranch,
-            newRefName: "t3/cancel",
+            newRefName: "t2/cancel",
           };
           const worktrees = git(cwd, ["worktree", "list", "--porcelain"]);
 
@@ -6252,7 +6252,7 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
 
           assert.equal(claims, 0);
           assert.notInclude(yield* worktrees, worktreePath);
-          assert.equal(yield* git(cwd, ["branch", "--list", "t3/cancel"]), "");
+          assert.equal(yield* git(cwd, ["branch", "--list", "t2/cancel"]), "");
           assert.isFalse(yield* fs.exists(worktreePath));
 
           // A retry gets the same path and branch, and a claimed worktree outlives a later cancel.
@@ -6267,7 +6267,7 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
           yield* Fiber.interrupt(retry);
           assert.include(yield* worktrees, worktreePath);
           assert.notInclude(yield* worktrees, "locked");
-          assert.equal(yield* git(worktreePath, ["branch", "--show-current"]), "t3/cancel");
+          assert.equal(yield* git(worktreePath, ["branch", "--show-current"]), "t2/cancel");
         }),
     );
 
@@ -6394,7 +6394,7 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
 
           const result = yield* driver
             .createWorktree(
-              { cwd, path: worktreePath, refName: initialBranch, newRefName: "t3/noisy" },
+              { cwd, path: worktreePath, refName: initialBranch, newRefName: "t2/noisy" },
               withProgress ? { progress: { onCheckoutProgress: () => Effect.void } } : undefined,
             )
             .pipe(Effect.result);

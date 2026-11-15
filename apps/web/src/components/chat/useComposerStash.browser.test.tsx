@@ -26,6 +26,8 @@ function Harness({ input }: { input: StashInput }) {
 
 it("keeps the draft when stashing while a pasted image is still compressing", async () => {
   const target = DraftId.make("stash-preparing-image");
+  // A durable recovery from another file hydrates this store; start from empty.
+  writePromptStashStorageForTest("");
   using _draft = {
     [Symbol.dispose]: () => useComposerDraftStore.getState().clearComposerContent(target),
   };

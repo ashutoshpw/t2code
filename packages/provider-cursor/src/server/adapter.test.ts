@@ -2586,7 +2586,7 @@ describe("CursorAdapterV2", () => {
           authorizationHeader: "Bearer synthetic-cursor-token",
           browserToolsAvailable: false,
         });
-        const t3Servers = cursorMcpServers(yield* mcpSessions.read(threadId));
+        const t2Servers = cursorMcpServers(yield* mcpSessions.read(threadId));
         const modelSelection = { instanceId, model: "composer-2.5" };
         const runtimePolicy = ProviderAdapter.ProviderAdapterV2RuntimePolicy.make({
           runtimeMode: "full-access",
@@ -2698,9 +2698,9 @@ describe("CursorAdapterV2", () => {
           "cwd-only": { command: "node", args: ["server.mjs"], cwd: projectRoot },
         };
         // The agent is created with T2's server only; the resolved servers go with each turn.
-        assert.deepEqual(openedWith?.mcpServers, t3Servers);
+        assert.deepEqual(openedWith?.mcpServers, t2Servers);
         yield* sendTurn(1);
-        assert.deepEqual(sentWith[0], { ...expectedServers, ...t3Servers });
+        assert.deepEqual(sentWith[0], { ...expectedServers, ...t2Servers });
         // A server switched off between turns stays off on the next one.
         yield* fileSystem.writeFileString(
           path.join(home, ".cursor", "projects", projectDirectory, "mcp-disabled.json"),
@@ -2708,14 +2708,14 @@ describe("CursorAdapterV2", () => {
         );
         yield* sendTurn(2);
         const { repro: _disabled, ...stillEnabled } = expectedServers;
-        assert.deepEqual(sentWith[1], { ...stillEnabled, ...t3Servers });
+        assert.deepEqual(sentWith[1], { ...stillEnabled, ...t2Servers });
         // Unreadable disabled state starts none of the overrides, and the turn still goes out.
         yield* fileSystem.writeFileString(
           path.join(home, ".cursor", "projects", projectDirectory, "mcp-disabled.json"),
           "[",
         );
         yield* sendTurn(3);
-        assert.deepEqual(sentWith[2], t3Servers);
+        assert.deepEqual(sentWith[2], t2Servers);
         yield* fileSystem.writeFileString(
           path.join(workspace, ".cursor", "mcp.json"),
           JSON.stringify({ mcpServers: { plain: { command: "node", args: ["server.mjs"] } } }),

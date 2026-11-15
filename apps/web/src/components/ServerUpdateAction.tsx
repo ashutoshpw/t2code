@@ -277,7 +277,7 @@ export function ServerUpdateAction({
   const updatesDenial = managedUpdatesDenial(useManagedPolicy(environmentId));
   const update = useServerUpdate();
   const updatesInstall =
-    installation?.kind === "npm-global" || installation?.kind === "t3-launcher";
+    installation?.kind === "npm-global" || installation?.kind === "t2-launcher";
   const { copyToClipboard } = useCopyToClipboard<{ command: string }>({
     target: updatesInstall ? "update command" : "relaunch command",
     onCopy: ({ command }) => {

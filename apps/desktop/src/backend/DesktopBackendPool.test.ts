@@ -236,7 +236,7 @@ const makeUpdateMarkerFixture = () =>
         mode: "desktop",
         noBrowser: true,
         port: 3774,
-        t3Home: "/test-home",
+        t2Home: "/test-home",
         host: "127.0.0.1",
         desktopBootstrapToken: "token",
         tailscaleServeEnabled: false,

@@ -46,6 +46,7 @@ const layerConnect = Layer.mock(CloudManagedEndpointRuntime)({
     pid: 4242,
     readyConnections: 1,
     hostname: value,
+    origin: null,
     protocol: "http2",
   })),
 });

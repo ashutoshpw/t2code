@@ -244,7 +244,7 @@ it.effect.each([
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const git = yield* GitVcsDriver.GitVcsDriver;
-    const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t3-clone-refs-" });
+    const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t2-clone-refs-" });
     const source = path.join(parent, "source");
     const destinationPath = path.join(parent, "checkout");
     const run = (cwd: string, args: ReadonlyArray<string>) =>
@@ -293,7 +293,7 @@ it.effect.each([
       GitVcsDriver.layer.pipe(
         Layer.provide(
           ServerConfig.layerTest(process.cwd(), {
-            prefix: "t3-clone-refs-config-",
+            prefix: "t2-clone-refs-config-",
           }),
         ),
         Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),

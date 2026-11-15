@@ -723,8 +723,8 @@ const make = Effect.gen(function* () {
 
   const describeUrl: PeerLinks["Service"]["describe"] = (url) =>
     peerOrigin(url).pipe(
-      Effect.flatMap(describe),
-      Effect.map(Option.map((peer) => ({ environmentId: peer.environmentId, label: peer.label }))),
+      Effect.flatMap(probe),
+      Effect.map((peer) => Option.some({ environmentId: peer.environmentId, label: peer.label })),
       Effect.orElseSucceed(() => Option.none()),
     );
 

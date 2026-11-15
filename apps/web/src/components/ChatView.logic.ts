@@ -848,10 +848,6 @@ export function recallCheckoutIsRepo(
     : sessionCheckoutIsRepo.get(checkoutIsRepoKey(environmentId, cwd));
 }
 
-function threadHasStarted(thread: Thread | null | undefined): boolean {
-  return Boolean(thread && (thread.latestRun !== null || thread.itemCount > 0 || thread.runtime));
-}
-
 export function threadShellHasStarted(
   shell:
     | Pick<EnvironmentThreadShell, "latestRun" | "latestUserMessageAt" | "runtime">

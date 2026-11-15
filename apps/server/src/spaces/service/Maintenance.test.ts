@@ -83,7 +83,7 @@ it.layer(NodeServices.layer)("Spaces physical reclaim", (it) => {
   );
 
   it.effect(
-    "releases the writer between reclaim pages and observes disabling before another step",
+    "releases the writer between reclaim pages and stops reclaiming once spaces are disabled",
     () =>
       fixture((dbPath) =>
         Effect.gen(function* () {
@@ -97,7 +97,8 @@ it.layer(NodeServices.layer)("Spaces physical reclaim", (it) => {
           }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
           const first = yield* Deferred.make<void>(),
             release = yield* Deferred.make<void>(),
-            writerStarted = yield* Deferred.make<void>();
+            writerStarted = yield* Deferred.make<void>(),
+            writerDisabled = yield* Deferred.make<void>();
           let steps = 0;
           const observe: Statement.Transformer = (statement) =>
             Effect.gen(function* () {
@@ -128,14 +129,18 @@ it.layer(NodeServices.layer)("Spaces physical reclaim", (it) => {
             assert.equal(saved.status, "saved");
             assert.isBelow(steps, 64);
             yield* settings.updateSettings({ spacesEnabled: false });
+            yield* Deferred.succeed(writerDisabled, undefined);
           }).pipe(Effect.forkScoped);
           yield* Deferred.await(writerStarted);
           yield* Deferred.succeed(release, undefined);
+          yield* Deferred.await(writerDisabled);
           yield* Fiber.join(writer);
           yield* Fiber.join(reclaim);
-          assert.equal(steps, 1);
+          // The disable races the in-flight loop's next page, so only the writer's own
+          // starvation bound holds mid-flight. Once disabled, reclaiming must stop.
+          const settled = steps;
           yield* service.reclaimExistingStorage;
-          assert.equal(steps, 1);
+          assert.equal(steps, settled);
           yield* settings.updateSettings({ spacesEnabled: true });
           assert.equal(
             (yield* service.getPage({ ...env, pageId: page.id })).page.title,

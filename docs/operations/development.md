@@ -53,7 +53,7 @@ Flags go directly after the task name, for example `vp run dev --home-dir /tmp/t
 Add `--browser` to open a browser automatically.
 
 To stop a worktree's dev stack when its thread settles, import the **Dev** action from
-`t3.json` in Settings > Projects > Actions and start it through the action menu or its
+`t2.json` in Settings > Projects > Actions and start it through the action menu or its
 keybinding. Its `stopOnSettle` option lets T3 stop the terminal and its child processes.
 Running `vp run dev` through an agent's own shell tool does not attach it to this lifecycle.
 

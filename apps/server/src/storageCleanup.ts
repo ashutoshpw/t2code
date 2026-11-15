@@ -21,7 +21,7 @@ import type {
   ThreadId,
 } from "@t2code/contracts";
 import { resolveWorktreeCleanup } from "@t2code/shared/projectSettings";
-import { resolveWorktreeT3Home } from "@t2code/shared/devHome";
+import { resolveWorktreeT2Home } from "@t2code/shared/devHome";
 import { makeDrainableWorker } from "@t2code/shared/DrainableWorker";
 import * as Context from "effect/Context";
 import * as Deferred from "effect/Deferred";
@@ -1033,7 +1033,7 @@ const make = Effect.gen(function* () {
     // A git worktree's dev home is seeded from real data, so its threads and any
     // copied settings can point at the developer's real worktrees.
     const isWorktreeDevHome =
-      (yield* resolveWorktreeT3Home(config.baseDir)) === path.resolve(config.baseDir);
+      (yield* resolveWorktreeT2Home(config.baseDir)) === path.resolve(config.baseDir);
     for (const directory of isWorktreeDevHome
       ? [config.worktreesDir]
       : managedWorktreesDirectories(

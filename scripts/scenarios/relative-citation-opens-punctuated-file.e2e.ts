@@ -2,14 +2,14 @@
 // The DOM lib types the function this scenario runs in the page.
 import { expect } from "e2e";
 
-import { test, WEB } from "./t3.ts";
+import { test, WEB } from "./t2.ts";
 
 const FILE = "reports/100% #1? draft.md";
 
 test(
   "A relative Codex citation whose name has % # ? opens its file",
   WEB,
-  async ({ t3, app, browser, screen }) => {
+  async ({ t2, app, browser, screen }) => {
     // The editor renders in a shadow root that locators do not reach.
     const editorText = () =>
       browser.evaluate(() => {
@@ -20,14 +20,14 @@ test(
         return null;
       });
 
-    const project = await t3.project("demo", { [FILE]: "Title\nQuarterly draft body\n" });
+    const project = await t2.project("demo", { [FILE]: "Title\nQuarterly draft body\n" });
     // User messages render Codex directives through the same Markdown pipeline as replies.
-    const thread = await t3.thread({
+    const thread = await t2.thread({
       project,
       title: "Citation",
       messages: [`See :codex-file-citation{path="${FILE}" line_range_start="2"}`],
     });
-    await t3.open(thread);
+    await t2.open(thread);
     // A message sent through the CLI shows collapsed under its sender.
     await screen.getByRole("button", /^Agent See/).tap();
 

@@ -55,7 +55,7 @@ describe("reloadOnceForChunkLoadError", () => {
 
 describe("isChunkLoadError", () => {
   it.each([
-    ["Failed to fetch dynamically imported module: t3code://app/assets/a.js", true],
+    ["Failed to fetch dynamically imported module: t2code://app/assets/a.js", true],
     ["error loading dynamically imported module: https://app.t2.codes/assets/a.js", true],
     ["Importing a module script failed.", true],
     ["Cannot read properties of undefined", false],

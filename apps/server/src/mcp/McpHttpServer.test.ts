@@ -296,14 +296,14 @@ it.effect("rejects a metadata-only response when the screenshot is saved", () =>
 const layerRecordingTools = (calls: Array<unknown>) => {
   const RecordingToolkit = Toolkit.make(
     OrchestratorToolkit.tools.delegate_task,
-    OrchestratorToolkit.tools.t3_thread_list,
-    OrchestratorToolkit.tools.t3_thread_read,
-    OrchestratorToolkit.tools.t3_thread_wait,
-    ProjectToolkit.tools.t3_project_list,
-    ProjectToolkit.tools.t3_project_update,
-    ThreadToolkit.tools.t3_queue,
-    PreviewControlsToolkit.tools.t3_preview_list,
-    ProjectToolkit.tools.t3_thread_launch,
+    OrchestratorToolkit.tools.t2_thread_list,
+    OrchestratorToolkit.tools.t2_thread_read,
+    OrchestratorToolkit.tools.t2_thread_wait,
+    ProjectToolkit.tools.t2_project_list,
+    ProjectToolkit.tools.t2_project_update,
+    ThreadToolkit.tools.t2_queue,
+    PreviewControlsToolkit.tools.t2_preview_list,
+    ProjectToolkit.tools.t2_thread_launch,
   );
   const record = McpToolAccess.reads((params: unknown) =>
     Effect.sync(() => calls.push(params)).pipe(
@@ -316,14 +316,14 @@ const layerRecordingTools = (calls: Array<unknown>) => {
     RecordingToolkit,
     McpToolAccess.toLayer(RecordingToolkit, {
       delegate_task: record,
-      t3_thread_list: record,
-      t3_thread_read: record,
-      t3_thread_wait: record,
-      t3_project_list: record,
-      t3_project_update: record,
-      t3_queue: record,
-      t3_preview_list: record,
-      t3_thread_launch: record,
+      t2_thread_list: record,
+      t2_thread_read: record,
+      t2_thread_wait: record,
+      t2_project_list: record,
+      t2_project_update: record,
+      t2_queue: record,
+      t2_preview_list: record,
+      t2_thread_launch: record,
     }),
   ).pipe(
     Layer.provideMerge(McpHttpServer.layerInProcessMcpServer),
@@ -669,8 +669,8 @@ it.effect("decodes null optional arguments the way it decodes omitted ones", () 
   const calls: Array<unknown> = [];
   return Effect.gen(function* () {
     const thread = { threadId: "thread-null-arguments" };
-    yield* callTool("t3_thread_read", thread);
-    yield* callTool("t3_thread_read", { ...thread, afterPosition: null, view: null });
+    yield* callTool("t2_thread_read", thread);
+    yield* callTool("t2_thread_read", { ...thread, afterPosition: null, view: null });
     yield* callTool("delegate_task", { task: "Inspect", target: {} });
     yield* callTool("delegate_task", { task: "Inspect", title: null, target: { model: null } });
     // A null the schema declares keeps its meaning: here it clears the project icon.
@@ -716,25 +716,25 @@ it.effect("accepts a nested key the merged advertised schema shows", () => {
 });
 
 it.effect(
-  "clamps t3_thread_read page sizes above their maximum instead of rejecting the call",
+  "clamps t2_thread_read page sizes above their maximum instead of rejecting the call",
   () => {
     const calls: Array<unknown> = [];
     return Effect.gen(function* () {
       const thread = { threadId: "thread-clamped-arguments" };
       // Codex never shows the model these bounds, so an over-large page must still read.
-      yield* callTool("t3_thread_read", {
+      yield* callTool("t2_thread_read", {
         ...thread,
         limit: 150,
         runLimit: 80,
         maxCharsPerItem: 60_000,
       });
-      yield* callTool("t3_thread_read", {
+      yield* callTool("t2_thread_read", {
         ...thread,
         limit: 100,
         runLimit: 50,
         maxCharsPerItem: 20_000,
       });
-      yield* callTool("t3_thread_read", { ...thread, limit: 7, runLimit: 1, maxCharsPerItem: 1 });
+      yield* callTool("t2_thread_read", { ...thread, limit: 7, runLimit: 1, maxCharsPerItem: 1 });
 
       expect(calls).toEqual([
         { ...thread, limit: 100, runLimit: 50, maxCharsPerItem: 20_000 },
@@ -746,12 +746,12 @@ it.effect(
 );
 
 it.effect.each(["limit", "runLimit", "maxCharsPerItem"])(
-  "still rejects a t3_thread_read %s below its minimum",
+  "still rejects a t2_thread_read %s below its minimum",
   (field) => {
     const calls: Array<unknown> = [];
     return Effect.gen(function* () {
       // Zero is a different request than one item, so it fails rather than answering another question.
-      const rejected = yield* callTool("t3_thread_read", {
+      const rejected = yield* callTool("t2_thread_read", {
         threadId: "thread-below-minimum",
         [field]: 0,
       }).pipe(Effect.flip);
@@ -763,10 +763,10 @@ it.effect.each(["limit", "runLimit", "maxCharsPerItem"])(
 );
 
 const clampedListLimits = [
-  { tool: "t3_thread_list", input: { allProjects: true }, maximum: 100 },
-  { tool: "t3_project_list", input: {}, maximum: 100 },
-  { tool: "t3_queue", input: { action: "list" }, maximum: 100 },
-  { tool: "t3_preview_list", input: {}, maximum: 50 },
+  { tool: "t2_thread_list", input: { allProjects: true }, maximum: 100 },
+  { tool: "t2_project_list", input: {}, maximum: 100 },
+  { tool: "t2_queue", input: { action: "list" }, maximum: 100 },
+  { tool: "t2_preview_list", input: {}, maximum: 50 },
 ];
 
 it.effect.each(clampedListLimits)(
@@ -789,7 +789,7 @@ it("keeps cross-tool routing out of the delegate_task description", () => {
   const description = OrchestratorToolkit.tools.delegate_task.description ?? "";
   expect(description).toContain("Start one child agent with only `task`");
   // Review rounds, follow-ups, and polling are routed in the system text.
-  expect(description).not.toContain("t3_thread_send");
+  expect(description).not.toContain("t2_thread_send");
   expect(description).not.toContain("Do not poll");
   expect(description).not.toContain("Prefer native");
 });
@@ -1509,7 +1509,7 @@ it.effect("gives outside clients an upload URL on the origin their request reach
         Layer.provide(
           AssetSigner.layer.pipe(
             Layer.provideMerge(ServerSecretStore.layer),
-            Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-mcp-upload-" })),
+            Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t2-mcp-upload-" })),
             Layer.provideMerge(DocumentText.layer),
             Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
           ),
@@ -1545,7 +1545,7 @@ it.effect("gives outside clients an upload URL on the origin their request reach
                 id: 2,
                 method: "tools/call",
                 params: {
-                  name: "t3_attachment_prepare_upload",
+                  name: "t2_attachment_prepare_upload",
                   arguments: {
                     upload: {
                       type: "image",

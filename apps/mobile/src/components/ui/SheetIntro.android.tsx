@@ -8,7 +8,7 @@ export type { SheetIntroProps } from "./SheetIntro.types";
 export function SheetIntro(props: SheetIntroProps) {
   return (
     <View className="gap-2 rounded-[20px] bg-card p-3">
-      <Text className="text-xl font-t3-medium">{props.title}</Text>
+      <Text className="text-xl font-t2-medium">{props.title}</Text>
       <Text className="text-base leading-normal text-foreground-secondary">
         {props.description}
       </Text>

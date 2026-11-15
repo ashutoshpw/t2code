@@ -404,6 +404,7 @@ describe("AgentActivityPublisher", () => {
             }),
         }),
         Layer.succeed(DeliveryAttempts.DeliveryAttempts, {
+          record: () => Effect.void,
           pruneExpired: Effect.succeed(0),
           claimSourceJob: () => Effect.succeed("claimed" as const),
           completeSourceJob: () => Effect.void,
@@ -420,7 +421,7 @@ describe("AgentActivityPublisher", () => {
           apnsDeliveryJobSigningSecret: Redacted.make("job-signing-secret"),
           clerkSecretKey: Redacted.make("clerk-secret"),
           clerkPublishableKey: "pk_test_test",
-          clerkJwtAudience: "t3-code-relay",
+          clerkJwtAudience: "t2-code-relay",
           cloudMintPrivateKey: Redacted.make("cloud-private-key"),
           cloudMintPublicKey: "cloud-public-key",
           managedEndpointBaseDomain: undefined,

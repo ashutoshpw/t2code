@@ -338,8 +338,8 @@ effectIt.effect("restores a missing worktree before a send only under the worksp
 );
 
 it.each([
-  { label: "directly in the scratch root", folder: "/tmp/t3-home/scratch/notes", recreated: true },
-  { label: "below another folder", folder: "/tmp/t3-home/scratch/notes/deep", recreated: false },
+  { label: "directly in the scratch root", folder: "/tmp/t2-home/scratch/notes", recreated: true },
+  { label: "below another folder", folder: "/tmp/t2-home/scratch/notes/deep", recreated: false },
   {
     label: "in another project",
     folder: "/tmp/elsewhere/notes",
@@ -368,7 +368,7 @@ it.each([
             } as never),
             Path.layer,
             Layer.mock(ServerConfig.ServerConfig)({
-              baseDir: "/tmp/t3-home",
+              baseDir: "/tmp/t2-home",
               worktreesDir: managedWorktreesDir,
             } as ServerConfig.ServerConfig["Service"]),
             ServerSettings.layerTest(),
@@ -376,7 +376,7 @@ it.each([
             Layer.mock(ProjectService.ProjectService)({
               getById: () =>
                 Effect.succeedSome({
-                  workspaceRoot: input.workspaceRoot ?? "/tmp/t3-home/scratch",
+                  workspaceRoot: input.workspaceRoot ?? "/tmp/t2-home/scratch",
                 } as never),
             }),
           ),
@@ -1970,7 +1970,7 @@ effectIt.effect("leaves a managed worktree folder without .git that holds user f
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const worktreesDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-leftover-" });
+    const worktreesDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-leftover-" });
     const worktreePath = path.join(worktreesDir, "project", "restore");
     yield* fileSystem.makeDirectory(path.join(worktreePath, "node_modules"), { recursive: true });
     yield* fileSystem.writeFileString(path.join(worktreePath, "notes.md"), "keep me");

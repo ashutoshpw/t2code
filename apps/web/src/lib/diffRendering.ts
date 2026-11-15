@@ -326,7 +326,7 @@ export const DIFF_SURFACE_THEME_UNSAFE_CSS = `
   );
   --diffs-bg-addition-hover-override: color-mix(in srgb, var(--code-background) 85%, var(--diff-addition));
   /* Pierre resolves emphasis on the host, before the diff's overrides can inherit. */
-  /* Light emphasis stays above t3-light's readable syntax luminance floor. */
+  /* Light emphasis stays above t2-light's readable syntax luminance floor. */
   --diffs-bg-addition-emphasis: light-dark(
     rgb(from var(--diffs-addition-base) r g b / 15%),
     rgb(from var(--diffs-addition-base) r g b / calc(20% + var(--appearance-contrast-boost, 0%) / 4))

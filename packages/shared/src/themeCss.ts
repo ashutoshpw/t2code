@@ -70,7 +70,7 @@ export const THEME_CSS_HOOKS = [
   { selector: '[data-slot="scroll-area-thumb"]', styles: "overlay scrollbar thumb" },
 ] as const;
 
-/** What an agent needs to restyle the app. `t3_theme_read` returns it. */
+/** What an agent needs to restyle the app. `t2_theme_read` returns it. */
 export const THEME_GUIDE = [
   "Themes restyle T2 Code on web and desktop. Mobile does not use them.",
   "",
@@ -89,5 +89,5 @@ export const THEME_GUIDE = [
   ...THEME_CSS_HOOKS.map((hook) => `- ${hook.selector}: ${hook.styles}`),
   "",
   "You cannot see the result. Make small changes, then ask the user how it looks.",
-  "To undo, set a built-in theme: t3-chat, grove, ocean, ember, or iris.",
+  "To undo, set a built-in theme: t2-chat, grove, ocean, ember, or iris.",
 ].join("\n");
