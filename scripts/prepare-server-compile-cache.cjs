@@ -62,7 +62,9 @@ module.exports = async ({ appOutDir, electronPlatformName, arch, packager }) => 
       runner,
       `require(${JSON.stringify(helper)}).generatePreparedServerCache(${JSON.stringify(resources)}).then(()=>process.exit(0),e=>{console.error(e);process.exit(1)})`,
     );
-    result = spawnSync(executable, [runner], { env, encoding: "utf8", timeout: 120000 });
+    // The cache pass is I/O-bound and takes ~90s on a good mac x64 runner; the
+    // 120s cap upstream chose trips on slower runners.
+    result = spawnSync(executable, [runner], { env, encoding: "utf8", timeout: 300000 });
   } finally {
     fs.rmSync(state, { recursive: true, force: true });
   }
