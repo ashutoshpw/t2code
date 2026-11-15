@@ -963,7 +963,7 @@ it.effect("a side chat of a busy parent points history recovery at the parent", 
     assert.equal(started.contextTransfers[0]?.resolution?.strategy, "portable_context");
     const handoff = started.contextHandoffs.find((item) => item.strategy === "full_thread_summary");
     const coverage = handoff?.history?.coverage ?? "";
-    assert.include(coverage, `t3_thread_read({threadId:"${parentId}"`);
+    assert.include(coverage, `t2_thread_read({threadId:"${parentId}"`);
     assert.notInclude(coverage, `threadId:"${sideChatId}"`);
     assert.isFalse(started.turnItems.some((item) => item.type === "handoff"));
   }).pipe(Effect.provide(forkCases[0]!.layer)),

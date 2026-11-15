@@ -90,7 +90,7 @@ it("keeps an MCP app call's tool activity beside its app card", () => {
     toolName: "repro.aggregate_rum_events",
     input: { query: "@type:view" },
     output: {
-      t3McpApp: mcpApp,
+      t2McpApp: mcpApp,
       result: { content: [{ type: "text", text: "Notice\nview\tcount\n/home\t42" }] },
     },
   };

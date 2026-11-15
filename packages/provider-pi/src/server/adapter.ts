@@ -640,7 +640,7 @@ export const makePiAdapterV2 = Effect.fn("makePiAdapterV2")(function* (
           heldPrompts.push(prompt);
           return;
         }
-        const id = `t3-prompt-${nextPromptId++}`;
+        const id = `t2-prompt-${nextPromptId++}`;
         yield* connection.send({ ...prompt.record, id });
         pendingPromptResponsesDrained ??= yield* Deferred.make<
           void,
@@ -3227,7 +3227,7 @@ export const makePiAdapterV2 = Effect.fn("makePiAdapterV2")(function* (
                   yield* finalizeTurn(state);
                 }
                 if (outOfTurnExtensionErrors.length > 0) {
-                  yield* Queue.offer(connection.events, { type: "t3.flush_extension_errors" });
+                  yield* Queue.offer(connection.events, { type: "t2.flush_extension_errors" });
                 }
                 return null;
               }).pipe(

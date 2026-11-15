@@ -4904,7 +4904,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
       : null;
     const lockReason =
       addHelp && `${addHelp.stdout}\n${addHelp.stderr}`.includes("--reason")
-        ? `t3-create-${yield* random.uuidV4()}`
+        ? `t2-create-${yield* random.uuidV4()}`
         : undefined;
 
     if (newRefName) {

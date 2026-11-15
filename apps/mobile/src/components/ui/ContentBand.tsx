@@ -33,7 +33,7 @@ export function ContentStatus(props: ContentStatusProps) {
   return (
     <View className="border-b border-border bg-card px-4 py-5">
       {props.title ? (
-        <Text className="text-sm font-t3-bold text-foreground">{props.title}</Text>
+        <Text className="text-sm font-t2-bold text-foreground">{props.title}</Text>
       ) : null}
       <Text className="text-xs leading-normal text-foreground-muted">{props.detail}</Text>
     </View>

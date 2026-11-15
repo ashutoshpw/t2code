@@ -2951,7 +2951,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     if (buildConfig.publish) {
       buildConfig.appImage = {
         artifactName:
-          updateChannel === "nightly" ? "T3-Code-Nightly-${arch}.${ext}" : "T3-Code-${arch}.${ext}",
+          updateChannel === "nightly" ? "T2-Code-Nightly-${arch}.${ext}" : "T2-Code-${arch}.${ext}",
       };
     }
     buildConfig.deb = {

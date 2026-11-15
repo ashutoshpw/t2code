@@ -34,7 +34,7 @@ export function ContentStatus(props: ContentStatusProps) {
   return (
     <View className="items-center px-6 py-5">
       {props.title ? (
-        <Text className="text-sm font-t3-bold text-foreground">{props.title}</Text>
+        <Text className="text-sm font-t2-bold text-foreground">{props.title}</Text>
       ) : null}
       <Text className="mt-2 text-center text-xs leading-normal text-foreground-muted">
         {props.detail}

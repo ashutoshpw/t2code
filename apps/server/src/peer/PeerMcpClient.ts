@@ -45,7 +45,7 @@ export class PeerMcpClient extends Context.Service<
       readonly tool: string;
       readonly arguments: Record<string, unknown>;
       readonly limits: PeerCallLimits;
-      /** The thread here the call is made for, sent as `T3-Sender-Thread`. */
+      /** The thread here the call is made for, sent as `T2-Sender-Thread`. */
       readonly sender?: OrchestrationV2LinkedSender;
       readonly success: S;
     }) => Effect.Effect<S["Type"], OrchestratorMcpFailure>;

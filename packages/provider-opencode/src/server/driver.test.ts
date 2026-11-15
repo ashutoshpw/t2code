@@ -179,7 +179,7 @@ const makeOpenCode2ProjectInstance = (
 it.live("discovers models through a home-relative OpenCode wrapper", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-opencode-home with spaces-" });
+    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-opencode-home with spaces-" });
     const binaryPath = NodePath.join(home, "opencode");
     const scriptPath = NodePath.join(home, "opencode.cjs");
     yield* fs.writeFileString(

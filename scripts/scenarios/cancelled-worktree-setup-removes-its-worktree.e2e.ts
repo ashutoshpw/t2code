@@ -6,7 +6,7 @@ import * as Schema from "effect/Schema";
 
 import { APP_DIR, T2_HOME } from "../e2e.config.ts";
 import { run } from "./shell.ts";
-import { runPromise, test, WEB } from "./t3.ts";
+import { runPromise, test, WEB } from "./t2.ts";
 
 const decodeLaunched = Schema.decodeUnknownEffect(
   Schema.fromJsonString(Schema.Struct({ threadId: Schema.String })),
@@ -15,8 +15,8 @@ const decodeLaunched = Schema.decodeUnknownEffect(
 test(
   "Cancelling worktree setup during its post-checkout hook removes the new worktree",
   WEB,
-  async ({ t3, app, screen }) => {
-    const project = await t3.project("demo");
+  async ({ t2, app, screen }) => {
+    const project = await t2.project("demo");
     const git = (...args: ReadonlyArray<string>) =>
       runPromise(run("git", args, { cwd: project })).then(({ stdout }) => stdout);
     const connected = Promise.withResolvers<void>();
@@ -77,7 +77,7 @@ test(
     );
 
     await connected.promise;
-    await t3.open(started);
+    await t2.open(started);
     await expect(screen.getByText("50%")).toBeVisible();
     await screen.getByRole("button", "Cancel").tap();
     await app.screenshot("after-cancel");
@@ -88,6 +88,6 @@ test(
         async () => (await git("worktree", "list", "--porcelain")).match(/^worktree /gm)?.length,
       )
       .toBe(1);
-    await expect.poll(() => git("branch", "--list", "t3/*")).toBe("");
+    await expect.poll(() => git("branch", "--list", "t2code/*")).toBe("");
   },
 );

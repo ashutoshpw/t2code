@@ -1,6 +1,6 @@
 import { expect } from "e2e";
 
-import { test, WEB } from "./t3.ts";
+import { test, WEB } from "./t2.ts";
 
 // A valid ODS whose only cell is typed time with no optional <text:p> display paragraph.
 const TIME_ONLY_ODS =
@@ -9,12 +9,12 @@ const TIME_ONLY_ODS =
 test(
   "An ODS time cell without a display paragraph shows its value",
   WEB,
-  async ({ t3, app, screen }) => {
-    const project = await t3.project("demo", {
+  async ({ t2, app, screen }) => {
+    const project = await t2.project("demo", {
       "shifts.ods": Buffer.from(TIME_ONLY_ODS, "base64"),
     });
-    const thread = await t3.thread({ project, title: "Shifts", messages: ["Start"] });
-    await t3.open(thread);
+    const thread = await t2.thread({ project, title: "Shifts", messages: ["Start"] });
+    await t2.open(thread);
 
     await screen.getByRole("button", "Toggle right panel").tap();
     await screen.getByRole("button", "Files F").tap();

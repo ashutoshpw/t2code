@@ -76,7 +76,6 @@ function ConfiguredT2ConnectSidebarSignIn() {
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
-      {authPrompt}
     </>
   );
 }

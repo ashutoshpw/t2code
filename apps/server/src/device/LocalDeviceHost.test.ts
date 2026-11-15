@@ -48,7 +48,8 @@ const agentFixture = Effect.fn("agentFixture")(function* (
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-device-agent-start-" });
-  const hub = { running: true, spawnFails: false };
+  const hub = { running: true, spawnFails: false, cleanup: Effect.void };
+  const daemonStopRequested = yield* Deferred.make<ReadonlyArray<string>>();
   const stateDir = agentDeviceStateDir(path, path.join(baseDir, "userdata"));
   const daemonHealthy = yield* Ref.make(true);
   const runs: Array<ProcessRunner.ProcessRunInput> = [];
@@ -168,7 +169,7 @@ describe("AgentDevice startup", () => {
   it.effect("uses the SDK a later shell environment selects", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-sdk-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-device-sdk-" });
       const standard = `${home}/Library/Android/sdk`;
       const profile = `${home}/profile-sdk`;
       for (const root of [standard, profile]) {

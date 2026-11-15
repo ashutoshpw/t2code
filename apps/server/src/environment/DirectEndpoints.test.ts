@@ -290,6 +290,7 @@ const layerServeConfig = (host = "127.0.0.1") =>
       Layer.succeed(ServerEnvironment.ServerEnvironment, {
         getEnvironmentId: Effect.succeed(EnvironmentId.make("serve-test")),
         getDescriptor: Effect.die("unused"),
+        setEnvironmentLabel: () => Effect.void,
       }),
     ),
   );

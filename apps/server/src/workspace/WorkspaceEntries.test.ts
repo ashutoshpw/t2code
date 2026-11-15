@@ -549,7 +549,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
     it.effect("indexes symlinked files and directories inside the workspace", () =>
       Effect.gen(function* () {
         if ((yield* HostProcess.Platform) === "win32") return;
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-symlinks-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-symlinks-" });
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         yield* writeTextFile(cwd, "src/index.ts", "export {};");
@@ -573,8 +573,8 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
     it.effect("skips symlinks that ignore rules hide or that leave the workspace", () =>
       Effect.gen(function* () {
         if ((yield* HostProcess.Platform) === "win32") return;
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-symlinks-", git: true });
-        const outside = yield* makeTempDir({ prefix: "t3code-workspace-symlinks-outside-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-symlinks-", git: true });
+        const outside = yield* makeTempDir({ prefix: "t2code-workspace-symlinks-outside-" });
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         yield* writeTextFile(cwd, "src/index.ts", "export {};");
@@ -621,7 +621,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
     it.effect("lets the nearest .ignore rule decide a symlink, and git's rules still hide it", () =>
       Effect.gen(function* () {
         if ((yield* HostProcess.Platform) === "win32") return;
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-symlinks-", git: true });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-symlinks-", git: true });
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         yield* writeTextFile(cwd, ".gitignore", "*keep*\n");
@@ -650,7 +650,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
     it.effect("matches .ignore rules against whole names and treats folder links as links", () =>
       Effect.gen(function* () {
         if ((yield* HostProcess.Platform) === "win32") return;
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-symlinks-", git: true });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-symlinks-", git: true });
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         yield* writeTextFile(cwd, "src/index.ts", "export {};");
@@ -675,7 +675,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
     );
     it.effect("finds a path inside a gitignored nested git worktree only by its exact path", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-worktree-", git: true });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-worktree-", git: true });
         const env = {
           ...process.env,
           GIT_AUTHOR_NAME: "Test",

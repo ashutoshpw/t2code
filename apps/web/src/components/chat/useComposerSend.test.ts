@@ -59,6 +59,9 @@ const state = vi.hoisted(() => {
 vi.mock("react", async () => ({
   ...(await vi.importActual<typeof import("react")>("react")),
   useRef: <A>(current: A) => ({ current }),
+  useState: <A>(initial: A | (() => A)) =>
+    [typeof initial === "function" ? (initial as () => A)() : initial, () => {}] as [A, () => void],
+  useInsertionEffect: () => {},
   useLayoutEffect: () => {},
 }));
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => state.navigate }));
@@ -500,6 +503,7 @@ async function verifyFailedSnapshotRecovery(
     needsLoadBalancing: false,
     loadBalancing: { pending: false },
     readPendingEnvironmentChange: () => null,
+    refreshBeforeSend: () => null,
     pendingApprovals: [],
     respondingRequestIds: [],
     activePendingProgress: null,

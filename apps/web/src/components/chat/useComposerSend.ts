@@ -73,7 +73,6 @@ import { resolvePlanFollowUpSubmission } from "../../proposedPlan";
 import { type ChatMessage } from "../../types";
 import { recordPromptSent } from "../GitHubStarPrompt";
 import { stackedThreadToast, toastManager } from "../ui/toast";
-import { writeTextToClipboard } from "~/hooks/useCopyToClipboard";
 import { newMessageId, newThreadId } from "~/lib/utils";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import { buildThreadRouteParams } from "../../threadRoutes";
@@ -1854,50 +1853,7 @@ export function useComposerSend(input: ComposerSendInput) {
       });
       // A restored draft clones its images, so the sent copies are no longer used.
       optimisticBlobPreviews.release(optimisticMessage);
-      if (
-        composerDraftHasUserContent(
-          useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
-        )
-      ) {
-        // A draft typed meanwhile keeps the composer, so the failed text stays reachable here.
-        const failedText = sendSnapshot.draftText;
-        if (failedText.trim().length > 0) {
-          toastManager.add(
-            stackedThreadToast({
-              type: "error",
-              title: isAtomCommandInterrupted(failure)
-                ? "Message may not have been sent"
-                : "Message not sent",
-              description: "Your new draft was kept. Copy the failed message to send it again.",
-              // The toast holds the only copy of the failed text, so it stays until dismissed.
-              timeout: 0,
-              data: { hideCopyButton: true },
-              actionProps: {
-                children: "Copy message",
-                onClick: () => {
-                  void writeTextToClipboard(failedText, "failed message").catch(() => undefined);
-                },
-              },
-            }),
-          );
-        }
-      } else {
-        const retryComposerImages = restoreComposerDraft(composerDraftTarget, sendSnapshot);
-        if (currentRouteThreadKeyRef.current === routeThreadKey) {
-          promptRef.current = sendSnapshot.draftText;
-          composerImagesRef.current = retryComposerImages;
-          composerFilesRef.current = composerFilesSnapshot;
-          composerTerminalContextsRef.current = composerTerminalContextsSnapshot;
-          composerRef.current?.resetCursorState({
-            cursor: collapseExpandedComposerCursor(
-              sendSnapshot.draftText,
-              sendSnapshot.draftText.length,
-            ),
-            prompt: sendSnapshot.draftText,
-            detectTrigger: true,
-          });
-        }
-      }
+      await recoverFailedSend(threadIdForSend, recoveryId!);
       if (!isAtomCommandInterrupted(failure)) {
         const error = squashAtomCommandFailure(failure);
         setThreadError(

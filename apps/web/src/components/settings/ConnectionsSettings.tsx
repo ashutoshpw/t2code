@@ -394,6 +394,7 @@ function ConnectionsSettingsContent({
   const canReadAccess = useEnvironmentScope(accessEnvironmentId, AuthAccessReadScope);
   const canWriteAccess = useEnvironmentScope(accessEnvironmentId, AuthAccessWriteScope);
   const canRenamePrimary = useEnvironmentScope(primaryEnvironmentId, AuthOrchestrationOperateScope);
+  const canWritePrimary = useEnvironmentScope(primaryEnvironmentId, AuthAccessWriteScope);
   const environmentLabels = environments.map((environment) => ({
     environmentId: environment.environmentId,
     label: environment.label,
@@ -1694,6 +1695,14 @@ function ConnectionsSettingsContent({
               environmentId={primaryEnvironmentId}
               canReadRelay={canReadRelay}
               canManageRelay={canManageRelay}
+              connectDeviceApproval={
+                primaryServerConfig?.settings.requireConnectDeviceApproval === undefined
+                  ? null
+                  : {
+                      required: primaryServerConfig.settings.requireConnectDeviceApproval,
+                      canManage: canWritePrimary,
+                    }
+              }
             />
           ) : null}
         </SettingsSection>

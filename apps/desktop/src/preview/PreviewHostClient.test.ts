@@ -75,6 +75,7 @@ const makeHarness = Effect.gen(function* () {
     loadFailed: () => undefined,
     setShown: () => undefined,
     humanStartedDownload: () => false,
+    agentLedPage: () => false,
     placeDownload: () => false,
     pointers: Stream.empty,
     painting: Stream.empty,

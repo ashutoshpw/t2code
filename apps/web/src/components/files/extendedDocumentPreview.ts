@@ -711,15 +711,10 @@ export function openRtf(bytes: ArrayBuffer): OfficeWorkerResult {
         fallback = state.uc;
       } else if (!state.skip && word === "page") finishPage();
       else if (!state.skip && (word === "par" || word === "line" || word === "row")) html += "<br>";
-      else if (word === "tab" || word === "cell") emit("\t");
-      else if (word === "endash") emit("–");
-      // oxlint-disable-next-line t2code/no-em-dash-copy -- Preserve the RTF document's punctuation.
-      else if (word === "emdash") emit("—");
-      else if (word === "bullet") emit("•");
-      else if (word === "lquote") emit("‘");
-      else if (word === "rquote") emit("’");
-      else if (word === "ldblquote") emit("“");
-      else if (word === "rdblquote") emit("”");
+      else {
+        const character = RTF_CHARACTERS.get(word!);
+        if (character) emit(character);
+      }
     } else if (char !== "\r" && char !== "\n" && char) emitByte(char.charCodeAt(0));
   }
   if (stack.length) throw new Error("This rich text document is damaged.");

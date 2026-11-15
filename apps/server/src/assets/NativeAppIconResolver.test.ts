@@ -52,7 +52,7 @@ it.effect("resolves the exact bundle path without Spotlight and caches the conve
       Effect.provide(
         Layer.mergeAll(
           spawner,
-          ServerConfig.ServerConfig.layerTest(root, { prefix: "t3-native-icon-config-" }),
+          ServerConfig.ServerConfig.layerTest(root, { prefix: "t2-native-icon-config-" }),
         ),
       ),
       Effect.provideService(HostProcess.Platform, "darwin"),

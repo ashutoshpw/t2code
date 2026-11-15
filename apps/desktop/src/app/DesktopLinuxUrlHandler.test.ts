@@ -233,16 +233,16 @@ describe("DesktopLinuxUrlHandler", () => {
   });
 
   it.each([
-    { from: "T3-Code-0.1.8-x86_64.AppImage", to: "T3-Code-x86_64.AppImage", restored: true },
+    { from: "T2-Code-0.1.8-x86_64.AppImage", to: "T2-Code-x86_64.AppImage", restored: true },
     {
-      from: "T3-Code-0.1.9-nightly.20261110.4449-arm64.AppImage",
-      to: "T3-Code-Nightly-arm64.AppImage",
+      from: "T2-Code-0.1.9-nightly.20261110.4449-arm64.AppImage",
+      to: "T2-Code-Nightly-arm64.AppImage",
       restored: true,
     },
-    { from: "T3-Code-0.1.8-x86_64.AppImage", to: "T3-Code-0.1.9-x86_64.AppImage", restored: false },
-    { from: "t3code.AppImage", to: "T3-Code-x86_64.AppImage", restored: false },
-    { from: "T3-Code-x86_64.AppImage", to: "T3-Code-x86_64.AppImage", restored: false },
-    { from: "../T3-Code-0.1.8-x86_64.AppImage", to: "T3-Code-x86_64.AppImage", restored: false },
+    { from: "T2-Code-0.1.8-x86_64.AppImage", to: "T2-Code-0.1.9-x86_64.AppImage", restored: false },
+    { from: "t2code.AppImage", to: "T2-Code-x86_64.AppImage", restored: false },
+    { from: "T2-Code-x86_64.AppImage", to: "T2-Code-x86_64.AppImage", restored: false },
+    { from: "../T2-Code-0.1.8-x86_64.AppImage", to: "T2-Code-x86_64.AppImage", restored: false },
   ])("finds the launch path an update from $from to $to removed", ({ from, to, restored }) => {
     for (const dir of ["/home/alice/Applications", '/home/al ice/My "100%" $Apps\\x']) {
       const previous = dir + "/" + from;

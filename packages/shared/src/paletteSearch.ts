@@ -922,15 +922,15 @@ export interface SearchMatchHint {
   readonly ranges: ReadonlyArray<SearchRange>;
 }
 
-// Most threads' branches start with the app's own worktree prefix ("t2/", and
-// "t2code/" before it), so "t2 connect" would match nearly every thread.
-// Only before more text, so typing "t2/" does not empty the list for a keystroke.
+// Most threads' branches start with the app's own worktree prefix ("t2code/", and
+// "t2/" before it), so "t2code connect" would match nearly every thread.
+// Only before more text, so typing "t2code/" does not empty the list for a keystroke.
 const WORKTREE_BRANCH_PREFIX_PATTERN = new RegExp(
   `^(?:(?:${WORKTREE_BRANCH_PREFIX}|t2code)/(?=\\S)|${WORKTREE_BRANCH_PREFIX}-(?=[0-9a-f]{8}$))`,
 );
 
 // The flat prefix anywhere in a query, while its hex is still being typed, so
-// "t2-abcd" and "connect t2-abcd1234" still reach the stripped branch field.
+// "t2code-abcd" and "connect t2code-abcd1234" still reach the stripped branch field.
 const FLAT_BRANCH_QUERY_PREFIX_PATTERN = new RegExp(
   `(^| )${WORKTREE_BRANCH_PREFIX}-(?=[0-9a-f]{1,8}(?: |$))`,
   "g",

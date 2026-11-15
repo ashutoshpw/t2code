@@ -125,7 +125,7 @@ export const makeCli = ({ cloudEnabled = hasCloudPublicConfig } = {}) =>
 export const cli = makeCli();
 
 const layerLegacyEnvConfig = Layer.unwrap(
-  Effect.sync(() => {
+  Effect.sync((): Layer.Layer<never, never, never> => {
     const { provider, usedLegacyNames } = legacyEnvProvider(process.env);
     const layer = ConfigProvider.layer(provider);
     return usedLegacyNames.length === 0

@@ -378,7 +378,7 @@ const runStatus = (harness: ReturnType<typeof makeHarness>) =>
 
 const decodeHandoffInput = Schema.decodeUnknownEffect(WorktreeMcpHandoffInput);
 
-describe("t3_worktree_handoff", () => {
+describe("t2_worktree_handoff", () => {
   // regression: #22971 a separate send let the detach settle the run before its follow-up existed
   it.effect("commits the continuation with the thread binding", () => {
     const harness = makeHarness();
@@ -680,7 +680,7 @@ describe("t3_worktree_handoff", () => {
   });
 });
 
-describe("t3_worktree_status", () => {
+describe("t2_worktree_status", () => {
   it.effect("reports an attached thread's worktree and branch", () => {
     const harness = makeHarness({
       thread: {

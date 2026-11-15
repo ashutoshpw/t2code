@@ -1,7 +1,7 @@
 import { expect } from "e2e";
 import JSZip from "jszip";
 
-import { test, WEB } from "./t3.ts";
+import { test, WEB } from "./t2.ts";
 
 // A 2 by 2 table stored the compact way ODF allows: one row repeated twice, one cell repeated twice.
 async function repeatedTableOdt() {
@@ -19,10 +19,10 @@ async function repeatedTableOdt() {
 test(
   "An ODT preview shows every cell of a table stored with repeated rows and cells",
   WEB,
-  async ({ t3, app, screen, browser }) => {
-    const project = await t3.project("demo", { "decisions.odt": await repeatedTableOdt() });
-    const thread = await t3.thread({ project, title: "Review decisions", messages: ["Start"] });
-    await t3.open(thread);
+  async ({ t2, app, screen, browser }) => {
+    const project = await t2.project("demo", { "decisions.odt": await repeatedTableOdt() });
+    const thread = await t2.thread({ project, title: "Review decisions", messages: ["Start"] });
+    await t2.open(thread);
     await expect(screen.getByText("fixture turn complete", { exact: false })).toBeVisible();
 
     await browser.keyboard.press("Control+p");

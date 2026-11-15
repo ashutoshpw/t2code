@@ -401,7 +401,7 @@ it.effect.each([{ restoreFiles: true }, { restoreFiles: false }])(
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const workspaceRoot = yield* fileSystem.realPath(
-        yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-rollback-reservation-" }),
+        yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-rollback-reservation-" }),
       );
       const worktreesDir = path.join(workspaceRoot, "worktrees");
       const worktreePath = path.join(worktreesDir, "repo", "feature");

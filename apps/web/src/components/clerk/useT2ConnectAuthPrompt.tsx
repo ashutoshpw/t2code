@@ -13,5 +13,5 @@ export function useT2ConnectAuthPrompt() {
     }
     clerk.openSignIn(resolveClerkSignInProps(window.location.href, isElectron));
   };
-  return { authPrompt: null, openAuthPrompt };
+  return { openAuthPrompt };
 }

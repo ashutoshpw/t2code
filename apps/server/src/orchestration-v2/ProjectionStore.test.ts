@@ -1514,7 +1514,7 @@ it.effect("SQL shells flag only an active turn blocked solely on T2 thread waits
       id: TurnItemId.make("item:thread-wait:active"),
       runId: run.id,
       type: "dynamic_tool" as const,
-      toolName: "mcp__t2_code__t3_thread_wait",
+      toolName: "mcp__t2_code__t2_thread_wait",
       input: { threadId: "child-thread" },
       status: "running" as const,
     };
@@ -1528,7 +1528,7 @@ it.effect("SQL shells flag only an active turn blocked solely on T2 thread waits
     const foreign = {
       ...wait,
       id: TurnItemId.make("item:thread-wait:foreign"),
-      toolName: "weather.t3_thread_wait",
+      toolName: "weather.t2_thread_wait",
     };
     yield* updateItem(foreign);
     yield* assertBlocked(false);
@@ -2745,7 +2745,7 @@ it.effect("SQL shells read a subagent family and a worktree's threads", () =>
     const store = yield* ProjectionStore.ProjectionStoreV2;
     const now = yield* DateTime.now;
     const projectId = ProjectId.make("project:family");
-    const worktreePath = "/repo/.t3/worktrees/family";
+    const worktreePath = "/repo/.t2/worktrees/family";
     const id = (name: string) => ThreadId.make(`thread:family:${name}`);
     const payloadOf = (input: {
       readonly name: string;
@@ -4383,7 +4383,7 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
       }
       // Until its run is scanned, a cursor on inline output is hidden inside a work group.
       yield* sql`UPDATE orchestration_v2_projection_turn_items SET type = 'dynamic_tool',
-        payload_json = json_set(payload_json, '$.type', 'dynamic_tool', '$.toolName', 't3-code.delegate_task')
+        payload_json = json_set(payload_json, '$.type', 'dynamic_tool', '$.toolName', 't2-code.delegate_task')
         WHERE thread_id = ${threadId} AND ordinal = 4`;
       const sharedRunId = "run:bounded-sql-history:1";
       // A work page of rows that have no run leaves their inline output out too.
@@ -4445,7 +4445,7 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
             '$.runId', CASE WHEN ordinal <= 700 THEN 'run:bounded-sql-history:300' ELSE ${sharedRunId} END)
         WHERE thread_id = ${threadId} AND ordinal >= 100`;
       yield* sql`UPDATE orchestration_v2_projection_turn_items SET type = 'dynamic_tool',
-        payload_json = json_set(payload_json, '$.type', 'dynamic_tool', '$.toolName', 't3-code.delegate_task')
+        payload_json = json_set(payload_json, '$.type', 'dynamic_tool', '$.toolName', 't2-code.delegate_task')
         WHERE thread_id = ${threadId} AND ordinal = 720`;
       const beforeMissingCursor = yield* historyPage(
         threadId,

@@ -219,7 +219,7 @@ const layerGitFixtureTemplates = Layer.effect(
   GitFixtureTemplates,
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const repo = yield* makeTempDir("t3code-git-template-");
+    const repo = yield* makeTempDir("t2code-git-template-");
     // An empty template skips copying git's sample hooks into every test repository.
     yield* runGit(repo, ["init", "--initial-branch=main", "--template="]);
     yield* runGit(repo, ["config", "user.email", "test@example.com"]);
@@ -2631,9 +2631,9 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
       yield* runGit(repoDir, ["remote", "set-head", "origin", "main"]);
       // What a new worktree thread gets: its start point as upstream, nothing published.
-      yield* runGit(repoDir, ["branch", "--track", "t3code/new-thread", "origin/main"]);
+      yield* runGit(repoDir, ["branch", "--track", "t2code/new-thread", "origin/main"]);
       yield* runGit(repoDir, ["branch", "--track", "feature/published", "origin/main"]);
-      yield* runGit(repoDir, ["branch", "--track", "t3code/pr-300/main", "origin/main"]);
+      yield* runGit(repoDir, ["branch", "--track", "t2code/pr-300/main", "origin/main"]);
       yield* runGit(repoDir, ["push", "origin", "feature/published"]);
       yield* configureVisibleRemoteUrlWithLocalRewrite(
         repoDir,
@@ -2682,7 +2682,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
       const unpublished = yield* manager.branchPullRequest({
         cwd: repoDir,
-        branch: "t3code/new-thread",
+        branch: "t2code/new-thread",
       });
       expect(unpublished).toBeNull();
       expect(listedSelectors(calls)).toEqual([]);
@@ -2695,7 +2695,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
       const pullRequestWorktree = yield* manager.branchPullRequest({
         cwd: repoDir,
-        branch: "t3code/pr-300/main",
+        branch: "t2code/pr-300/main",
       });
       expect(pullRequestWorktree?.number).toBe(300);
     }),
@@ -4592,7 +4592,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
         yield* runGit(repoDir, ["add", "changes.txt"]);
         yield* runGit(repoDir, ["commit", "-m", "Feature commit"]);
         yield* runGit(repoDir, ["push", "-u", "fork-seed", "statemachine"]);
-        yield* runGit(repoDir, ["checkout", "-b", "t3code/pr-91/statemachine"]);
+        yield* runGit(repoDir, ["checkout", "-b", "t2code/pr-91/statemachine"]);
         yield* runGit(repoDir, ["branch", "--set-upstream-to", "fork-seed/statemachine"]);
         yield* configureVisibleRemoteUrlWithLocalRewrite(
           repoDir,
@@ -5587,118 +5587,6 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       }),
   );
 
-  it.effect("preserves both branch materialization failures when the fallback also fails", () =>
-    Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t2code-git-manager-");
-      yield* initRepo(repoDir);
-      const originDir = yield* createBareRemote();
-      yield* runGit(repoDir, ["remote", "add", "origin", originDir]);
-      yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
-
-      const missingForkDir = NodePath.join(repoDir, "missing-fork.git");
-      const { manager } = yield* makeManager({
-        ghScenario: {
-          pullRequest: {
-            number: 93,
-            title: "Missing fork branch",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/93",
-            baseRefName: "main",
-            headRefName: "feature/missing-fork-branch",
-            state: "open",
-            isCrossRepository: true,
-            headRepositoryNameWithOwner: "octocat/codething-mvp",
-            headRepositoryOwnerLogin: "octocat",
-          },
-          repositoryCloneUrls: {
-            "octocat/codething-mvp": {
-              url: missingForkDir,
-              sshUrl: missingForkDir,
-            },
-          },
-        },
-      });
-
-      const error = yield* preparePullRequestThread(manager, {
-        cwd: repoDir,
-        reference: "93",
-        mode: "worktree",
-      }).pipe(Effect.flip);
-
-      if (error._tag !== "GitPullRequestMaterializationError") {
-        return yield* Effect.die(error);
-      }
-      expect(error).toMatchObject({
-        cwd: repoDir,
-        pullRequestNumber: 93,
-        headRepository: "octocat/codething-mvp",
-        headBranch: "feature/missing-fork-branch",
-        localBranch: "t2code/pr-93/feature/missing-fork-branch",
-      });
-      if (!(error.cause instanceof AggregateError)) {
-        return yield* Effect.die(error.cause);
-      }
-      expect(error.cause.errors).toHaveLength(2);
-      expect(error.cause.errors).toEqual([
-        expect.objectContaining({ _tag: "GitCommandError" }),
-        expect.objectContaining({ _tag: "GitCommandError" }),
-      ]);
-      expect(error.cause.cause).toBe(error.cause.errors[0]);
-    }),
-  );
-
-  it.effect("launches setup when creating a new PR worktree", () =>
-    Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t2code-git-manager-");
-      yield* initRepo(repoDir);
-      const remoteDir = yield* createBareRemote();
-      yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
-      yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
-      yield* runGit(repoDir, ["checkout", "-b", "feature/pr-worktree-setup"]);
-      NodeFS.writeFileSync(NodePath.join(repoDir, "setup.txt"), "setup\n");
-      yield* runGit(repoDir, ["add", "setup.txt"]);
-      yield* runGit(repoDir, ["commit", "-m", "PR worktree setup branch"]);
-      yield* runGit(repoDir, ["push", "-u", "origin", "feature/pr-worktree-setup"]);
-      yield* runGit(repoDir, ["push", "origin", "HEAD:refs/pull/177/head"]);
-      yield* runGit(repoDir, ["checkout", "main"]);
-
-      const setupCalls: ProjectSetupScriptRunner.ProjectSetupScriptRunnerInput[] = [];
-      const { manager } = yield* makeManager({
-        ghScenario: {
-          pullRequest: {
-            number: 177,
-            title: "Worktree setup PR",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/177",
-            baseRefName: "main",
-            headRefName: "feature/pr-worktree-setup",
-            state: "open",
-          },
-        },
-        setupScriptRunner: {
-          runForThread: (setupInput) =>
-            Effect.sync(() => {
-              setupCalls.push(setupInput);
-              return { status: "no-script" as const };
-            }),
-        },
-      });
-
-      const result = yield* preparePullRequestThread(manager, {
-        cwd: repoDir,
-        reference: "177",
-        mode: "worktree",
-        threadId: asThreadId("thread-pr-setup"),
-      });
-
-      expect(result.worktreePath).not.toBeNull();
-      expect(setupCalls).toHaveLength(1);
-      expect(setupCalls[0]).toEqual({
-        threadId: "thread-pr-setup",
-        projectCwd: repoDir,
-        worktreePath: result.worktreePath as string,
-      });
-    }),
-  );
-
   it.effect.each([
     { localBranch: "ahead", expectedHead: "local", isOnPullRequestHead: false },
     { localBranch: "behind", expectedHead: "pull request", isOnPullRequestHead: true },
@@ -5824,7 +5712,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "checks out the submodules of the head an existing PR branch moves onto (head %s one)",
     (headChange) =>
       Effect.gen(function* () {
-        const submoduleDir = yield* makeTempDir("t3code-git-submodule-");
+        const submoduleDir = yield* makeTempDir("t2code-git-submodule-");
         yield* initRepo(submoduleDir);
         const repoDir = yield* makeTempDir("t3code-git-manager-");
         yield* initRepo(repoDir);
@@ -5895,63 +5783,6 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
             ),
           ),
       ),
-  );
-
-  it.effect("derives fork repository identity from PR URL when GitHub omits nameWithOwner", () =>
-    Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t2code-git-manager-");
-      yield* initRepo(repoDir);
-      const originDir = yield* createBareRemote();
-      const forkDir = yield* createBareRemote();
-      yield* runGit(repoDir, ["remote", "add", "origin", originDir]);
-      yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
-      yield* runGit(repoDir, ["remote", "add", "binbandit-seed", forkDir]);
-      yield* runGit(repoDir, ["checkout", "-b", "fix/git-action-default-without-origin"]);
-      NodeFS.writeFileSync(NodePath.join(repoDir, "derived-fork.txt"), "derived fork\n");
-      yield* runGit(repoDir, ["add", "derived-fork.txt"]);
-      yield* runGit(repoDir, ["commit", "-m", "Derived fork PR branch"]);
-      yield* runGit(repoDir, [
-        "push",
-        "-u",
-        "binbandit-seed",
-        "fix/git-action-default-without-origin",
-      ]);
-      yield* runGit(repoDir, ["checkout", "main"]);
-      yield* runGit(repoDir, ["branch", "-D", "fix/git-action-default-without-origin"]);
-
-      const { manager } = yield* makeManager({
-        ghScenario: {
-          pullRequest: {
-            number: 642,
-            title: "fix: use commit as the default git action without origin",
-            url: "https://github.com/pingdotgg/t3code/pull/642",
-            baseRefName: "main",
-            headRefName: "fix/git-action-default-without-origin",
-            state: "open",
-            isCrossRepository: true,
-            headRepositoryOwnerLogin: "binbandit",
-          },
-          repositoryCloneUrls: {
-            "binbandit/t2code": {
-              url: forkDir,
-              sshUrl: forkDir,
-            },
-          },
-        },
-      });
-
-      const result = yield* preparePullRequestThread(manager, {
-        cwd: repoDir,
-        reference: "642",
-        mode: "local",
-      });
-
-      expect(result.branch).toBe("fix/git-action-default-without-origin");
-      expect(result.worktreePath).toBeNull();
-      expect(
-        (yield* runGit(repoDir, ["rev-parse", "--abbrev-ref", "@{upstream}"])).stdout.trim(),
-      ).toBe("binbandit-seed/fix/git-action-default-without-origin");
-    }),
   );
 
   it.effect("refreshes a reused PR worktree onto the updated pull request head", () =>

@@ -1925,7 +1925,7 @@ describe("orchestration v2 provider switching", () => {
     }),
   );
 
-  // regression: #15993 t3_worktree_handoff releases the Claude session that runs it. Nothing
+  // regression: #15993 t2_worktree_handoff releases the Claude session that runs it. Nothing
   // was left to report how the call ended, so it stayed running and the thread stayed Waiting.
   it.live("interrupts the handoff tool call that releases its own session", () =>
     Effect.gen(function* () {
@@ -1946,7 +1946,7 @@ describe("orchestration v2 provider switching", () => {
           holdFirstTurn: started,
           heldRunningToolCall: {
             id: toolCallId,
-            toolName: "mcp__t3-code__t3_worktree_handoff",
+            toolName: "mcp__t2-code__t2_worktree_handoff",
           },
           backgroundTasksEndWithProcess: true,
         }),
@@ -2012,7 +2012,7 @@ describe("orchestration v2 provider switching", () => {
           type: "thread.metadata.update",
           commandId: CommandId.make(`command:${key}:release`),
           threadId: scenarioThreadId,
-          branch: `t3/${key}`,
+          branch: `t2/${key}`,
           worktreePath,
           expectedWorktreePath: null,
         });

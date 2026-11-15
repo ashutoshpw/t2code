@@ -80,8 +80,8 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("NonBlockingSpa
         "a pipeline": ChildProcess.make("printf", ["a\\nb\\n"], { cwd: root }).pipe(
           ChildProcess.pipeTo(ChildProcess.make("tail", ["-n", "1"])),
         ),
-        "a missing command": ChildProcess.make("t3code-missing-command", ["--version"]),
-        "a missing command in a cwd": ChildProcess.make("t3code-missing-command", [], {
+        "a missing command": ChildProcess.make("t2code-missing-command", ["--version"]),
+        "a missing command in a cwd": ChildProcess.make("t2code-missing-command", [], {
           cwd: root,
         }),
         "a non-executable command": ChildProcess.make("tool", [], {
@@ -124,7 +124,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("NonBlockingSpa
         ChildProcess.make("true", [], { cwd: directory }),
         ChildProcess.make("true", []),
         ChildProcess.make("/bin/true", []),
-        ChildProcess.make("t3code-missing-command", []),
+        ChildProcess.make("t2code-missing-command", []),
         ChildProcess.make("true", [], { cwd: directory, shell: true }),
         ChildProcess.make("printf", ["a"], { cwd: directory }).pipe(
           ChildProcess.pipeTo(ChildProcess.make("cat", [], { cwd: directory })),
@@ -177,7 +177,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("NonBlockingSpa
         ["a", "b", "c"],
         (name) =>
           ChildProcessSpawner.ChildProcessSpawner.use((spawner) =>
-            spawner.exitCode(ChildProcess.make("true", [], { cwd: `/t3code-hung/${name}` })),
+            spawner.exitCode(ChildProcess.make("true", [], { cwd: `/t2code-hung/${name}` })),
           ).pipe(Effect.flip),
         { concurrency: "unbounded" },
       ).pipe(

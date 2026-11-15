@@ -214,7 +214,7 @@ const PRINTENV_CAPTURE_SYNTAX = new Map(
   [...DEBUG_TRAP_SHELLS, "dash", "ash"].map((shell) => [shell, POSIX_CAPTURE_SYNTAX] as const),
 ).set("fish", { assignment: "set -l __T3CODE_PRINTENV (", orElse: "; or " });
 // Network PATH entries must be probed inside the shell's deadline, away from the desktop thread.
-const PRINTENV_LOOKUP_COMMAND = `/bin/sh -c 'command -v printenv || { [ -n "$1" ] && PATH="$1" command -v printenv; } || printf %s /usr/bin/printenv' t3`;
+const PRINTENV_LOOKUP_COMMAND = `/bin/sh -c 'command -v printenv || { [ -n "$1" ] && PATH="$1" command -v printenv; } || printf %s /usr/bin/printenv' t2`;
 
 export function buildEnvironmentCaptureCommand(
   shell: string,

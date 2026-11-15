@@ -61,7 +61,7 @@ describe.each(observedPlatforms)("RelayClientLedger observing as %s", (platform)
     run(
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-relay-ledger-" });
+        const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-relay-ledger-" });
         const deadOwner = yield* spawnSleep;
         const liveOwner = yield* spawnSleep;
         const orphan = yield* spawnSleep;
@@ -88,7 +88,7 @@ describe.each(observedPlatforms)("RelayClientLedger observing as %s", (platform)
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-relay-ledger-" });
+        const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-relay-ledger-" });
         const deadOwner = yield* spawnSleep;
         const unrelated = yield* spawnSleep;
 
