@@ -7,7 +7,7 @@ import * as NodePath from "node:path";
 import { expect } from "e2e";
 
 import { T2_HOME } from "../e2e.config.ts";
-import { makeState, runPromise, test, WEB } from "./t3.ts";
+import { makeState, runPromise, test, WEB } from "./t2.ts";
 
 // An OpenCode 1.19.5 server with background subagents on (OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS,
 // which T2 never sets). Frames follow v1.19.5 source: tool/task.ts injects a finished background
@@ -180,7 +180,7 @@ function fakeOpenCode() {
 test(
   "An OpenCode 1.x background task's result wakes its settled thread",
   WEB,
-  async ({ t3, app, screen }) => {
+  async ({ t2, app, screen }) => {
     const opencode = fakeOpenCode();
     await new Promise<void>((resolve) => opencode.server.listen(0, "127.0.0.1", resolve));
     try {
@@ -194,7 +194,7 @@ test(
       };
       await NodeFSP.writeFile(settingsPath, JSON.stringify(settings));
 
-      const project = await t3.project("demo");
+      const project = await t2.project("demo");
       const { cli } = makeState(T2_HOME);
       const start = [
         "thread",
@@ -222,7 +222,7 @@ test(
         )
         .toBe(true);
       const { threadId } = JSON.parse(started) as { threadId: string };
-      await t3.open({ threadId });
+      await t2.open({ threadId });
 
       await expect(screen.getByText("PARENT_OK")).toBeVisible({ timeout: 60_000 });
       opencode.finishBackgroundTask();

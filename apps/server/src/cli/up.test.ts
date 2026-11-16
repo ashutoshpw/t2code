@@ -153,7 +153,7 @@ const answering = (text: string) =>
     display: () => Effect.void,
   });
 
-it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))("t3 up", (it) => {
+it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))("t2 up", (it) => {
   afterEach(() => vi.restoreAllMocks());
 
   it.effect.each<{
@@ -290,8 +290,8 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       installed: true,
       reportStatus: true,
       prints: [
-        "Turn it off: `t3 up --base-dir <baseDir> --no-lan`.",
-        "Change access: `t3 up --base-dir <baseDir>`.",
+        "Turn it off: `t2code up --base-dir <baseDir> --no-lan`.",
+        "Change access: `t2code up --base-dir <baseDir>`.",
       ],
       env: "",
       args: [],
@@ -333,7 +333,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
   ])("keeps service changes and access settings consistent: $label", (input) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-up-test-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-up-test-" });
       yield* fs.writeFileString(`${baseDir}/service.env`, input.env);
       let installs = 0;
       let restarts = 0;

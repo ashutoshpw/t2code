@@ -3168,10 +3168,14 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         });
         yield* writeTranscript({
           filePath: transcriptPaths.parse,
-          contents: encodeTranscriptRecord({
-            type: "session_meta",
-            payload: { id: "parse-session", cwd: workspace },
-          }),
+          // No session id, so the transcript parses but cannot be resumed.
+          contents: [
+            encodeTranscriptRecord({ type: "session_meta", payload: { cwd: workspace } }),
+            encodeTranscriptRecord({
+              type: "event_msg",
+              payload: { type: "user_message", message: "Import this session" },
+            }),
+          ].join("\n"),
           mtimeMs: nowMs,
         });
 

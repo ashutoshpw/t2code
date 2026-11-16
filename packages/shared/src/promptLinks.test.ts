@@ -48,7 +48,7 @@ describe("parseNewThreadLink", () => {
       value: {
         kind: "new",
         prompt: { text: "Rate me", hiddenCharacters: 0 },
-        repository: { owner: "pingdotgg", name: "t2code" },
+        repository: { owner: "pingdotgg", name: "t3code" },
         provider: "codex",
         model: "gpt-5",
       },

@@ -7,7 +7,7 @@ import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 
 import { T2_HOME } from "../e2e.config.ts";
-import { runPromise, test, WEB } from "./t3.ts";
+import { runPromise, test, WEB } from "./t2.ts";
 
 const SettingsJson = Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown));
 const decodeSettings = Schema.decodeEffect(SettingsJson);
@@ -65,7 +65,7 @@ const settingsFile = Effect.gen(function* () {
 test(
   "Two custom model edits saved before the first one's settings echo both persist",
   WEB,
-  async ({ t3, app, browser, screen }) => {
+  async ({ t2, app, browser, screen }) => {
     // Holds the server config stream while active, so a save's reply arrives before its settings
     // echo, and records settings save replies by request id.
     await browser.addInitScript(() => {
@@ -138,7 +138,7 @@ test(
     const settings = await runPromise(settingsFile);
     try {
       await runPromise(settings.seed);
-      await t3.open("/settings/providers?instanceId=codex");
+      await t2.open("/settings/providers?instanceId=codex");
       await expect(screen.getByRole("button", "Edit model-a", { exact: true })).toBeVisible();
 
       const before = await saveReplies();

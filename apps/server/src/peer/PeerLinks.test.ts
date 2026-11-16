@@ -448,7 +448,7 @@ it.effect("resolves a link at its answering address without waiting out a sleepi
   Effect.scoped(
     Effect.gen(function* () {
       const b = yield* serveB(box);
-      const described = yield* HttpClient.get(`${b.url}/.well-known/t3/environment`).pipe(
+      const described = yield* HttpClient.get(`${b.url}/.well-known/t2/environment`).pipe(
         Effect.flatMap((response) => response.text),
         Effect.provide(FetchHttpClient.layer),
       );

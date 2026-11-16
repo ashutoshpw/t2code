@@ -92,7 +92,8 @@ const create = (config: Partial<OpenCodeSettings>, http: HttpClient.HttpClient, 
   OpenCodeDriver.create({
     instanceId: ProviderInstanceId.make("opencode-test"),
     displayName: undefined,
-    environment: [],
+    // A developer's real OpenCode credentials must not reach these stubbed servers.
+    environment: [{ name: "OPENCODE_AUTH_CONTENT", value: "{}", sensitive: false }],
     enabled,
     config: { ...OpenCodeDriver.defaultConfig(), ...config },
   }).pipe(Effect.provideService(HttpClient.HttpClient, http));

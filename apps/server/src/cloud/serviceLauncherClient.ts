@@ -164,14 +164,14 @@ export const repointLaunchers = Effect.fn("cloud.service_launcher_client.repoint
       environment["T2CODE_INSTALL_BIN_DIR"] ||
       (environment["HOME"] ? path.join(environment["HOME"], ".local", "bin") : undefined);
     const candidates = new Set<string>();
-    if (installBinDir !== undefined) candidates.add(path.join(installBinDir, "t3"));
+    if (installBinDir !== undefined) candidates.add(path.join(installBinDir, "t2"));
     for (const directory of (environment["PATH"] ?? "").split(":")) {
       if (directory.length === 0) continue;
-      const candidate = path.join(directory, "t3");
+      const candidate = path.join(directory, "t2");
       if (
         yield* fs.exists(candidate).pipe(
           Effect.catch((cause) =>
-            Effect.logWarning("Could not check the t3 command on PATH", {
+            Effect.logWarning("Could not check the t2 command on PATH", {
               launchedAs: candidate,
               cause,
             }).pipe(Effect.as(false)),
@@ -219,7 +219,7 @@ export const repointLaunchers = Effect.fn("cloud.service_launcher_client.repoint
         Effect.catchCause((cause) =>
           Cause.hasInterrupts(cause)
             ? Effect.interrupt
-            : Effect.logWarning("Could not move the t3 command to the updated version", {
+            : Effect.logWarning("Could not move the t2 command to the updated version", {
                 launchedAs,
                 cause,
               }),

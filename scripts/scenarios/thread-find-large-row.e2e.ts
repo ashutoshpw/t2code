@@ -1,11 +1,11 @@
 import { expect } from "e2e";
 
-import { test, WEB } from "./t3.ts";
+import { test, WEB } from "./t2.ts";
 
-test("Find highlights a row with 200,000 matches", WEB, async ({ t3, app, screen, browser }) => {
-  const project = await t3.project("find-proof");
-  await t3.thread({ project, title: "Large row proof", messages: ["go"] });
-  await t3.open();
+test("Find highlights a row with 200,000 matches", WEB, async ({ t2, app, screen, browser }) => {
+  const project = await t2.project("find-proof");
+  await t2.thread({ project, title: "Large row proof", messages: ["go"] });
+  await t2.open();
   const thread = screen.getByRole("button", /^Large row proof,/);
   await expect(thread).toBeVisible({ timeout: 120_000 });
   await thread.tap();

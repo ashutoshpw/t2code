@@ -105,7 +105,7 @@ it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
       assert.isUndefined(yield* findOwnedLauncher({ launchedAs: undefined, versionsDir }));
       // A script launcher execs by absolute path, so argv0 names the executable.
       const scriptDir = path.join(root, "script-bin");
-      const script = path.join(scriptDir, "t3");
+      const script = path.join(scriptDir, "t2");
       yield* fs.makeDirectory(scriptDir);
       yield* fs.writeFileString(script, posixLauncherScript(exe), { mode: 0o755 });
       assert.equal(
@@ -182,15 +182,15 @@ it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
 });
 
 it.live.runIf(HostProcess.Platform.defaultValue() === "win32")(
-  "t3 uninstall has cmd.exe remove the runtime directory, preserving spaces and literal environment-variable syntax",
+  "t2 uninstall has cmd.exe remove the runtime directory, preserving spaces and literal environment-variable syntax",
   () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-uninstall-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-uninstall-" });
       const runtimeDir = path.join(root, "t2 home %COMSPEC% !COMSPEC! & data", "runtime");
       yield* fs.makeDirectory(path.join(runtimeDir, "versions", "1.0.0"), { recursive: true });
-      yield* fs.writeFileString(path.join(runtimeDir, "versions", "1.0.0", "t3.exe"), "");
+      yield* fs.writeFileString(path.join(runtimeDir, "versions", "1.0.0", "t2.exe"), "");
 
       const child = spawnWindowsRemoval(
         yield* Config.String("ComSpec").pipe(Config.withDefault("cmd.exe")),
