@@ -704,7 +704,7 @@ export class BootServiceDowngradeRefusedError extends Schema.TaggedError<BootSer
   },
 ) {
   override get message(): string {
-    return `Refusing to replace ${CLI_PACKAGE_NAME}@${this.installedVersion} with older ${CLI_PACKAGE_NAME}@${this.targetVersion}. Run the command again with --allow-downgrade to continue.`;
+    return `Refusing to replace t2@${this.installedVersion} with older t2@${this.targetVersion}. Run the command again with --allow-downgrade to continue.`;
   }
 }
 
