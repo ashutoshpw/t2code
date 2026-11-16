@@ -126,7 +126,7 @@ export const reconcileService = Effect.fn("cli.service.reconcile")(function* (op
     return { changed: false, status } satisfies ServiceReconcileResult;
   }
   if (status.supported && !status.installed) {
-    // A new service listens on this machine only, until `t3 up` opens the local network.
+    // A new service listens on this machine only, until `t2 up` opens the local network.
     const { entries } = yield* readServiceEnv(baseDir);
     if (entries.T2CODE_LAN === undefined && entries.T2CODE_HOST === undefined) {
       yield* writeServiceEnv(baseDir, { T2CODE_LAN: "false" });

@@ -8,7 +8,7 @@ import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 
-/** The launcher install.sh, `t3 install`, and `t3 update` write; exec by absolute path. */
+/** The launcher install.sh, `t2 install`, and `t2 update` write; exec by absolute path. */
 const launcherScript = (executable: string) =>
   `#!/bin/sh\nexec '${executable.replaceAll("'", "'\\''")}' "$@"\n`;
 
@@ -315,7 +315,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("install.sh t2 
       expect(relative.output).toContain(`'export PATH="$PATH:$HOME/bin"'`);
 
       // A launcher script someone edited is theirs now.
-      const edited = `${launcherScript(NodePath.join(home, "runtime/versions/1.2.3/t3"))}# mine\n`;
+      const edited = `${launcherScript(NodePath.join(home, "runtime/versions/1.2.3/t2"))}# mine\n`;
       await NodeFSP.writeFile(link, edited);
       const overEdited = await installOver({ script: "install.sh", home, binDir });
       expect(overEdited.code).not.toBe(0);

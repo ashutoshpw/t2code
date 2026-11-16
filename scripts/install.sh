@@ -9,7 +9,7 @@
 #                            (default: stable; preview is a maintainers' test train)
 #   T2CODE_VERSION           exact version to install (overrides T2CODE_CHANNEL)
 #   T2CODE_HOME              T2 home directory (default: ~/.t2)
-#   T2CODE_INSTALL_BIN_DIR   where the `t2` symlink goes (default: ~/.local/bin)
+#   T2CODE_INSTALL_BIN_DIR   where the `t2` command goes (default: ~/.local/bin)
 #   T2CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
 #
@@ -30,7 +30,7 @@ case "$t2_home" in
     ;;
 esac
 bin_dir="${T2CODE_INSTALL_BIN_DIR:-$HOME/.local/bin}"
-# Trailing slashes would put `//` in the paths the t3 command guard compares.
+# Trailing slashes would put `//` in the paths the t2 command guard compares.
 while [ "${t2_home%/}" != "$t2_home" ] && [ "$t2_home" != / ]; do t2_home="${t2_home%/}"; done
 while [ "${bin_dir%/}" != "$bin_dir" ] && [ "$bin_dir" != / ]; do bin_dir="${bin_dir%/}"; done
 # Absolute, so the PATH hint never adds a folder that changes with the working directory.
@@ -311,7 +311,7 @@ if [ -e "${bin_dir}/t2" ] || [ -L "${bin_dir}/t2" ]; then
     existing="$(script_t2 "${bin_dir}/t2")"
   fi
   if [ -n "$existing" ]; then
-    # Through a symlinked T2 home the link text names the alias; resolve its folder to compare.
+    # Through a symlinked T2 home the path names the alias; resolve its folder to compare.
     existing_dir="$(CDPATH='' cd -P -- "$(dirname -- "$existing")" 2>/dev/null && pwd || true)"
     # The text alone counts only without . or .. segments (a pruned version leaves a dangling path).
     case "$existing" in

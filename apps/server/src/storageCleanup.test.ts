@@ -672,7 +672,7 @@ const runCleanupTest = <A, E>(
 ) => effect.pipe(Effect.provide(cleanupTestLayer));
 
 const legacyCheckpointRef = (threadId: string, turn: number) =>
-  `refs/t3/checkpoints/${Base64Url.encode(threadId)}/turn/${turn}`;
+  `refs/t2/checkpoints/${Base64Url.encode(threadId)}/turn/${turn}`;
 
 const checkpointCleanupFixture = Effect.fn("test.checkpointCleanupFixture")(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -736,7 +736,7 @@ const checkpointCleanupFixture = Effect.fn("test.checkpointCleanupFixture")(func
       .execute({
         operation: "cleanup-test.list-checkpoints",
         cwd: repo,
-        args: ["for-each-ref", "--format=%(refname)", "refs/t3/"],
+        args: ["for-each-ref", "--format=%(refname)", "refs/t2/", "refs/t3/"],
         maxOutputBytes: 16 * 1024 * 1024,
       })
       .pipe(Effect.map(({ stdout }) => stdout.trim().split("\n").filter(Boolean).sort()));
@@ -813,7 +813,7 @@ describe("checkpoint ref cleanup", () => {
         const refs = yield* addThread("deleted", { deleted: true });
         yield* command(repo, ["symbolic-ref", refs[0]!, "refs/heads/main"]);
         const retained = [
-          "refs/t3/unrelated/0",
+          "refs/t2/unrelated/0",
           `${refs[1]}-other`,
           refs[1]!.replace(/1$/, "2/nested"),
         ];

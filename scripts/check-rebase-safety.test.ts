@@ -24,6 +24,8 @@ import {
   parseRpcGroup,
   parseTestTitles,
   parseWorkflowFacts,
+  removedLinesByFile,
+  revertedUpstreamLines,
   shrunkCommits,
   significantLines,
   substantiveAddedLines,
@@ -233,6 +235,33 @@ describe("check-rebase-safety structure checks", () => {
     ).toEqual(["a.ts: 10 -> 0"]);
   });
 
+  it.each([
+    {
+      name: "a line upstream rewrote is back (rebranded)",
+      diff: "diff --git a/t.ts b/t.ts\n--- a/t.ts\n+++ b/t.ts\n@@\n-  description: 'Old T3 wording here',\n+  description: 'New wording here',\n",
+      now: ["description: 'Old T2 wording here',", "description: 'New wording here',"],
+      tip: ["description: 'New wording here',"],
+      reverted: ["description: 'Old T3 wording here',"],
+    },
+    {
+      name: "a moved line is not a revert",
+      diff: "diff --git a/t.ts b/t.ts\n--- a/t.ts\n+++ b/t.ts\n@@\n-const moved = compute(value);\n+const moved = compute(value);\n",
+      now: ["const moved = compute(value);"],
+      tip: ["const moved = compute(value);"],
+      reverted: [],
+    },
+    {
+      name: "a line upstream deleted and the result dropped too",
+      diff: "diff --git a/t.ts b/t.ts\n--- a/t.ts\n+++ b/t.ts\n@@\n-const removed = compute(value);\n",
+      now: [],
+      tip: [],
+      reverted: [],
+    },
+  ])("detects reverted upstream text: $name", ({ diff, now, tip, reverted }) => {
+    const removed = removedLinesByFile(diff)["t.ts"] ?? [];
+    expect(revertedUpstreamLines(removed, new Set(now), new Set(tip))).toEqual(reverted);
+  });
+
   it("flags lowered budgets, lost pinned lines, grown T3 text, shrunk commits and unlisted migrations", () => {
     const budget = (value: number) => parseBudget(`{"mcpToolListJsonBytes": ${value}, "x": "s"}`);
     expect(loweredBudgets(budget(95), budget(48), budget(48), budget(48))).toEqual([
@@ -391,6 +420,36 @@ describe("check-rebase-safety against a real repository", () => {
     }
   });
 
+  it("reports a reverted upstream line past the fifth even when the first five are accepted", () => {
+    const cwd = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "rebase-safety-"));
+    const old = Array.from({ length: 7 }, (_, i) => `const old${i + 1} = ${i + 1};`);
+    try {
+      run(cwd, "init", "-q", "-b", "main");
+      write(cwd, "src/Peer.ts", `${old.join("\n")}\n`);
+      commit(cwd, "base");
+      run(cwd, "checkout", "-q", "-b", "up");
+      write(cwd, "src/Peer.ts", "const fresh = 0;\n");
+      commit(cwd, "upstream rewrite");
+      run(cwd, "checkout", "-q", "main");
+      write(cwd, "src/Other.ts", "export const o = 1;\n");
+      commit(cwd, "feat: fork");
+      const snapshot = takeSnapshot(cwd, "up");
+
+      run(cwd, "checkout", "-q", "-b", "result", "up");
+      write(cwd, "src/Other.ts", "export const o = 1;\n");
+      write(cwd, "src/Peer.ts", `${old.join("\n")}\nconst fresh = 0;\n`);
+      commit(cwd, "rebase: revert upstream");
+      const text = verifySnapshot(cwd, "up", snapshot).failures.join("\n");
+      expect(text).toContain("7 line(s) upstream deleted or rewrote");
+      expect(text).toContain("src/Peer.ts: const old7 = 7;");
+      const partial = verifySnapshot(cwd, "up", snapshot, "HEAD", old.slice(0, 5));
+      expect(partial.failures.join("\n")).toContain("2 line(s) upstream deleted or rewrote");
+      expect(partial.failures.join("\n")).toContain("src/Peer.ts: const old6 = 6;");
+    } finally {
+      NodeFS.rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("fails on each loss class a rebase has silently caused", () => {
     const cwd = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "rebase-safety-"));
     try {
@@ -486,6 +545,54 @@ describe("check-rebase-safety against a real repository", () => {
       const accepted = verifySnapshot(cwd, "upstream", snapshot, "HEAD", ["README.md"]);
       expect(accepted.failures.join("\n")).not.toContain("README.md");
       expect(accepted.notes.join("\n")).toContain("ACCEPTED");
+    } finally {
+      NodeFS.rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("fails on upstream text the replay reverted and on bare t3 added to source", () => {
+    const cwd = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "rebase-safety-"));
+    try {
+      run(cwd, "init", "-q", "-b", "main");
+      write(
+        cwd,
+        "src/tool.ts",
+        'const text = "Create scheduled work that exposes webhook URLs";\n',
+      );
+      write(cwd, "src/cli.ts", "export const a = 1;\n");
+      write(cwd, "src/cli.test.ts", "export const a = 1;\n");
+      commit(cwd, "base");
+      run(cwd, "checkout", "-q", "-b", "up");
+      write(
+        cwd,
+        "src/tool.ts",
+        'const text = "Create scheduled work without exposing webhook URLs";\n',
+      );
+      commit(cwd, "upstream: reword");
+      run(cwd, "checkout", "-q", "main");
+      write(cwd, "src/fork.ts", "export const fork = 1;\n");
+      commit(cwd, "fork: add");
+      const snapshot = takeSnapshot(cwd, "up");
+
+      run(cwd, "checkout", "-q", "-b", "result", "up");
+      write(cwd, "src/fork.ts", "export const fork = 1;\n");
+      write(
+        cwd,
+        "src/tool.ts",
+        'const text = "Create scheduled work that exposes webhook URLs";\n',
+      );
+      write(cwd, "src/cli.ts", "// run `t3 up` to start\nexport const a = 1;\n");
+      write(cwd, "src/cli.test.ts", "// run `t3 up` to start\nexport const a = 1;\n");
+      commit(cwd, "rebase: fallout");
+      const found = verifySnapshot(cwd, "up", snapshot);
+      const text = found.failures.join("\n");
+      expect(text).toContain("src/tool.ts: const text = ");
+      expect(text).toContain("src/cli.ts: 0 -> 1");
+      expect(text).not.toContain("src/cli.test.ts");
+      expect(found.notes.join("\n")).toContain("src/cli.test.ts: 0 -> 1");
+      expect(
+        verifySnapshot(cwd, "up", snapshot, "HEAD", ["src/tool.ts"]).failures.join("\n"),
+      ).not.toContain("src/tool.ts");
     } finally {
       NodeFS.rmSync(cwd, { recursive: true, force: true });
     }

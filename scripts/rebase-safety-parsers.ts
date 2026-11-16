@@ -356,6 +356,52 @@ export function grownT3Files(
     .toSorted();
 }
 
+/** Lines upstream removed from each file (rename-normalised, not re-added elsewhere in the same file). */
+export function removedLinesByFile(diff: string): Record<string, ReadonlyArray<string>> {
+  const out: Record<string, ReadonlyArray<string>> = {};
+  let file: string | null = null;
+  let removed: string[] = [];
+  let added = new Set<string>();
+  const flush = () => {
+    if (file === null) return;
+    const gone = [...new Set(removed)].filter(
+      (line) =>
+        !added.has(normalizeRename(line)) && /[A-Za-z0-9]{4}/.test(line) && line.length >= 12,
+    );
+    if (gone.length > 0) out[file] = gone;
+  };
+  for (const raw of diff.split("\n")) {
+    if (raw.startsWith("diff --git ")) {
+      flush();
+      file = null;
+      removed = [];
+      added = new Set();
+    } else if (raw.startsWith("+++ ")) file = raw === "+++ /dev/null" ? null : raw.slice(6);
+    else if (file !== null && !raw.startsWith("--- ")) {
+      const text = raw.slice(1).trim();
+      if (raw[0] === "-" && text !== "") removed.push(text);
+      else if (raw[0] === "+" && text !== "") added.add(normalizeRename(text));
+    }
+  }
+  flush();
+  return out;
+}
+
+/**
+ * Lines upstream deleted or rewrote that the result still carries (rename-normalised), though
+ * upstream's tip no longer has them: a conflict resolved to the fork's older text reverts the change.
+ */
+export function revertedUpstreamLines(
+  removed: ReadonlyArray<string>,
+  now: ReadonlySet<string>,
+  upstreamTip: ReadonlySet<string>,
+): ReadonlyArray<string> {
+  return removed.filter((line) => {
+    const key = normalizeRename(line);
+    return now.has(key) && !upstreamTip.has(key);
+  });
+}
+
 /** Commits that kept their subject but lost most of their added lines. */
 export function shrunkCommits(
   before: ReadonlyArray<{ readonly subject: string; readonly lines: number }>,

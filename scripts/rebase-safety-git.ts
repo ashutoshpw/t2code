@@ -2,13 +2,21 @@
 // Everything is read from commits, never from the working tree.
 import * as NodeChildProcess from "node:child_process";
 
-import { normalizeRename, significantLines, WORKFLOW_FILE } from "./rebase-safety-parsers.ts";
+import {
+  normalizeRename,
+  removedLinesByFile,
+  revertedUpstreamLines,
+  significantLines,
+  WORKFLOW_FILE,
+} from "./rebase-safety-parsers.ts";
 
 const isUpstreamReviewFile = (file: string) =>
   WORKFLOW_FILE.test(file) || file === "pnpm-workspace.yaml";
 const STORE_LINK =
   "https?://(apps\\.apple\\.com|play\\.google\\.com|testflight\\.apple\\.com)/[^][ )\"'>`<]*";
 const T3_TOKEN = "\\bT3\\b|\\bt3[_-]|T3CODE_";
+// The fork CLI is `t2`: a bare lowercase `t3` in a comment or path is upstream text the replay missed.
+const T3_BARE_TOKEN = "\\bt3\\b|T3Code";
 const T3_EXEMPT = [
   /^\.repos\//,
   /(^|\/)pnpm-lock\.yaml$/,
@@ -77,8 +85,12 @@ export function treeFiles(cwd: string, ref: string): ReadonlySet<string> {
   );
 }
 
-export function t3Counts(cwd: string, ref: string): Record<string, number> {
-  const out = git(["grep", "-c", "-I", "-E", T3_TOKEN, ref, "--", ".", ":!.repos"], cwd, true);
+export function t3Counts(cwd: string, ref: string, bare = false): Record<string, number> {
+  const out = git(
+    ["grep", "-c", "-I", "-E", bare ? T3_BARE_TOKEN : T3_TOKEN, ref, "--", ".", ":!.repos"],
+    cwd,
+    true,
+  );
   const counts: Record<string, number> = {};
   for (const row of lines(out)) {
     const match = /^(.*):(\d+)$/.exec(row.slice(ref.length + 1));
@@ -125,4 +137,46 @@ export function upstreamNotCarried(
 
 export function changedBetween(cwd: string, from: string, to: string): ReadonlySet<string> {
   return new Set(lines(git(["diff", "--name-only", "--no-renames", from, to], cwd, true)));
+}
+
+const normalizedLines = (text: string) =>
+  new Set(text.split("\n").map((row) => normalizeRename(row.trim())));
+
+/** Per file: lines upstream removed since the old base that the result still has and upstream's tip lacks. */
+export function revertedUpstreamText(
+  cwd: string,
+  oldBase: string,
+  upstreamRef: string,
+  head: string,
+): Readonly<Record<string, ReadonlyArray<string>>> {
+  const removed = removedLinesByFile(
+    git(
+      ["diff", "-U0", "--no-color", "--no-renames", "--no-ext-diff", oldBase, upstreamRef],
+      cwd,
+      true,
+    ),
+  );
+  const files = Object.keys(removed).filter(
+    (file) => !/(^|\/)pnpm-lock\.yaml$|^\.repos\//.test(file),
+  );
+  const here = readBlobs(
+    cwd,
+    files.map((file) => `${head}:${file}`),
+  );
+  const tip = readBlobs(
+    cwd,
+    files.map((file) => `${upstreamRef}:${file}`),
+  );
+  return Object.fromEntries(
+    files.flatMap((file) => {
+      const text = here.get(`${head}:${file}`);
+      if (text === undefined) return [];
+      const back = revertedUpstreamLines(
+        removed[file]!,
+        normalizedLines(text),
+        normalizedLines(tip.get(`${upstreamRef}:${file}`) ?? ""),
+      );
+      return back.length > 0 ? [[file, back] as const] : [];
+    }),
+  );
 }

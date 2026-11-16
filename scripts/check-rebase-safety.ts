@@ -55,6 +55,7 @@ import {
   git,
   lines,
   readBlobs,
+  revertedUpstreamText,
   show,
   storeLinks,
   t3Counts,
@@ -120,6 +121,7 @@ interface Snapshot {
   readonly budget: Budget;
   readonly budgetBase: Budget;
   readonly t3Counts: Readonly<Record<string, number>>;
+  readonly t3BareCounts?: Readonly<Record<string, number>>;
   readonly storeLinks: ReadonlyArray<string>;
 }
 
@@ -148,8 +150,10 @@ interface CurrentState {
   readonly budget: Budget;
   readonly budgetUpstream: Budget;
   readonly t3Counts: Readonly<Record<string, number>>;
+  readonly t3BareCounts: Readonly<Record<string, number>>;
   readonly storeLinks: ReadonlyArray<string>;
   readonly upstreamNotCarried: ReadonlyArray<string>;
+  readonly revertedUpstream: Readonly<Record<string, ReadonlyArray<string>>>;
   readonly upstreamChanged: ReadonlySet<string>;
   readonly mainMigrationProblems: ReadonlyArray<string>;
   readonly unlistedMigrationFiles: ReadonlyArray<string>;
@@ -293,16 +297,35 @@ function compareState(
         ),
       );
     else lostPinned.push(`${file}: file is gone`);
+  const capped = (lines: string[], max: number) =>
+    [
+      ...lines.slice(0, max),
+      ...(lines.length > max
+        ? [`... and ${lines.length - max} more (accept the reviewed ones and rerun)`]
+        : []),
+    ]
+      .map((l) => `    ${l}`)
+      .join("\n");
+
   const lostPinnedOpen = open(lostPinned);
   if (lostPinnedOpen.length > 0)
     failures.push(
-      `${lostPinnedOpen.length} line(s) the fork added to pinned files are gone (pnpm overrides, migrate-dev-db lists, migration entries):\n${lostPinnedOpen
-        .slice(0, 40)
-        .map((l) => `    ${l}`)
-        .join("\n")}`,
+      `${lostPinnedOpen.length} line(s) the fork added to pinned files are gone (pnpm overrides, migrate-dev-db lists, migration entries):\n${capped(lostPinnedOpen, 40)}`,
     );
 
-  const lowered = loweredBudgets(before.budget, before.budgetBase, now.budgetUpstream, now.budget);
+  const reverted = open(
+    Object.entries(now.revertedUpstream).flatMap(([file, rows]) =>
+      rows.map((row) => `${file}: ${row}`),
+    ),
+  );
+  if (reverted.length > 0)
+    failures.push(
+      `${reverted.length} line(s) upstream deleted or rewrote are back in the result (a conflict resolved to the fork's older text reverted upstream's change; re-apply upstream's new text, then the rebrand):\n${capped(reverted, 40)}`,
+    );
+
+  const lowered = open(
+    loweredBudgets(before.budget, before.budgetBase, now.budgetUpstream, now.budget),
+  );
   if (lowered.length > 0)
     failures.push(
       `${BUDGET_FILE} was lowered or reset below the fork's value:\n${lowered.map((l) => `    ${l}`).join("\n")}`,
@@ -311,10 +334,19 @@ function compareState(
   const grownT3 = open(grownT3Files(before.t3Counts, now.t3Counts));
   if (grownT3.length > 0)
     failures.push(
-      `T3-spelled text came back (lines with T3 / t3_ / t3- tokens, before -> after). Rebrand each, or exempt a real compat hit in check-rebrand:\n${grownT3
-        .slice(0, 60)
-        .map((l) => `    ${l}`)
-        .join("\n")}`,
+      `T3-spelled text came back (lines with T3 / t3_ / t3- tokens, before -> after). Rebrand each, or exempt a real compat hit in check-rebrand:\n${capped(grownT3, 60)}`,
+    );
+  const grownBare =
+    before.t3BareCounts === undefined ? [] : grownT3Files(before.t3BareCounts, now.t3BareCounts);
+  const bareSource = open(grownBare.filter((entry) => !isTestFile(entry.split(": ")[0]!)));
+  if (bareSource.length > 0)
+    failures.push(
+      `bare t3 / T3Code text in source files (the fork CLI and brand are t2; legacy compat and upstream URLs are accept-able):\n${capped(bareSource, 60)}`,
+    );
+  const bareTests = grownBare.filter((entry) => isTestFile(entry.split(": ")[0]!));
+  if (bareTests.length > 0)
+    notes.push(
+      `REVIEW: bare t3 text grew in ${bareTests.length} test file(s); a literal the code under test no longer produces fails only when the suite runs:\n${capped(bareTests, 40)}`,
     );
   const newLinks = open(now.storeLinks.filter((link) => !before.storeLinks.includes(link)));
   if (newLinks.length > 0)
@@ -326,10 +358,7 @@ function compareState(
   const strayMissing = open(now.upstreamMissing.filter((file) => !deleted.has(file)));
   if (strayMissing.length > 0)
     failures.push(
-      `${strayMissing.length} file(s) exist at upstream's tip, were not deleted by the old fork, and are missing from the result:\n${strayMissing
-        .slice(0, 40)
-        .map((f) => `    ${f}`)
-        .join("\n")}`,
+      `${strayMissing.length} file(s) exist at upstream's tip, were not deleted by the old fork, and are missing from the result:\n${capped(strayMissing, 40)}`,
     );
   const lostRules = open(
     now.upstreamMissing.filter((file) => /^oxlint-plugin-[^/]+\/rules\//.test(file)),
@@ -343,10 +372,7 @@ function compareState(
   );
   if (keptDeletions.length > 0)
     notes.push(
-      `REVIEW: ${keptDeletions.length} non-test file(s) upstream still has were deleted by the fork and stay deleted (a lint rule, config or doc lost in an earlier replay looks the same as a deliberate removal):\n${keptDeletions
-        .slice(0, 40)
-        .map((f) => `    ${f}`)
-        .join("\n")}`,
+      `REVIEW: ${keptDeletions.length} non-test file(s) upstream still has were deleted by the fork and stay deleted (a lint rule, config or doc lost in an earlier replay looks the same as a deliberate removal):\n${capped(keptDeletions, 40)}`,
     );
 
   const goneSpaces = before.spacesMigrations.filter(
@@ -605,6 +631,7 @@ function collectState(
     budgetBase: parseBudget(show(cwd, base, BUDGET_FILE)),
     budgetUpstream: parseBudget(show(cwd, upstreamRef, BUDGET_FILE)),
     t3Counts: t3Counts(cwd, head),
+    t3BareCounts: t3Counts(cwd, head, true),
     storeLinks: storeLinks(cwd, head),
   };
 }
@@ -649,6 +676,7 @@ export function takeSnapshot(cwd: string, upstreamRef: string, headRef = "HEAD")
     budget: state.budget,
     budgetBase: state.budgetBase,
     t3Counts: state.t3Counts,
+    t3BareCounts: state.t3BareCounts,
     storeLinks: state.storeLinks,
   };
 }
@@ -691,9 +719,11 @@ export function verifySnapshot(
       budget: state.budget,
       budgetUpstream: state.budgetUpstream,
       t3Counts: state.t3Counts,
+      t3BareCounts: state.t3BareCounts,
       storeLinks: state.storeLinks,
       upstreamChanged: changedBetween(cwd, before.mergeBase, upstreamRef),
       upstreamNotCarried: upstreamNotCarried(cwd, before.mergeBase, upstreamRef, state.head),
+      revertedUpstream: revertedUpstreamText(cwd, before.mergeBase, upstreamRef, state.head),
       mainMigrationProblems: state.mainMigrationProblems,
       unlistedMigrationFiles: state.unlistedMigrationFiles,
       tags: state.tags,
